@@ -155,6 +155,22 @@ MAP_LIST = [
     {"title": "Yesterday", "song": "Yesterday", "level": 9, "bpm": 130, "offset": 0.0, "duration": 300.50, "audio": "Yesterday.mp4", "colors": ((20, 25, 45), (42, 20, 58), (8, 12, 28)), "accent": (120, 205, 255)},
 ]
 
+# ASCII-only, percent-encoded filenames avoid Unicode corruption when PyGBag
+# converts Python strings into browser DOM URLs.
+WEB_AUDIO_FILES = (
+    "%EB%82%98%EB%8B%A4%EC%9B%80.mp4",
+    "%EC%88%99%EB%AA%85.mp4",
+    "%EC%9D%B4%EB%8B%A8%EC%9D%98%20%EC%8A%A4%ED%83%80.mp4",
+    "Cry%20Baby.mp4",
+    "Make%20Me%20Wonder.mp4",
+    "Mixed%20Nuts.mp4",
+    "Pretender.mp4",
+    "Subtitle.mp4",
+    "TATTOO.mp4",
+    "Universe.mp4",
+    "Yesterday.mp4",
+)
+
 # 성취도를 위한 로컬 기록 딕셔너리
 RECORDS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "records_v2.json")
 
@@ -693,7 +709,7 @@ def start_music(path):
             audio_element.pause()
             # Keep the large music files outside game.tar.gz. GitHub Pages serves
             # the selected track directly, so the browser downloads only one song.
-            audio_element.src = "music/" + os.path.basename(path)
+            audio_element.src = "music/" + WEB_AUDIO_FILES[current_map_idx]
             audio_element.load()
             audio_element.volume = 1.0
             audio_element.play()
