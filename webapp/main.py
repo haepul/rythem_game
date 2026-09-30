@@ -64,19 +64,28 @@ def get_perspective_pos(lane, progress):
 def generate_bg_surface(colors, accent):
     surf = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
     c_top, c_mid, c_bot = colors
-    for y in range(SCREEN_HEIGHT):
-        ratio = y / SCREEN_HEIGHT
+    base_rows = []
+    for y in range(0, SCREEN_HEIGHT, 4):
+        ratio = y / max(1, SCREEN_HEIGHT - 1)
         if ratio < 0.5:
             r1 = ratio * 2
-            r = int(c_top[0] * (1 - r1) + c_mid[0] * r1)
-            g = int(c_top[1] * (1 - r1) + c_mid[1] * r1)
-            b = int(c_top[2] * (1 - r1) + c_mid[2] * r1)
+            base = tuple(int(c_top[i] * (1 - r1) + c_mid[i] * r1) for i in range(3))
         else:
             r2 = (ratio - 0.5) * 2
-            r = int(c_mid[0] * (1 - r2) + c_bot[0] * r2)
-            g = int(c_mid[1] * (1 - r2) + c_bot[1] * r2)
-            b = int(c_mid[2] * (1 - r2) + c_bot[2] * r2)
-        pygame.draw.line(surf, (r, g, b), (0, y), (SCREEN_WIDTH, y))
+            base = tuple(int(c_mid[i] * (1 - r2) + c_bot[i] * r2) for i in range(3))
+        base_rows.append(base)
+
+    # Blend two broad accent glows into the dark base for a layered 2D gradient.
+    for y_index, y in enumerate(range(0, SCREEN_HEIGHT, 4)):
+        base = base_rows[y_index]
+        for x in range(0, SCREEN_WIDTH, 4):
+            glow_right = max(0.0, 1.0 - math.hypot((x - SCREEN_WIDTH * 0.78) / 430.0,
+                                                  (y - SCREEN_HEIGHT * 0.20) / 300.0))
+            glow_left = max(0.0, 1.0 - math.hypot((x - SCREEN_WIDTH * 0.16) / 360.0,
+                                                 (y - SCREEN_HEIGHT * 0.82) / 280.0))
+            blend = min(0.30, glow_right * 0.21 + glow_left * 0.12)
+            color = tuple(int(base[i] * (1.0 - blend) + accent[i] * blend) for i in range(3))
+            pygame.draw.rect(surf, color, (x, y, 4, 4))
         
     for _ in range(20):
         rx = random.randint(0, SCREEN_WIDTH)
@@ -424,10 +433,10 @@ perfect_count, great_count, miss_count = 0, 0, 0
 APPROACH_TIME = 1.2
 PERFECT_TIME = 0.07
 GREAT_TIME = 0.15
-LONG_NOTE_HEAD_WINDOW = 0.25
-LONG_NOTE_RELEASE_GRACE = 0.22
+LONG_NOTE_HEAD_WINDOW = 0.23
+LONG_NOTE_RELEASE_GRACE = 0.20
 LONG_NOTE_TICK_LATE = 0.08
-SLIDE_LANE_TOLERANCE = 0.76
+SLIDE_LANE_TOLERANCE = 0.72
 
 active_touches = {}
 key_lanes_down = set()
@@ -700,12 +709,18 @@ def draw_home(mouse_pos, mouse_click):
             pygame.draw.rect(screen, (241, 244, 255), rect, width=2, border_radius=14)
 
     # Controls are deliberately separated from song cards, like a web player action bar.
-    play_button = pygame.Rect(226, 406, 128, 44)
-    practice_button = pygame.Rect(365, 406, 150, 44)
-    editor_button = pygame.Rect(526, 406, 166, 44)
+    if sys.platform == "emscripten":
+        play_button = pygame.Rect(255, 406, 128, 44)
+        practice_button = pygame.Rect(394, 406, 150, 44)
+        editor_button = None
+    else:
+        play_button = pygame.Rect(226, 406, 128, 44)
+        practice_button = pygame.Rect(365, 406, 150, 44)
+        editor_button = pygame.Rect(526, 406, 166, 44)
     draw_button(screen, play_button, "PLAY CHART", selected["accent"], True)
     draw_button(screen, practice_button, "PRACTICE", (69, 197, 161))
-    draw_button(screen, editor_button, "CHART STUDIO", (154, 135, 255))
+    if editor_button is not None:
+        draw_button(screen, editor_button, "CHART STUDIO", (154, 135, 255))
     draw_styled_text(screen, "D F J K  ·  MOUSE & TOUCH     /     VOLUME: SLIDER OR - / +", font_small, SCREEN_WIDTH // 2, 466, (140, 153, 184))
     if home_notice and time.time() < home_notice_until:
         notice_box = pygame.Rect(253, 378, 524, 24)
@@ -720,7 +735,7 @@ def draw_home(mouse_pos, mouse_click):
                 return None
         if play_button.collidepoint(mouse_pos): return "play"
         if practice_button.collidepoint(mouse_pos): return "practice"
-        if editor_button.collidepoint(mouse_pos): return "editor"
+        if editor_button is not None and editor_button.collidepoint(mouse_pos): return "editor"
     return None
 
 def _analyze_for_game(job, audio_path, difficulty):
@@ -1237,9 +1252,10 @@ async def main():
                         spawn_particles(hit_x, hit_y, (255, 255, 255), count=25, power=1.4)
 
                 elif note["type"] == "SLIDE":
-                    t_head = play_time if note["active"] else note["time"]
                     t_tail = note["end_time"]
-                    t_vis_min = max(t_head, play_time - 0.05 * APPROACH_TIME)
+                    # Anchor the path to the chart's actual endpoints at every
+                    # frame. Early contact must not extend it before its head.
+                    t_vis_min = max(note["time"], play_time)
                     t_vis_max = min(t_tail, play_time + APPROACH_TIME)
                     
                     if t_vis_min < t_vis_max:
@@ -1249,18 +1265,16 @@ async def main():
                             t_curr = t_vis_min + (t_vis_max - t_vis_min) * (s / steps)
                             slide_ratio = (t_curr - note["time"]) / (note["end_time"] - note["time"])
                             curr_lane = note["lane"] + (note["end_lane"] - note["lane"]) * slide_ratio
-                            
-                            if note["active"]:
-                                p_ratio = (t_curr - play_time) / (note["end_time"] - play_time) if note["end_time"] > play_time else 0
-                                curr_p = 1.0 - p_ratio * (1.0 - (1.0 - ((note["end_time"] - play_time) / APPROACH_TIME)))
-                            else:
-                                curr_p = 1.0 - ((t_curr - play_time) / APPROACH_TIME)
-                            
+                            curr_p = 1.0 - ((t_curr - play_time) / APPROACH_TIME)
                             xc, yc, wc = get_perspective_pos(curr_lane, curr_p)
                             pts_l.append((xc - wc * 0.46, yc))
                             pts_r.append((xc + wc * 0.46, yc))
-                        pygame.draw.polygon(screen, SLIDE_BOT, pts_l + pts_r[::-1])
-                        pygame.draw.polygon(screen, (255, 255, 255), pts_l + pts_r[::-1], 2)
+                        for segment in range(steps):
+                            tint = interpolate_color(SLIDE_TOP, SLIDE_BOT, (segment + 0.5) / steps)
+                            quad = (pts_l[segment], pts_r[segment], pts_r[segment + 1], pts_l[segment + 1])
+                            pygame.draw.polygon(screen, tint, quad)
+                        outline = pts_l + pts_r[::-1]
+                        pygame.draw.polygon(screen, (244, 240, 255), outline, 2)
 
                     slide_duration = max(0.001, note["end_time"] - note["time"])
                     slide_ratio = max(0.0, min(1.0, (play_time - note["time"]) / slide_duration))
