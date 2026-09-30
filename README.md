@@ -12,4 +12,4 @@ $archive = Get-ChildItem .\build\web\*.tar.gz | Select-Object -First 1
 Copy-Item $archive.FullName .\game.tar.gz -Force
 ```
 
-The archive must remain named `game.tar.gz`, which is what `index.html` loads. Keep `music/*.mp4` at the repository root for GitHub Pages audio streaming.
+The archive must remain named `game.tar.gz`, which is what `index.html` loads. Increment the `v=` value in `index.html` whenever replacing the archive so browsers do not keep an older cached build. Keep `music/*.mp4` at the repository root for GitHub Pages audio streaming.
