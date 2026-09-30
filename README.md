@@ -4,12 +4,16 @@ GitHub Pages build for the Pygame rhythm game. The page loads `game.tar.gz`; tra
 
 ## Rebuild the web archive
 
-With Python 3.12 and Pygbag 0.9.3 installed, run from this directory:
+The browser build uses `webapp/` so the music files stay outside the startup
+archive. After changing the game source or charts, copy the matching files from
+the repository root into `webapp/`, then run this from the repository root:
 
 ```powershell
+Copy-Item .\main.py, .\auto_chart.py, .\auto_charts.json, .\charts.json, .\font.ttf .\webapp\ -Force
+Push-Location .\webapp
 python -m pygbag --build --PYBUILD 3.12 --app_name RhythmStage --title "Rhythm Stage" .
-$archive = Get-ChildItem .\build\web\*.tar.gz | Select-Object -First 1
-Copy-Item $archive.FullName .\game.tar.gz -Force
+Pop-Location
+Copy-Item .\webapp\build\web\webapp.tar.gz .\game.tar.gz -Force
 ```
 
 The archive must remain named `game.tar.gz`, which is what `index.html` loads. Increment the `v=` value in `index.html` whenever replacing the archive so browsers do not keep an older cached build. Keep `music/*.mp4` at the repository root for GitHub Pages audio streaming.

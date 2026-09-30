@@ -65,7 +65,7 @@ def _fft(real, imag, bit_reversed):
     return reordered_real, reordered_imag
 
 
-def _spectral_flux(samples, frame_size=512, hop_size=256):
+def _spectral_flux(samples, sample_rate, frame_size=512, hop_size=256):
     if len(samples) < frame_size:
         raise ValueError("분석할 수 있는 오디오 길이가 부족합니다.")
     half = frame_size // 2
@@ -80,7 +80,9 @@ def _spectral_flux(samples, frame_size=512, hop_size=256):
         bit_reversed.append(result)
 
     previous = [0.0] * (half + 1)
-    flux, frame_energy = [], []
+    flux, frame_energy, melody_pitch, melody_salience = [], [], [], []
+    melody_low = max(4, round(180 * frame_size / sample_rate))
+    melody_high = min(70, half // 3, round(1200 * frame_size / sample_rate))
     for start in range(0, len(samples) - frame_size + 1, hop_size):
         real = [samples[start + i] * window[i] for i in range(frame_size)]
         imag = [0.0] * frame_size
@@ -99,8 +101,35 @@ def _spectral_flux(samples, frame_size=512, hop_size=256):
         else:
             flux.append(0.0)
         frame_energy.append(energy)
+        # Estimate a melodic fundamental using harmonic support. Percussion and
+        # bass still contribute to onset timing, but pitch movement in the
+        # vocal/instrument range now gets a separate signal for note selection.
+        best_score, best_bin = 0.0, 0
+        for fundamental in range(melody_low, melody_high + 1):
+            score = current[fundamental]
+            for harmonic, weight in ((2, 0.75), (3, 0.48), (4, 0.30)):
+                band = fundamental * harmonic
+                if band <= half:
+                    score += current[band] * weight
+            if score > best_score:
+                best_score, best_bin = score, fundamental
+        band_total = sum(current[melody_low:min(melody_high * 4 + 1, half + 1)])
+        if best_bin:
+            # Parabolic interpolation reduces FFT-bin pitch jitter.
+            left = current[best_bin - 1] if best_bin > 0 else current[best_bin]
+            middle = current[best_bin]
+            right = current[best_bin + 1] if best_bin < half else middle
+            denom = left - 2.0 * middle + right
+            fraction = 0.5 * (left - right) / denom if abs(denom) > 1e-12 else 0.0
+            refined_bin = best_bin + max(-0.5, min(0.5, fraction))
+            frequency = refined_bin * sample_rate / frame_size
+            melody_pitch.append(69.0 + 12.0 * math.log2(max(1.0, frequency) / 440.0))
+            melody_salience.append(min(1.0, best_score / (band_total + 1e-9)))
+        else:
+            melody_pitch.append(None)
+            melody_salience.append(0.0)
         previous = current
-    return flux, frame_energy
+    return flux, frame_energy, melody_pitch, melody_salience
 
 
 def _tempo_and_phase(flux, hop_seconds, preferred_bpm):
@@ -161,7 +190,7 @@ def _tempo_and_phase(flux, hop_seconds, preferred_bpm):
     return 60.0 / period_seconds, best_phase * hop_seconds, confidence, alternatives, period_frames
 
 
-def _find_onsets(flux, hop_seconds):
+def _find_onsets(flux, hop_seconds, melody_pitch=None, melody_salience=None):
     count = len(flux)
     prefix = [0.0] * (count + 1)
     squares = [0.0] * (count + 1)
@@ -190,36 +219,100 @@ def _find_onsets(flux, hop_seconds):
     for item in sorted(raw, key=lambda x: x[2], reverse=True):
         if all(abs(item[0] - prev[0]) >= gap for prev in selected):
             selected.append(item)
-    return sorted(selected)
+    selected.sort()
+
+    # Detect clear melodic note changes even when their attack is softer than
+    # the drums. Require a meaningful pitch move and stable harmonic support so
+    # vibrato does not fill the chart with spurious notes.
+    melodic = []
+    if melody_pitch and melody_salience:
+        refractory = max(4, round(0.10 / hop_seconds))
+        for i in range(5, min(count - 3, len(melody_pitch) - 3)):
+            before = [value for value in melody_pitch[i - 5:i - 2] if value is not None]
+            after = [value for value in melody_pitch[i:i + 3] if value is not None]
+            if len(before) < 2 or len(after) < 2:
+                continue
+            old_pitch = sorted(before)[len(before) // 2]
+            new_pitch = sorted(after)[len(after) // 2]
+            change = abs(new_pitch - old_pitch)
+            salience = sum(melody_salience[i:i + 3]) / 3.0
+            if change >= 1.8 and salience >= 0.035:
+                melodic.append((i, change * salience))
+        sparse = []
+        for frame, score in sorted(melodic, key=lambda row: row[1], reverse=True):
+            if all(abs(frame - prev[0]) >= refractory for prev in sparse):
+                sparse.append((frame, score))
+
+        for frame, score in sparse:
+            nearby = [j for j, item in enumerate(selected)
+                      if abs(item[0] - frame) <= max(2, round(0.09 / hop_seconds))]
+            if nearby:
+                j = min(nearby, key=lambda index: abs(selected[index][0] - frame))
+                old_frame, strength, peak = selected[j]
+                selected[j] = (old_frame, strength, peak, max(score, selected[j][3] if len(selected[j]) > 3 else 0.0))
+            else:
+                selected.append((frame, 0.35 + min(2.0, score), flux[frame], score))
+
+    enriched = []
+    for item in selected:
+        frame, strength, peak = item[:3]
+        change_score = item[3] if len(item) > 3 else 0.0
+        pitch = melody_pitch[frame] if melody_pitch and frame < len(melody_pitch) else None
+        salience = melody_salience[frame] if melody_salience and frame < len(melody_salience) else 0.0
+        enriched.append({"frame": frame, "strength": strength, "peak": peak,
+                         "melody_change": change_score, "pitch": pitch,
+                         "melody_salience": salience})
+    return sorted(enriched, key=lambda item: item["frame"])
 
 
-def _select_quantized_onsets(onsets, bpm, offset, hop_seconds, level):
+def _select_quantized_onsets(onsets, bpm, offset, hop_seconds, level, duration=None):
     beat_seconds = 60.0 / bpm
+    difficulty = "easy" if level <= 2 else "hard" if level <= 6 else "master"
+    limits = {"easy": (3, 0.48), "hard": (8, 0.24), "master": (18, 0.12)}
+    per_bar, min_gap = limits[difficulty]
     by_slot = {}
-    for frame, strength, peak in onsets:
-        seconds = frame * hop_seconds
+    for onset in onsets:
+        seconds = onset["frame"] * hop_seconds
+        if duration is not None and seconds >= duration:
+            continue
         beat = (seconds - offset) / beat_seconds
         if beat < 0:
             continue
-        slot = round(beat * 4.0)
-        quantized = slot / 4.0
-        if abs(beat - quantized) > 0.16:
-            continue
-        previous = by_slot.get(slot)
-        if previous is None or strength > previous["strength"]:
-            by_slot[slot] = {"beat": quantized, "strength": strength, "frame": frame, "peak": peak}
+        # Use a fine grid only when the detected melody attack is already
+        # close. Keep expressive/off-grid attacks at their measured timestamp.
+        slot = round(beat * 8.0)
+        snapped = slot / 8.0
+        chart_beat = snapped if abs(beat - snapped) <= 0.11 else beat
+        onset = {**onset, "beat": chart_beat}
+        # Several spectral peaks can describe one attack. Keep its strongest
+        # melodic/percussive evidence rather than stacking duplicate notes.
+        slot_key = round(seconds / max(0.04, min_gap * beat_seconds))
+        score = (onset["strength"] * 0.25 +
+                 min(2.0, onset["melody_change"]) * 1.35 +
+                 onset["melody_salience"] * 3.5 +
+                 min(0.7, max(0.0, onset["peak"]) * 0.015))
+        onset["selection_score"] = score
+        previous = by_slot.get(slot_key)
+        if previous is None or score > previous["selection_score"]:
+            by_slot[slot_key] = onset
 
     if not by_slot:
         return []
-    per_bar = 2 if level <= 2 else 3 if level <= 5 else 4 if level <= 8 else 5
     bars = {}
     for item in by_slot.values():
         bar = int(item["beat"] // 4)
         bars.setdefault(bar, []).append(item)
     chosen = []
     for bar_items in bars.values():
-        bar_items.sort(key=lambda item: item["strength"] + (0.3 if item["beat"] % 4.0 < 0.25 else 0.0), reverse=True)
-        chosen.extend(bar_items[:per_bar])
+        bar_items.sort(key=lambda item: item["selection_score"] +
+                       (0.20 if item["beat"] % 4.0 < 0.25 else 0.0), reverse=True)
+        bar_chosen = []
+        for item in bar_items:
+            if all(abs(item["beat"] - prev["beat"]) >= min_gap for prev in bar_chosen):
+                bar_chosen.append(item)
+                if len(bar_chosen) >= per_bar:
+                    break
+        chosen.extend(bar_chosen)
     return sorted(chosen, key=lambda item: item["beat"])
 
 
@@ -262,8 +355,9 @@ def _make_note_events(selected, frame_energy, bpm, hop_seconds, level):
             following = events[index + 1] if index + 1 < len(events) else None
             gap = following["beat"] - current["beat"] if following else 0.0
             phrase_slot = int(round(current["beat"] * 4.0))
+            slide_period = 5 if level >= 8 else 9
             if (following and current["type"] == following["type"] == "TAP"
-                    and 0.5 <= gap <= 1.0 and phrase_slot % 7 == level % 7):
+                    and 0.375 <= gap <= 1.0 and phrase_slot % slide_period == level % slide_period):
                 converted.append({"type": "SLIDE", "beat": current["beat"], "end_beat": following["beat"],
                                   "strength": (current["strength"] + following["strength"]) * 0.5})
                 index += 2
@@ -333,25 +427,74 @@ def _optimize_lanes(events, level):
     return output
 
 
-def generate_auto_chart(path, preferred_bpm=120.0, level=5):
-    """Run STFT -> spectral flux -> onset -> beat grid -> starter chart."""
+def _add_master_chords(events):
+    """Add two-lane accents at the strongest detected melodic attacks."""
+    taps = [(index, event) for index, event in enumerate(events) if event["type"] == "TAP"]
+    if len(taps) < 8:
+        return events
+    extra_count = max(1, round(len(taps) * 0.16))
+    featured = sorted(taps, key=lambda pair: pair[1]["strength"], reverse=True)[:extra_count]
+    # Avoid stacking the added chord on an existing nearby sustain start.
+    existing_beats = [event["beat"] for event in events]
+    extras = []
+    for index, event in featured:
+        if any(other_index != index and abs(beat - event["beat"]) < 0.08
+               for other_index, beat in enumerate(existing_beats)):
+            continue
+        extras.append({**event, "chord_accent": True})
+    return sorted(events + extras, key=lambda event: (event["beat"], not event.get("chord_accent", False)))
+
+
+def _generate_levels_from_audio(path, preferred_bpm):
+    """Analyze once, then select distinct melody-led Easy/Hard/Master charts."""
     samples, sample_rate = _downsample_mono(path)
     frame_size, hop_size = 512, 256
     hop_seconds = hop_size / sample_rate
-    flux, frame_energy = _spectral_flux(samples, frame_size, hop_size)
+    flux, frame_energy, melody_pitch, melody_salience = _spectral_flux(
+        samples, sample_rate, frame_size, hop_size)
     bpm, offset, confidence, alternatives, _ = _tempo_and_phase(flux, hop_seconds, preferred_bpm)
-    onsets = _find_onsets(flux, hop_seconds)
-    selected = _select_quantized_onsets(onsets, bpm, offset, hop_seconds, level)
-    events = _make_note_events(selected, frame_energy, bpm, hop_seconds, level)
-    notes = _optimize_lanes(events, level)
-    counts = {kind: sum(note["type"] == kind for note in notes) for kind in ("TAP", "HOLD", "SLIDE")}
+    onsets = _find_onsets(flux, hop_seconds, melody_pitch, melody_salience)
+    duration = len(samples) / sample_rate
+    charts = {}
+    for name, level in (("easy", 1), ("hard", 5), ("master", 9)):
+        selected = _select_quantized_onsets(onsets, bpm, offset, hop_seconds, level, duration)
+        events = _make_note_events(selected, frame_energy, bpm, hop_seconds, level)
+        if name == "master":
+            events = _add_master_chords(events)
+        notes = _optimize_lanes(events, level)
+        counts = {kind: sum(note["type"] == kind for note in notes)
+                  for kind in ("TAP", "HOLD", "SLIDE")}
+        charts[name] = {"notes": notes, "type_counts": counts, "selected_count": len(selected)}
     return {
         "bpm": bpm,
         "offset": offset,
         "confidence": confidence,
         "alternatives": alternatives,
         "onset_count": len(onsets),
-        "selected_count": len(selected),
-        "notes": notes,
-        "type_counts": counts,
+        "duration": duration,
+        "difficulty_charts": charts,
+        # Flat Hard fields keep older Chart Studio and cached-chart readers compatible.
+        "selected_count": charts["hard"]["selected_count"],
+        "notes": charts["hard"]["notes"],
+        "type_counts": charts["hard"]["type_counts"],
     }
+
+
+def generate_auto_chart_levels(path, preferred_bpm=None):
+    """Build all three selectable difficulties from the same melody analysis."""
+    return _generate_levels_from_audio(path, preferred_bpm)
+
+
+def generate_auto_chart(path, preferred_bpm=120.0, level=5):
+    """Compatibility API for Chart Studio; level selects one chart tier."""
+    result = _generate_levels_from_audio(path, preferred_bpm)
+    if isinstance(level, str):
+        difficulty = level.lower()
+    else:
+        difficulty = "easy" if level <= 2 else "hard" if level <= 6 else "master"
+    if difficulty not in result["difficulty_charts"]:
+        difficulty = "hard"
+    selected = result["difficulty_charts"][difficulty]
+    result.update(notes=selected["notes"], type_counts=selected["type_counts"],
+                  selected_count=selected["selected_count"], difficulty=difficulty)
+    return result

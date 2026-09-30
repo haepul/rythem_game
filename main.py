@@ -1,6 +1,6 @@
 import asyncio  # 상단에 추가
 import pygame
-from auto_chart import generate_auto_chart
+from auto_chart import generate_auto_chart, generate_auto_chart_levels
 import time
 import random
 import sys
@@ -98,6 +98,24 @@ def interpolate_color(c1, c2, t):
         int(c1[2] + (c2[2] - c1[2]) * t)
     )
 
+def combo_gradient_colors(combo_count):
+    """Return a smoothly shifting note gradient tied to the active combo."""
+    stops = (
+        (0,   (255, 242, 255), (247, 93, 187)),
+        (10,  (203, 252, 255), (34, 194, 255)),
+        (35,  (225, 214, 255), (119, 91, 255)),
+        (75,  (255, 210, 235), (255, 69, 173)),
+        (150, (255, 247, 190), (255, 150, 38)),
+        (300, (255, 255, 255), (75, 236, 211)),
+    )
+    if combo_count <= stops[0][0]:
+        return stops[0][1], stops[0][2]
+    for first, second in zip(stops, stops[1:]):
+        if combo_count <= second[0]:
+            phase = (combo_count - first[0]) / (second[0] - first[0])
+            return interpolate_color(first[1], second[1], phase), interpolate_color(first[2], second[2], phase)
+    return stops[-1][1], stops[-1][2]
+
 def draw_styled_text(surface, text, font, center_x, center_y, text_color, shadow_color=(0, 0, 0), scale=1.0):
     base_img = font.render(text, True, text_color)
     shadow_img = font.render(text, True, shadow_color)
@@ -142,17 +160,18 @@ def draw_gradient_note(surface, lane, p_top, p_bot, color_top, color_bot, width_
 # 4. 곡 데이터 (난이도 이름 적용) 및 로컬 기록 저장소
 # ---------------------------------------------------------
 MAP_LIST = [
-    {"title": "나다움", "song": "나다움", "level": 1, "bpm": 165, "offset": 0.0, "duration": 309.08, "audio": "나다움.mp4", "colors": ((15, 35, 25), (10, 50, 40), (5, 20, 15)), "accent": (100, 255, 180)},
-    {"title": "숙명", "song": "숙명", "level": 2, "bpm": 164, "offset": 0.0, "duration": 282.97, "audio": "숙명.mp4", "colors": ((25, 20, 40), (40, 30, 60), (10, 10, 25)), "accent": (180, 150, 255)},
-    {"title": "이단의 스타", "song": "이단의 스타", "level": 3, "bpm": 98, "offset": 0.0, "duration": 292.16, "audio": "이단의 스타.mp4", "colors": ((50, 15, 25), (60, 25, 20), (20, 5, 10)), "accent": (255, 120, 80)},
-    {"title": "Cry Baby", "song": "Cry Baby", "level": 4, "bpm": 200, "offset": 0.0, "duration": 240.45, "audio": "Cry Baby.mp4", "colors": ((10, 15, 35), (15, 25, 55), (5, 5, 15)), "accent": (80, 160, 255)},
-    {"title": "Make Me Wonder", "song": "Make Me Wonder", "level": 5, "bpm": 115, "offset": 0.0, "duration": 239.66, "audio": "Make Me Wonder.mp4", "colors": ((35, 10, 40), (50, 10, 60), (15, 5, 20)), "accent": (255, 50, 200)},
-    {"title": "Mixed Nuts", "song": "Mixed Nuts", "level": 6, "bpm": 150, "offset": 0.0, "duration": 215.93, "audio": "Mixed Nuts.mp4", "colors": ((10, 25, 40), (15, 40, 60), (5, 15, 25)), "accent": (100, 200, 255)},
-    {"title": "Pretender", "song": "Pretender", "level": 7, "bpm": 92, "offset": 0.0, "duration": 325.18, "audio": "Pretender.mp4", "colors": ((30, 30, 10), (50, 50, 15), (15, 15, 5)), "accent": (255, 230, 50)},
-    {"title": "Subtitle", "song": "Subtitle", "level": 8, "bpm": 130, "offset": 0.0, "duration": 310.76, "audio": "Subtitle.mp4", "colors": ((45, 25, 10), (60, 35, 15), (20, 10, 5)), "accent": (255, 160, 50)},
-    {"title": "TATTOO", "song": "TATTOO", "level": 9, "bpm": 194, "offset": 0.0, "duration": 291.30, "audio": "TATTOO.mp4", "colors": ((10, 40, 45), (15, 60, 65), (5, 20, 25)), "accent": (0, 255, 220)},
-    {"title": "Universe", "song": "Universe", "level": 10, "bpm": 186, "offset": 0.0, "duration": 285.20, "audio": "Universe.mp4", "colors": ((45, 10, 10), (65, 15, 15), (20, 5, 5)), "accent": (255, 60, 60)},
-    {"title": "Yesterday", "song": "Yesterday", "level": 9, "bpm": 130, "offset": 0.0, "duration": 300.50, "audio": "Yesterday.mp4", "colors": ((20, 25, 45), (42, 20, 58), (8, 12, 28)), "accent": (120, 205, 255)},
+    {"title": "나다움", "song": "나다움", "level": 1, "bpm": 165, "offset": 0.0, "duration": 309.034, "audio": "나다움.mp4", "colors": ((15, 35, 25), (10, 50, 40), (5, 20, 15)), "accent": (100, 255, 180)},
+    {"title": "숙명", "song": "숙명", "level": 2, "bpm": 164, "offset": 0.0, "duration": 282.935, "audio": "숙명.mp4", "colors": ((25, 20, 40), (40, 30, 60), (10, 10, 25)), "accent": (180, 150, 255)},
+    {"title": "이단의 스타", "song": "이단의 스타", "level": 3, "bpm": 98, "offset": 0.0, "duration": 292.130, "audio": "이단의 스타.mp4", "colors": ((50, 15, 25), (60, 25, 20), (20, 5, 10)), "accent": (255, 120, 80)},
+    {"title": "Cry Baby", "song": "Cry Baby", "level": 4, "bpm": 200, "offset": 0.0, "duration": 240.419, "audio": "Cry Baby.mp4", "colors": ((10, 15, 35), (15, 25, 55), (5, 5, 15)), "accent": (80, 160, 255)},
+    {"title": "Make Me Wonder", "song": "Make Me Wonder", "level": 5, "bpm": 115, "offset": 0.0, "duration": 239.630, "audio": "Make Me Wonder.mp4", "colors": ((35, 10, 40), (50, 10, 60), (15, 5, 20)), "accent": (255, 50, 200)},
+    {"title": "Mixed Nuts", "song": "Mixed Nuts", "level": 6, "bpm": 150, "offset": 0.0, "duration": 215.899, "audio": "Mixed Nuts.mp4", "colors": ((10, 25, 40), (15, 40, 60), (5, 15, 25)), "accent": (100, 200, 255)},
+    {"title": "Pretender", "song": "Pretender", "level": 7, "bpm": 92, "offset": 0.0, "duration": 325.149, "audio": "Pretender.mp4", "colors": ((30, 30, 10), (50, 50, 15), (15, 15, 5)), "accent": (255, 230, 50)},
+    {"title": "Universe", "song": "Universe", "level": 10, "bpm": 186, "offset": 0.0, "duration": 285.164, "audio": "Universe.mp4", "colors": ((45, 10, 10), (65, 15, 15), (20, 5, 5)), "accent": (255, 60, 60)},
+    {"title": "괴수의 꽃노래", "song": "괴수의 꽃노래", "level": 8, "bpm": 135, "offset": 0.0, "duration": 225.210, "audio": "괴수의 꽃노래.mp4", "colors": ((34, 12, 42), (76, 20, 48), (16, 8, 24)), "accent": (255, 122, 190)},
+    {"title": "라일락", "song": "라일락", "level": 8, "bpm": 138, "offset": 0.0, "duration": 291.596, "audio": "라일락.mp4", "colors": ((28, 20, 52), (58, 34, 84), (13, 10, 35)), "accent": (194, 153, 255)},
+    {"title": "최종화", "song": "최종화", "level": 9, "bpm": 130, "offset": 0.0, "duration": 255.187, "audio": "최종화.mp4", "colors": ((34, 28, 12), (82, 56, 22), (20, 12, 8)), "accent": (255, 208, 118)},
+    {"title": "Ray", "song": "Ray", "level": 8, "bpm": 130, "offset": 0.0, "duration": 301.767, "audio": "Ray.mp4", "colors": ((10, 34, 50), (20, 60, 84), (5, 15, 33)), "accent": (98, 223, 255)},
 ]
 
 # ASCII-only, percent-encoded filenames avoid Unicode corruption when PyGBag
@@ -165,11 +184,14 @@ WEB_AUDIO_FILES = (
     "Make%20Me%20Wonder.mp4",
     "Mixed%20Nuts.mp4",
     "Pretender.mp4",
-    "Subtitle.mp4",
-    "TATTOO.mp4",
     "Universe.mp4",
-    "Yesterday.mp4",
+    "%EA%B4%B4%EC%88%98%EC%9D%98%20%EA%BD%83%EB%85%B8%EB%9E%98.mp4",
+    "%EB%9D%BC%EC%9D%BC%EB%9D%BD.mp4",
+    "%EC%B5%9C%EC%A2%85%ED%99%94.mp4",
+    "Ray.mp4",
 )
+
+DIFFICULTIES = {"easy": "EASY", "hard": "HARD", "master": "MASTER"}
 
 # 성취도를 위한 로컬 기록 딕셔너리
 RECORDS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "records_v2.json")
@@ -240,6 +262,17 @@ def get_auto_chart_entry(audio_name):
         return None
     return entry
 
+def chart_entry_for_difficulty(entry, difficulty):
+    """Expose the selected tier while keeping the common BPM/phase metadata."""
+    if not isinstance(entry, dict):
+        return {}
+    variants = entry.get("difficulty_charts", {})
+    if isinstance(variants, dict) and isinstance(variants.get(difficulty), dict):
+        return {**entry, **variants[difficulty]}
+    # Older saves contain a single hand-authored chart. Keep them playable;
+    # freshly analyzed songs carry all three variants in difficulty_charts.
+    return entry
+
 def save_auto_chart_entry(audio_name, entry, signature):
     global _auto_chart_meta_cache
     stem = os.path.splitext(os.path.basename(audio_name))[0]
@@ -253,16 +286,16 @@ def save_auto_chart_entry(audio_name, entry, signature):
 
 def get_saved_bpm(audio_name, default_bpm):
     """Show the BPM saved in Chart Studio, refreshing after an editor save."""
-    manual = get_manual_chart_entry(audio_name)
-    if isinstance(manual, dict) and manual.get("notes"):
-        try:
-            return float(manual.get("bpm", default_bpm))
-        except (TypeError, ValueError):
-            pass
     automatic = get_auto_chart_entry(audio_name)
     if automatic:
         try:
             return float(automatic.get("bpm", default_bpm))
+        except (TypeError, ValueError):
+            pass
+    manual = get_manual_chart_entry(audio_name)
+    if isinstance(manual, dict) and manual.get("notes"):
+        try:
+            return float(manual.get("bpm", default_bpm))
         except (TypeError, ValueError):
             pass
     try:
@@ -365,6 +398,8 @@ def generate_chart(level, duration, bpm, offset=0.0):
 state = "HOME"
 current_map, current_map_idx = None, -1
 selected_map_idx = 0
+selected_difficulty = "hard"
+current_difficulty = "hard"
 practice_mode = False
 current_bpm = 120.0
 current_offset = 0.0
@@ -511,7 +546,7 @@ def draw_album_art(surface, rect, accent, index):
     pygame.draw.rect(surface, accent, rect, width=2, border_radius=14)
 
 def draw_home(mouse_pos, mouse_click):
-    global selected_map_idx
+    global selected_map_idx, selected_difficulty
     screen.blit(default_bg_surface, (0, 0))
     overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
     pygame.draw.circle(overlay, (64, 77, 174, 32), (680, 80), 260)
@@ -535,11 +570,21 @@ def draw_home(mouse_pos, mouse_click):
     title_font = font_med if len(selected["song"]) < 17 else font_small
     draw_styled_text(screen, selected["song"], title_font, hero.centerx, hero.y + 164, (248, 249, 255))
     selected_bpm = get_saved_bpm(selected["audio"], selected["bpm"])
-    draw_styled_text(screen, f"LV. {selected['level']}   ·   {selected_bpm:g} BPM", font_small, hero.centerx, hero.y + 194, selected["accent"])
+    draw_styled_text(screen, f"{DIFFICULTIES[selected_difficulty]}   ·   {selected_bpm:g} BPM", font_small, hero.centerx, hero.y + 194, selected["accent"])
     draw_styled_text(screen, f"{format_time(selected['duration'])}   ·   4 LANES", font_small, hero.centerx, hero.y + 218, (171, 181, 209))
-    record = player_records[selected_map_idx]
-    record_label = f"BEST  {record['grade']}" + ("   FULL COMBO" if record["fc"] else "")
-    draw_styled_text(screen, record_label, font_small, hero.centerx, hero.y + 254, (255, 211, 115) if record["grade"] != "-" else (113, 124, 153))
+    draw_styled_text(screen, "SELECT CHART LEVEL", font_small, hero.centerx, hero.y + 238, (142, 156, 194))
+    difficulty_buttons = {}
+    button_y = hero.y + 250
+    button_x = hero.x + 13
+    for index, difficulty in enumerate(("easy", "hard", "master")):
+        rect = pygame.Rect(button_x + index * 62, button_y, 58, 25)
+        difficulty_buttons[difficulty] = rect
+        active = difficulty == selected_difficulty
+        fill = selected["accent"] if active else (25, 31, 52)
+        ink = (14, 18, 33) if active else (184, 195, 222)
+        pygame.draw.rect(screen, fill, rect, border_radius=8)
+        pygame.draw.rect(screen, (235, 240, 255) if active else (61, 72, 104), rect, 1, border_radius=8)
+        draw_styled_text(screen, DIFFICULTIES[difficulty], font_small, rect.centerx, rect.centery, ink)
 
     grid_x, grid_y = 252, 102
     card_w, card_h, gap_x, gap_y = 126, 87, 7, 8
@@ -576,6 +621,10 @@ def draw_home(mouse_pos, mouse_click):
         draw_styled_text(screen, home_notice, font_small, notice_box.centerx, notice_box.centery, (218, 235, 255))
 
     if mouse_click:
+        for difficulty, rect in difficulty_buttons.items():
+            if rect.collidepoint(mouse_pos):
+                selected_difficulty = difficulty
+                return None
         if play_button.collidepoint(mouse_pos): return "play"
         if practice_button.collidepoint(mouse_pos): return "practice"
         if editor_button.collidepoint(mouse_pos): return "editor"
@@ -583,32 +632,36 @@ def draw_home(mouse_pos, mouse_click):
 
 def _analyze_for_game(job, audio_path, difficulty):
     try:
-        # The chart generator estimates tempo/phase first and quantizes every
-        # selected onset against that exact grid; a stale hand-entered BPM is
-        # deliberately not allowed to steer a new automatic chart.
-        job["result"] = generate_auto_chart(audio_path, preferred_bpm=None, level=difficulty)
+        # Tempo establishes the time scale; melody attacks and pitch movement
+        # decide which moments become notes in each difficulty tier.
+        job["result"] = generate_auto_chart_levels(audio_path, preferred_bpm=None)
         job["signature"] = audio_signature(audio_path)
-        if not job["result"].get("notes"):
-            raise ValueError("박자에 맞는 노트를 찾지 못했습니다. Chart Studio에서 BPM을 확인해 주세요.")
+        variants = job["result"].get("difficulty_charts", {})
+        if any(not variants.get(name, {}).get("notes") for name in DIFFICULTIES):
+            raise ValueError("멜로디 노트를 찾지 못했습니다. 오디오 파일을 확인해 주세요.")
     except Exception as exc:
         job["error"] = str(exc)
     finally:
         job["done"] = True
 
-def request_game_start(m_idx, practice=False):
+def request_game_start(m_idx, practice=False, difficulty=None):
     global auto_analysis_job, state
+    difficulty = difficulty or selected_difficulty
     song = MAP_LIST[m_idx]
+    automatic = get_auto_chart_entry(song["audio"])
+    if automatic and (automatic.get("notes") or automatic.get("difficulty_charts")):
+        start_game(m_idx, practice=practice, chart_entry=automatic,
+                   chart_source="MELODY CHART", difficulty=difficulty)
+        return
     manual = get_manual_chart_entry(song["audio"])
     if isinstance(manual, dict) and manual.get("notes"):
-        start_game(m_idx, practice=practice, chart_entry=manual, chart_source="SAVED CHART")
-        return
-    automatic = get_auto_chart_entry(song["audio"])
-    if automatic and automatic.get("notes"):
-        start_game(m_idx, practice=practice, chart_entry=automatic, chart_source="AUTO CHART")
+        start_game(m_idx, practice=practice, chart_entry=manual,
+                   chart_source="SAVED CHART", difficulty=difficulty)
         return
     if auto_analysis_job is not None:
         if auto_analysis_job.get("map_idx") == m_idx:
             auto_analysis_job["practice"] = practice
+            auto_analysis_job["difficulty"] = difficulty
             auto_analysis_job["pending"] = True
         else:
             set_home_notice("다른 곡을 분석 중입니다. 잠시 후 다시 눌러 주세요.")
@@ -622,9 +675,10 @@ def request_game_start(m_idx, practice=False):
         return
     stop_music()
     auto_analysis_job = {"done": False, "result": None, "error": None,
-                         "map_idx": m_idx, "practice": practice, "pending": True}
+                         "map_idx": m_idx, "practice": practice, "difficulty": difficulty,
+                         "pending": True}
     state = "ANALYZING"
-    threading.Thread(target=_analyze_for_game, args=(auto_analysis_job, audio_path, song["level"]), daemon=True).start()
+    threading.Thread(target=_analyze_for_game, args=(auto_analysis_job, audio_path, difficulty), daemon=True).start()
 
 def draw_analysis_screen():
     screen.blit(default_bg_surface, (0, 0))
@@ -634,23 +688,25 @@ def draw_analysis_screen():
     pygame.draw.circle(screen, (34, 42, 76), center, 56, 2)
     pygame.draw.arc(screen, song["accent"], pygame.Rect(center[0] - 56, center[1] - 56, 112, 112),
                     time.perf_counter() % (math.pi * 2), time.perf_counter() % (math.pi * 2) + 2.2 + pulse, 5)
-    draw_styled_text(screen, "AUDIO → BPM → BEAT GRID → AUTO CHART", font_small, CENTER_X, 90, (177, 191, 223))
+    draw_styled_text(screen, "AUDIO → MELODY DETECTION → AUTO CHART", font_small, CENTER_X, 90, (177, 191, 223))
     draw_styled_text(screen, song["song"], font_large, CENTER_X, 142, (248, 249, 255))
-    draw_styled_text(screen, "곡의 박자와 onset을 분석해 차트를 준비하고 있어요", font_med, CENTER_X, 284, (214, 222, 245))
+    draw_styled_text(screen, "음의 시작과 높낮이를 읽어 3단계 차트를 만들고 있어요", font_med, CENTER_X, 284, (214, 222, 245))
     draw_styled_text(screen, "첫 분석은 잠시 걸릴 수 있습니다 · ESC를 누르면 취소됩니다", font_small, CENTER_X, 323, (137, 151, 184))
-    draw_styled_text(screen, "BPM과 오프셋을 확인한 뒤 같은 박자 그리드로 노트를 생성합니다", font_small, CENTER_X, 350, song["accent"])
+    draw_styled_text(screen, f"선택 난이도  {DIFFICULTIES.get(auto_analysis_job.get('difficulty', 'hard'), 'HARD')}  ·  BPM도 함께 분석합니다", font_small, CENTER_X, 350, song["accent"])
     progress_w = 300
     pygame.draw.rect(screen, (22, 28, 49), (CENTER_X - progress_w // 2, 390, progress_w, 7), border_radius=4)
     sweep = int(progress_w * (0.25 + pulse * 0.3))
     pygame.draw.rect(screen, song["accent"], (CENTER_X - progress_w // 2, 390, sweep, 7), border_radius=4)
 
-def start_game(m_idx, practice=False, chart_entry=None, chart_source="SAVED CHART"):
+def start_game(m_idx, practice=False, chart_entry=None, chart_source="SAVED CHART", difficulty=None):
     global current_map, current_map_idx, chart, total_notes, score, combo, max_combo, hit_score, hp
     global perfect_count, great_count, miss_count, game_start_time, current_bg_surface, state, audio_ended_at
-    global practice_mode, current_bpm, current_offset, current_chart_source
+    global practice_mode, current_bpm, current_offset, current_chart_source, current_difficulty
     
     current_map_idx = m_idx
     current_map = MAP_LIST[m_idx]
+    current_difficulty = difficulty or selected_difficulty
+    chart_entry = chart_entry_for_difficulty(chart_entry, current_difficulty)
     chart, current_bpm, current_offset = load_authored_chart(
         current_map["audio"], current_map["level"], current_map["duration"],
         current_map["bpm"], current_map["offset"], entry_override=chart_entry)
@@ -686,13 +742,16 @@ def finish_auto_analysis():
         return
     song = MAP_LIST[job["map_idx"]]
     result = job["result"]
-    cache_entry = {key: result[key] for key in ("bpm", "offset", "confidence", "alternatives", "notes", "type_counts") if key in result}
+    cache_entry = {key: result[key] for key in (
+        "bpm", "offset", "confidence", "alternatives", "notes", "type_counts",
+        "difficulty_charts", "duration", "onset_count", "selected_count") if key in result}
     try:
         save_auto_chart_entry(song["audio"], cache_entry, job["signature"])
     except OSError as exc:
         print(f"자동채보 캐시를 저장하지 못했습니다: {exc}")
     if job.get("pending"):
-        start_game(job["map_idx"], practice=job["practice"], chart_entry=cache_entry, chart_source="AUTO CHART")
+        start_game(job["map_idx"], practice=job["practice"], chart_entry=cache_entry,
+                   chart_source="MELODY CHART", difficulty=job.get("difficulty", selected_difficulty))
         counts = result.get("type_counts", {})
         set_home_notice(f"자동채보 완료 · {result['bpm']:.2f} BPM · 노트 {len(result['notes'])}개")
 
@@ -832,9 +891,9 @@ async def main():
         if state == "HOME":
             action = draw_home(mouse_pos, mouse_click)
             if action == "play":
-                request_game_start(selected_map_idx)
+                request_game_start(selected_map_idx, difficulty=selected_difficulty)
             elif action == "practice":
-                request_game_start(selected_map_idx, practice=True)
+                request_game_start(selected_map_idx, practice=True, difficulty=selected_difficulty)
             elif action == "editor":
                 stop_music()
                 if sys.platform == "emscripten":
@@ -937,9 +996,14 @@ async def main():
                 key_color = (14, 20, 36) if lane in pressed_lanes else (198, 213, 242)
                 draw_styled_text(screen, ("D", "F", "J", "K")[lane], font_small, cx, cy, key_color)
 
-            TAP_TOP, TAP_BOT = (255, 242, 255), (247, 93, 187)
-            HOLD_TOP, HOLD_BOT = (255, 250, 196), (45, 218, 222)
-            SLIDE_TOP, SLIDE_BOT = (255, 203, 255), (151, 90, 255)
+            combo_top, combo_bottom = combo_gradient_colors(combo)
+            combo_mix = min(1.0, combo / 12.0)
+            TAP_TOP = interpolate_color((255, 242, 255), combo_top, combo_mix)
+            TAP_BOT = interpolate_color((247, 93, 187), combo_bottom, combo_mix)
+            HOLD_TOP = interpolate_color((255, 250, 196), combo_top, combo_mix * 0.8)
+            HOLD_BOT = interpolate_color((45, 218, 222), combo_bottom, combo_mix * 0.8)
+            SLIDE_TOP = interpolate_color((255, 203, 255), combo_top, combo_mix * 0.9)
+            SLIDE_BOT = interpolate_color((151, 90, 255), combo_bottom, combo_mix * 0.9)
 
             for note in chart[:]:
                 if note["hit"]: continue
@@ -1095,7 +1159,7 @@ async def main():
             bar_w, bar_h = 240, 8
             bar_x, bar_y = CENTER_X - bar_w // 2, 35
             time_str = f"{format_time(play_time)} / {format_time(current_map['duration'])}"
-            title_str = f"{current_map['song']}  /  LV.{current_map['level']}  ·  {current_chart_source}"
+            title_str = f"{current_map['song']}  /  {DIFFICULTIES[current_difficulty]}  ·  {current_chart_source}"
             
             pygame.draw.rect(screen, (10, 14, 32), (0, 0, SCREEN_WIDTH, 58))
             draw_styled_text(screen, title_str, font_small, CENTER_X, 15, (200, 240, 255))
@@ -1117,7 +1181,8 @@ async def main():
                 pause_music()
 
             if combo >= 3:
-                draw_styled_text(screen, f"{combo}", font_combo_num, CENTER_X, 150, (255, 220, 0), scale=combo_scale)
+                combo_color = interpolate_color(combo_top, combo_bottom, 0.48)
+                draw_styled_text(screen, f"{combo}", font_combo_num, CENTER_X, 150, combo_color, scale=combo_scale)
                 draw_styled_text(screen, "COMBO", font_combo_sub, CENTER_X, 190, (255, 255, 255))
 
             if time.time() - feedback_time < 0.45:
@@ -1171,7 +1236,7 @@ async def main():
                     game_start_time += (time.perf_counter() - pause_start_time)
                     resume_music()
                 elif btn_retry.collidepoint(mouse_pos):
-                    request_game_start(current_map_idx, practice=practice_mode)
+                    request_game_start(current_map_idx, practice=practice_mode, difficulty=current_difficulty)
                 elif btn_home.collidepoint(mouse_pos):
                     state = "HOME"
                     stop_music()
@@ -1199,7 +1264,7 @@ async def main():
             draw_styled_text(screen, "메뉴로", font_med, btn_home.centerx, btn_home.centery, (255, 255, 255))
             
             if mouse_click:
-                if btn_retry.collidepoint(mouse_pos): request_game_start(current_map_idx)
+                if btn_retry.collidepoint(mouse_pos): request_game_start(current_map_idx, difficulty=current_difficulty)
                 elif btn_home.collidepoint(mouse_pos):
                     state = "HOME"
                     stop_music()
@@ -1247,7 +1312,7 @@ async def main():
                     state = "HOME"
                     stop_music()
                 elif btn_retry.collidepoint(mouse_pos):
-                    request_game_start(current_map_idx, practice=practice_mode)
+                    request_game_start(current_map_idx, practice=practice_mode, difficulty=current_difficulty)
 
         pygame.display.flip()
         
