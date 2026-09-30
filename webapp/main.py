@@ -414,6 +414,8 @@ particles = []
 audio_element = None
 auto_analysis_job = None
 audio_ended_at = None
+ready_start_time = 0.0
+ready_count_in_duration = 2.0
 
 # 판정 횟수 카운터
 perfect_count, great_count, miss_count = 0, 0, 0
@@ -702,6 +704,7 @@ def start_game(m_idx, practice=False, chart_entry=None, chart_source="SAVED CHAR
     global current_map, current_map_idx, chart, total_notes, score, combo, max_combo, hit_score, hp
     global perfect_count, great_count, miss_count, game_start_time, current_bg_surface, state, audio_ended_at
     global practice_mode, current_bpm, current_offset, current_chart_source, current_difficulty
+    global ready_start_time, ready_count_in_duration
     
     current_map_idx = m_idx
     current_map = MAP_LIST[m_idx]
@@ -722,12 +725,49 @@ def start_game(m_idx, practice=False, chart_entry=None, chart_source="SAVED CHAR
     hp = 100.0
     particles.clear()
     current_bg_surface = generate_bg_surface(current_map["colors"], current_map["accent"])
+    stop_music()
+    ready_start_time = time.perf_counter()
+    ready_count_in_duration = min(4.5, max(1.5, 240.0 / max(40.0, current_bpm)))
+    audio_ended_at = None
+    state = "READY"
+    active_touches.clear()
+    key_lanes_down.clear()
+
+def draw_ready_screen():
+    """Show a beat-paced count-in without drawing or advancing chart notes."""
+    screen.blit(current_bg_surface, (0, 0))
+    elapsed = max(0.0, time.perf_counter() - ready_start_time)
+    beat_length = ready_count_in_duration / 4.0
+    count = max(1, 4 - min(3, int(elapsed / beat_length)))
+    beat_phase = (elapsed % beat_length) / beat_length
+    pulse = 0.5 + 0.5 * math.sin(beat_phase * math.pi)
+    overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+    overlay.fill((3, 6, 18, 148))
+    screen.blit(overlay, (0, 0))
+    draw_styled_text(screen, current_map["song"], font_large, CENTER_X, 112, (246, 248, 255))
+    draw_styled_text(screen, f"{DIFFICULTIES[current_difficulty]}  ·  {current_bpm:.1f} BPM", font_small, CENTER_X, 150, current_map["accent"])
+    ring = pygame.Rect(CENTER_X - 74, 188, 148, 148)
+    pygame.draw.circle(screen, (31, 40, 67), ring.center, 70, 2)
+    pygame.draw.arc(screen, current_map["accent"], ring,
+                    -math.pi / 2, -math.pi / 2 + max(0.1, pulse * math.pi * 1.7), 5)
+    draw_styled_text(screen, str(count), font_combo_num, CENTER_X, ring.centery, (249, 250, 255), scale=1.0 + pulse * 0.06)
+    draw_styled_text(screen, "GET READY", font_med, CENTER_X, 365, (220, 229, 248))
+    draw_styled_text(screen, "곡이 시작되면 첫 노트가 나타납니다", font_small, CENTER_X, 396, (151, 166, 199))
+    if practice_mode:
+        draw_styled_text(screen, "PRACTICE · NO FAIL", font_small, CENTER_X, 431, (120, 228, 195))
+    draw_styled_text(screen, "ESC  ·  취소", font_small, CENTER_X, 462, (112, 126, 158))
+
+def begin_play():
+    global game_start_time, audio_ended_at, state
+    if current_map is None:
+        state = "HOME"
+        return
+    active_touches.clear()
+    key_lanes_down.clear()
     start_music(current_map["audio"])
     game_start_time = time.perf_counter()
     audio_ended_at = None
     state = "PLAY"
-    active_touches.clear()
-    key_lanes_down.clear()
 
 def finish_auto_analysis():
     global auto_analysis_job, state
@@ -840,12 +880,16 @@ async def main():
                 if event.key in KEY_TO_LANE:
                     key_lanes_down.add(KEY_TO_LANE[event.key])
                     triggered_lanes.add(KEY_TO_LANE[event.key])
-                if event.key == pygame.K_ESCAPE and state in ["PLAY", "PAUSED", "ANALYZING"]:
+                if event.key == pygame.K_ESCAPE and state in ["READY", "PLAY", "PAUSED", "ANALYZING"]:
                     if state == "ANALYZING":
                         if auto_analysis_job is not None:
                             auto_analysis_job["pending"] = False
                         state = "HOME"
                         set_home_notice("분석은 계속 진행되며 결과는 다음 플레이에 사용됩니다.")
+                    elif state == "READY":
+                        stop_music()
+                        state = "HOME"
+                        set_home_notice("게임 시작을 취소했습니다.")
                     elif state == "PLAY":
                         state = "PAUSED"
                         pause_start_time = time.perf_counter()
@@ -914,6 +958,14 @@ async def main():
         # ==========================================
         elif state == "ANALYZING":
             draw_analysis_screen()
+
+        # ==========================================
+        # SCENE: PLAY
+        # ==========================================
+        elif state == "READY":
+            draw_ready_screen()
+            if time.perf_counter() - ready_start_time >= ready_count_in_duration:
+                begin_play()
 
         # ==========================================
         # SCENE: PLAY
@@ -1145,16 +1197,6 @@ async def main():
             max_combo = max(max_combo, combo)
             draw_styled_text(screen, f"점수: {score:,}", font_med, 90, 20, (255, 255, 255))
             
-            if practice_mode:
-                draw_styled_text(screen, "PRACTICE · NO FAIL", font_small, 105, 43, (120, 228, 195))
-            else:
-                draw_styled_text(screen, "LIFE", font_small, 30, 48, (255, 255, 255))
-                pygame.draw.rect(screen, (40, 20, 20), (45, 42, 110, 12), border_radius=4)
-                hp_ratio = max(0.0, hp / 100.0)
-                hp_color = (0, 255, 120) if hp > 50 else (255, 200, 0) if hp > 25 else (255, 50, 50)
-                pygame.draw.rect(screen, hp_color, (45, 42, int(110 * hp_ratio), 12), border_radius=4)
-                pygame.draw.rect(screen, (255, 255, 255), (45, 42, 110, 12), width=1, border_radius=4)
-
             prog_ratio = min(1.0, max(0.0, play_time / current_map["duration"]))
             bar_w, bar_h = 240, 8
             bar_x, bar_y = CENTER_X - bar_w // 2, 35
@@ -1163,12 +1205,21 @@ async def main():
             
             pygame.draw.rect(screen, (10, 14, 32), (0, 0, SCREEN_WIDTH, 58))
             draw_styled_text(screen, title_str, font_small, CENTER_X, 15, (200, 240, 255))
+            draw_styled_text(screen, "LIFE", font_small, 30, 43, (211, 220, 242))
+            pygame.draw.rect(screen, (39, 28, 44), (55, 37, 113, 12), border_radius=5)
+            hp_ratio = max(0.0, min(1.0, hp / 100.0))
+            hp_color = (70, 232, 166) if hp > 50 else (255, 195, 77) if hp > 25 else (255, 82, 110)
+            if hp_ratio > 0:
+                pygame.draw.rect(screen, hp_color, (55, 37, int(113 * hp_ratio), 12), border_radius=5)
+            pygame.draw.rect(screen, (226, 234, 252), (55, 37, 113, 12), width=1, border_radius=5)
             pygame.draw.rect(screen, (20, 25, 45), (bar_x, bar_y, bar_w, bar_h), border_radius=4)
             if prog_ratio > 0:
                 pygame.draw.rect(screen, (0, 230, 255), (bar_x, bar_y, int(bar_w * prog_ratio), bar_h), border_radius=4)
             pygame.draw.rect(screen, (255, 255, 255), (bar_x, bar_y, bar_w, bar_h), width=1, border_radius=4)
             draw_styled_text(screen, time_str, font_small, CENTER_X + 165, 38, (200, 200, 200))
             draw_styled_text(screen, f"{current_bpm:.2f} BPM", font_small, CENTER_X - 185, 38, current_map["accent"])
+            if practice_mode:
+                draw_styled_text(screen, "PRACTICE", font_small, 674, 43, (120, 228, 195))
 
             pygame.draw.rect(screen, (30, 40, 70), btn_pause, border_radius=8)
             pygame.draw.rect(screen, (0, 220, 255), btn_pause, width=2, border_radius=8)

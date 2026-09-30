@@ -268,7 +268,7 @@ def _find_onsets(flux, hop_seconds, melody_pitch=None, melody_salience=None):
 def _select_quantized_onsets(onsets, bpm, offset, hop_seconds, level, duration=None):
     beat_seconds = 60.0 / bpm
     difficulty = "easy" if level <= 2 else "hard" if level <= 6 else "master"
-    limits = {"easy": (3, 0.48), "hard": (8, 0.24), "master": (18, 0.12)}
+    limits = {"easy": (3, 0.48), "hard": (6, 0.32), "master": (12, 0.20)}
     per_bar, min_gap = limits[difficulty]
     by_slot = {}
     for onset in onsets:
@@ -432,7 +432,7 @@ def _add_master_chords(events):
     taps = [(index, event) for index, event in enumerate(events) if event["type"] == "TAP"]
     if len(taps) < 8:
         return events
-    extra_count = max(1, round(len(taps) * 0.16))
+    extra_count = max(1, round(len(taps) * 0.10))
     featured = sorted(taps, key=lambda pair: pair[1]["strength"], reverse=True)[:extra_count]
     # Avoid stacking the added chord on an existing nearby sustain start.
     existing_beats = [event["beat"] for event in events]
