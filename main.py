@@ -430,9 +430,9 @@ ready_count_in_duration = 2.0
 # 판정 횟수 카운터
 perfect_count, great_count, miss_count = 0, 0, 0
 
-BASE_APPROACH_TIME = 0.8
+BASE_APPROACH_TIME = 0.55
 NOTE_SPEED_LEVELS = (0.75, 0.9, 1.0, 1.15, 1.3, 1.5, 1.75, 2.0)
-note_speed_index = 5
+note_speed_index = 2
 APPROACH_TIME = BASE_APPROACH_TIME / NOTE_SPEED_LEVELS[note_speed_index]
 PERFECT_TIME = 0.07
 GREAT_TIME = 0.15

@@ -280,15 +280,15 @@ def _select_quantized_onsets(onsets, bpm, offset, hop_seconds, level, duration=N
         beat = (seconds - offset) / beat_seconds
         if beat < 0:
             continue
-        # Use a fine grid only when the detected melody attack is already
-        # close. Keep expressive/off-grid attacks at their measured timestamp.
-        slot = round(beat * 8.0)
-        snapped = slot / 8.0
-        chart_beat = snapped if abs(beat - snapped) <= 0.11 else beat
+        # Keep melody-selected attacks on a musical sixteenth-note grid. The
+        # grid is anchored to the detected BPM phase so off-grid transients do
+        # not turn into notes that feel detached from the song's pulse.
+        slot = round(beat * 4.0)
+        chart_beat = slot / 4.0
         onset = {**onset, "beat": chart_beat}
         # Several spectral peaks can describe one attack. Keep its strongest
         # melodic/percussive evidence rather than stacking duplicate notes.
-        slot_key = round(seconds / max(0.04, min_gap * beat_seconds))
+        slot_key = slot
         score = (onset["strength"] * 0.25 +
                  min(2.0, onset["melody_change"]) * 1.35 +
                  onset["melody_salience"] * 3.5 +
