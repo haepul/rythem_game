@@ -674,11 +674,11 @@ def draw_home(mouse_pos, mouse_click):
     draw_styled_text(screen, "SONG LIBRARY", font_small, 524, 31, (155, 172, 212))
     draw_styled_text(screen, f"{len(MAP_LIST):02d} TRACKS", font_small, 733, 31, (113, 220, 207))
     draw_volume_control(screen, volume_slider_for_state("HOME"), mouse_pos, mouse_click)
-    speed_left = pygame.Rect(315, 48, 30, 25)
-    speed_value = pygame.Rect(350, 48, 76, 25)
-    speed_right = pygame.Rect(431, 48, 30, 25)
+    speed_left = pygame.Rect(310, 46, 38, 30)
+    speed_value = pygame.Rect(352, 46, 76, 30)
+    speed_right = pygame.Rect(432, 46, 38, 30)
     draw_styled_text(screen, "NOTE SPEED", font_small, 260, 60, (155, 172, 212))
-    for rect, label in ((speed_left, "−"), (speed_right, "+")):
+    for rect, label in ((speed_left, "-"), (speed_right, "+")):
         hovered = rect.collidepoint(mouse_pos)
         pygame.draw.rect(screen, (47, 57, 86) if hovered else (25, 31, 52), rect, border_radius=7)
         pygame.draw.rect(screen, (102, 119, 166), rect, 1, border_radius=7)
@@ -1059,12 +1059,16 @@ async def main():
                     del active_touches[event.button]
             elif event.type == pygame.FINGERDOWN:
                 touch_x = int(event.x * SCREEN_WIDTH)
+                touch_y = int(event.y * SCREEN_HEIGHT)
                 active_touches[("finger", event.finger_id)] = touch_x
                 if state == "PLAY":
                     track_left = CENTER_X - TRACK_BOTTOM_W / 2
                     if track_left <= touch_x <= track_left + TRACK_BOTTOM_W:
                         lane = min(3, max(0, int((touch_x - track_left) // (TRACK_BOTTOM_W / 4))))
                         triggered_lanes.add(lane)
+                else:
+                    mouse_click = True
+                    mouse_pos = (touch_x, touch_y)
             elif event.type == pygame.FINGERMOTION:
                 active_touches[("finger", event.finger_id)] = int(event.x * SCREEN_WIDTH)
             elif event.type == pygame.FINGERUP:
@@ -1265,7 +1269,7 @@ async def main():
                     lane_held = note["lane"] in pressed_lanes
                     can_join = (play_time >= note["time"] - LONG_NOTE_HEAD_WINDOW
                                 and play_time < note["end_time"])
-                    if lane_held and can_join and not note["active"]:
+                    if lane_held and note["lane"] in triggered_lanes and can_join and not note["active"]:
                         connect_sustain_note(note, play_time, time_diff)
                         hit_x, hit_y, _ = get_perspective_pos(note["lane"], 1.0)
                         spawn_particles(hit_x, hit_y, HOLD_TOP, count=10)
@@ -1324,9 +1328,11 @@ async def main():
                     slide_ratio = max(0.0, min(1.0, (play_time - note["time"]) / slide_duration))
                     active_cur_lane = note["lane"] + (note["end_lane"] - note["lane"]) * slide_ratio
                     lane_matches = any(abs(active_cur_lane - lane) <= SLIDE_LANE_TOLERANCE for lane in pressed_lanes)
+                    lane_repressed = any(abs(active_cur_lane - lane) <= SLIDE_LANE_TOLERANCE
+                                         for lane in triggered_lanes)
                     can_join = (play_time >= note["time"] - LONG_NOTE_HEAD_WINDOW
                                 and play_time < note["end_time"])
-                    if not note["active"] and can_join and lane_matches:
+                    if not note["active"] and can_join and lane_matches and lane_repressed:
                         connect_sustain_note(note, play_time, time_diff)
 
                     if note["active"] and not note["hit"] and play_time < note["end_time"]:
