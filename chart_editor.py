@@ -17,7 +17,7 @@ CHARTS_PATH = os.path.join(ROOT, "charts.json")
 AUTO_CHARTS_PATH = os.path.join(ROOT, "auto_charts.json")
 SONGS = [
     ("나다움", "나다움", 165), ("숙명", "숙명", 164), ("이단의 스타", "이단의 스타", 98),
-    ("Cry Baby", "Cry Baby", 200), ("Make Me Wonder", "Make Me Wonder", 115),
+    ("Cry Baby", "Cry Baby", 200), ("Gone Angels", "Gone Angels", 129),
     ("Mixed Nuts", "Mixed Nuts", 150), ("Pretender", "Pretender", 92),
     ("Universe", "Universe", 186), ("괴수의 꽃노래", "괴수의 꽃노래", 151),
     ("라일락", "라일락", 83), ("최종화", "최종화", 100), ("Ray", "Ray", 66),

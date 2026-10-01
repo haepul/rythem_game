@@ -64,19 +64,28 @@ def get_perspective_pos(lane, progress):
 def generate_bg_surface(colors, accent):
     surf = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
     c_top, c_mid, c_bot = colors
-    for y in range(SCREEN_HEIGHT):
-        ratio = y / SCREEN_HEIGHT
+    base_rows = []
+    for y in range(0, SCREEN_HEIGHT, 4):
+        ratio = y / max(1, SCREEN_HEIGHT - 1)
         if ratio < 0.5:
             r1 = ratio * 2
-            r = int(c_top[0] * (1 - r1) + c_mid[0] * r1)
-            g = int(c_top[1] * (1 - r1) + c_mid[1] * r1)
-            b = int(c_top[2] * (1 - r1) + c_mid[2] * r1)
+            base = tuple(int(c_top[i] * (1 - r1) + c_mid[i] * r1) for i in range(3))
         else:
             r2 = (ratio - 0.5) * 2
-            r = int(c_mid[0] * (1 - r2) + c_bot[0] * r2)
-            g = int(c_mid[1] * (1 - r2) + c_bot[1] * r2)
-            b = int(c_mid[2] * (1 - r2) + c_bot[2] * r2)
-        pygame.draw.line(surf, (r, g, b), (0, y), (SCREEN_WIDTH, y))
+            base = tuple(int(c_mid[i] * (1 - r2) + c_bot[i] * r2) for i in range(3))
+        base_rows.append(base)
+
+    # Blend two broad accent glows into the dark base for a layered 2D gradient.
+    for y_index, y in enumerate(range(0, SCREEN_HEIGHT, 4)):
+        base = base_rows[y_index]
+        for x in range(0, SCREEN_WIDTH, 4):
+            glow_right = max(0.0, 1.0 - math.hypot((x - SCREEN_WIDTH * 0.78) / 430.0,
+                                                  (y - SCREEN_HEIGHT * 0.20) / 300.0))
+            glow_left = max(0.0, 1.0 - math.hypot((x - SCREEN_WIDTH * 0.16) / 360.0,
+                                                 (y - SCREEN_HEIGHT * 0.82) / 280.0))
+            blend = min(0.30, glow_right * 0.21 + glow_left * 0.12)
+            color = tuple(int(base[i] * (1.0 - blend) + accent[i] * blend) for i in range(3))
+            pygame.draw.rect(surf, color, (x, y, 4, 4))
         
     for _ in range(20):
         rx = random.randint(0, SCREEN_WIDTH)
@@ -164,7 +173,7 @@ MAP_LIST = [
     {"title": "숙명", "song": "숙명", "level": 2, "bpm": 164, "offset": 0.0, "duration": 282.935, "audio": "숙명.mp4", "colors": ((25, 20, 40), (40, 30, 60), (10, 10, 25)), "accent": (180, 150, 255)},
     {"title": "이단의 스타", "song": "이단의 스타", "level": 3, "bpm": 98, "offset": 0.0, "duration": 292.130, "audio": "이단의 스타.mp4", "colors": ((50, 15, 25), (60, 25, 20), (20, 5, 10)), "accent": (255, 120, 80)},
     {"title": "Cry Baby", "song": "Cry Baby", "level": 4, "bpm": 200, "offset": 0.0, "duration": 240.419, "audio": "Cry Baby.mp4", "colors": ((10, 15, 35), (15, 25, 55), (5, 5, 15)), "accent": (80, 160, 255)},
-    {"title": "Make Me Wonder", "song": "Make Me Wonder", "level": 5, "bpm": 115, "offset": 0.0, "duration": 239.630, "audio": "Make Me Wonder.mp4", "colors": ((35, 10, 40), (50, 10, 60), (15, 5, 20)), "accent": (255, 50, 200)},
+    {"title": "Gone Angels", "song": "Gone Angels", "level": 5, "bpm": 129.146, "offset": 0.319, "duration": 144.173, "audio": "Gone Angels.mp4", "colors": ((22, 12, 38), (48, 24, 64), (12, 8, 25)), "accent": (207, 145, 255)},
     {"title": "Mixed Nuts", "song": "Mixed Nuts", "level": 6, "bpm": 150, "offset": 0.0, "duration": 215.899, "audio": "Mixed Nuts.mp4", "colors": ((10, 25, 40), (15, 40, 60), (5, 15, 25)), "accent": (100, 200, 255)},
     {"title": "Pretender", "song": "Pretender", "level": 7, "bpm": 92, "offset": 0.0, "duration": 325.149, "audio": "Pretender.mp4", "colors": ((30, 30, 10), (50, 50, 15), (15, 15, 5)), "accent": (255, 230, 50)},
     {"title": "Universe", "song": "Universe", "level": 10, "bpm": 186, "offset": 0.0, "duration": 285.164, "audio": "Universe.mp4", "colors": ((45, 10, 10), (65, 15, 15), (20, 5, 5)), "accent": (255, 60, 60)},
@@ -181,7 +190,7 @@ WEB_AUDIO_FILES = (
     "%EC%88%99%EB%AA%85.mp4",
     "%EC%9D%B4%EB%8B%A8%EC%9D%98%20%EC%8A%A4%ED%83%80.mp4",
     "Cry%20Baby.mp4",
-    "Make%20Me%20Wonder.mp4",
+    "Gone%20Angels.mp4",
     "Mixed%20Nuts.mp4",
     "Pretender.mp4",
     "Universe.mp4",
@@ -412,6 +421,7 @@ combo, max_combo, total_notes, hit_score = 0, 0, 0, 0
 hp = 100.0 
 particles = []
 audio_element = None
+music_volume = 0.8
 auto_analysis_job = None
 audio_ended_at = None
 ready_start_time = 0.0
@@ -423,6 +433,10 @@ perfect_count, great_count, miss_count = 0, 0, 0
 APPROACH_TIME = 1.2
 PERFECT_TIME = 0.07
 GREAT_TIME = 0.15
+LONG_NOTE_HEAD_WINDOW = 0.23
+LONG_NOTE_RELEASE_GRACE = 0.20
+LONG_NOTE_TICK_LATE = 0.08
+SLIDE_LANE_TOLERANCE = 0.72
 
 active_touches = {}
 key_lanes_down = set()
@@ -459,6 +473,9 @@ def prepare_sustain_combo_ticks(notes, bpm):
     for note in notes:
         note["ticks_awarded"] = 0
         if note["type"] in {"HOLD", "SLIDE"}:
+            note["active"] = False
+            note["ever_started"] = False
+            note["off_lane_since"] = None
             duration = max(0.0, note["end_time"] - note["time"])
             note["tick_interval"] = interval
             ticks = [note["time"]]
@@ -506,6 +523,88 @@ def award_due_sustain_ticks(note, play_time):
         if play_time + 1e-6 < tick_time:
             break
         award_sustain_tick(note)
+
+def skip_missed_sustain_ticks(note, play_time):
+    """Record elapsed sustain ticks as misses without removing the long note."""
+    global miss_count, combo, hp
+    skipped = 0
+    while note["ticks_awarded"] < note["tick_total"]:
+        ordinal = note["ticks_awarded"]
+        tick_time = note["tick_times"][ordinal]
+        # Keep the first tick available for the wider long-note head window.
+        if ordinal == 0 and play_time < note["time"] + LONG_NOTE_HEAD_WINDOW:
+            break
+        if tick_time >= play_time - LONG_NOTE_TICK_LATE:
+            break
+        note["ticks_awarded"] += 1
+        skipped += 1
+    if skipped:
+        miss_count += skipped
+        combo = 0
+        if not practice_mode:
+            hp = max(0.0, hp - min(5.0, skipped * 0.8))
+
+def connect_sustain_note(note, play_time, timing_diff):
+    """Start or rejoin a hold/slide, preserving only ticks the player can still hit."""
+    global last_feedback, last_feedback_color, feedback_time, feedback_scale
+    first_tick_available = note["ticks_awarded"] == 0
+    note["active"] = True
+    note["ever_started"] = True
+    note["off_lane_since"] = None
+    if first_tick_available and abs(timing_diff) <= LONG_NOTE_HEAD_WINDOW:
+        award_sustain_tick(note, timing_diff)
+    else:
+        was_missed = note["ticks_awarded"] > 0
+        skip_missed_sustain_ticks(note, play_time)
+        award_due_sustain_ticks(note, play_time)
+        if was_missed:
+            last_feedback, last_feedback_color = "REJOIN", (120, 228, 195)
+            feedback_time = time.time()
+            feedback_scale = 1.0
+
+def disconnect_sustain_note(note, play_time):
+    """Allow a short release grace, then break combo while leaving the note recoverable."""
+    global combo, last_feedback, last_feedback_color, feedback_time, feedback_scale
+    if note.get("off_lane_since") is None:
+        note["off_lane_since"] = play_time
+    elif play_time - note["off_lane_since"] >= LONG_NOTE_RELEASE_GRACE:
+        note["active"] = False
+        note["off_lane_since"] = None
+        combo = 0
+        last_feedback, last_feedback_color = "REJOIN", (120, 228, 195)
+        feedback_time = time.time()
+        feedback_scale = 1.0
+
+def set_music_volume(value):
+    global music_volume
+    music_volume = max(0.0, min(1.0, float(value)))
+    try:
+        if audio_element is not None:
+            audio_element.volume = music_volume
+        if pygame.mixer.get_init():
+            pygame.mixer.music.set_volume(music_volume)
+    except Exception:
+        pass
+
+def draw_volume_control(surface, slider_rect, mouse_pos, mouse_click, label="VOL"):
+    if mouse_click and slider_rect.inflate(0, 14).collidepoint(mouse_pos):
+        set_music_volume((mouse_pos[0] - slider_rect.x) / max(1, slider_rect.width))
+    draw_styled_text(surface, label, font_small, slider_rect.x - 22, slider_rect.centery, (155, 172, 212))
+    pygame.draw.rect(surface, (38, 47, 72), slider_rect, border_radius=5)
+    fill_width = int(slider_rect.width * music_volume)
+    if fill_width > 0:
+        pygame.draw.rect(surface, (112, 196, 255), (slider_rect.x, slider_rect.y, fill_width, slider_rect.height), border_radius=5)
+    pygame.draw.rect(surface, (220, 233, 255), slider_rect, width=1, border_radius=5)
+    knob_x = slider_rect.x + fill_width
+    pygame.draw.circle(surface, (250, 252, 255), (knob_x, slider_rect.centery), 6)
+    draw_styled_text(surface, f"{round(music_volume * 100):d}%", font_small, slider_rect.right + 23, slider_rect.centery, (218, 228, 248))
+
+def volume_slider_for_state(scene):
+    if scene == "HOME":
+        return pygame.Rect(657, 54, 93, 9)
+    if scene == "PAUSED":
+        return pygame.Rect(CENTER_X - 40, 350, 100, 10)
+    return None
 
 def miss_sustain_note(note):
     global miss_count, combo, hp
@@ -561,6 +660,7 @@ def draw_home(mouse_pos, mouse_click):
     draw_styled_text(screen, "STAGE", font_small, 47, 57, (121, 152, 255))
     draw_styled_text(screen, "SONG LIBRARY", font_small, 524, 31, (155, 172, 212))
     draw_styled_text(screen, f"{len(MAP_LIST):02d} TRACKS", font_small, 733, 31, (113, 220, 207))
+    draw_volume_control(screen, volume_slider_for_state("HOME"), mouse_pos, mouse_click)
 
     hero = pygame.Rect(24, 101, 212, 286)
     pygame.draw.rect(screen, (17, 22, 41), hero, border_radius=18)
@@ -609,13 +709,19 @@ def draw_home(mouse_pos, mouse_click):
             pygame.draw.rect(screen, (241, 244, 255), rect, width=2, border_radius=14)
 
     # Controls are deliberately separated from song cards, like a web player action bar.
-    play_button = pygame.Rect(226, 406, 128, 44)
-    practice_button = pygame.Rect(365, 406, 150, 44)
-    editor_button = pygame.Rect(526, 406, 166, 44)
+    if sys.platform == "emscripten":
+        play_button = pygame.Rect(255, 406, 128, 44)
+        practice_button = pygame.Rect(394, 406, 150, 44)
+        editor_button = None
+    else:
+        play_button = pygame.Rect(226, 406, 128, 44)
+        practice_button = pygame.Rect(365, 406, 150, 44)
+        editor_button = pygame.Rect(526, 406, 166, 44)
     draw_button(screen, play_button, "PLAY CHART", selected["accent"], True)
     draw_button(screen, practice_button, "PRACTICE", (69, 197, 161))
-    draw_button(screen, editor_button, "CHART STUDIO", (154, 135, 255))
-    draw_styled_text(screen, "D F J K  ·  KEYBOARD     /     MOUSE & TOUCH SUPPORTED", font_small, SCREEN_WIDTH // 2, 466, (140, 153, 184))
+    if editor_button is not None:
+        draw_button(screen, editor_button, "CHART STUDIO", (154, 135, 255))
+    draw_styled_text(screen, "D F J K  ·  MOUSE & TOUCH     /     VOLUME: SLIDER OR - / +", font_small, SCREEN_WIDTH // 2, 466, (140, 153, 184))
     if home_notice and time.time() < home_notice_until:
         notice_box = pygame.Rect(253, 378, 524, 24)
         pygame.draw.rect(screen, (25, 39, 58), notice_box, border_radius=8)
@@ -629,7 +735,7 @@ def draw_home(mouse_pos, mouse_click):
                 return None
         if play_button.collidepoint(mouse_pos): return "play"
         if practice_button.collidepoint(mouse_pos): return "practice"
-        if editor_button.collidepoint(mouse_pos): return "editor"
+        if editor_button is not None and editor_button.collidepoint(mouse_pos): return "editor"
     return None
 
 def _analyze_for_game(job, audio_path, difficulty):
@@ -810,7 +916,7 @@ def start_music(path):
             # the selected track directly, so the browser downloads only one song.
             audio_element.src = "music/" + WEB_AUDIO_FILES[current_map_idx]
             audio_element.load()
-            audio_element.volume = 1.0
+            audio_element.volume = music_volume
             audio_element.play()
             return
         except Exception:
@@ -821,7 +927,7 @@ def start_music(path):
         if os.path.isfile(audio_path):
             if not pygame.mixer.get_init(): pygame.mixer.init()
             pygame.mixer.music.load(audio_path)
-            pygame.mixer.music.set_volume(1.0)
+            pygame.mixer.music.set_volume(music_volume)
             pygame.mixer.music.play()
         else:
             print(f"음악 파일을 찾을 수 없습니다: {audio_path}")
@@ -880,6 +986,10 @@ async def main():
                 if event.key in KEY_TO_LANE:
                     key_lanes_down.add(KEY_TO_LANE[event.key])
                     triggered_lanes.add(KEY_TO_LANE[event.key])
+                elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
+                    set_music_volume(music_volume - 0.05)
+                elif event.key in (pygame.K_EQUALS, pygame.K_KP_PLUS):
+                    set_music_volume(music_volume + 0.05)
                 if event.key == pygame.K_ESCAPE and state in ["READY", "PLAY", "PAUSED", "ANALYZING"]:
                     if state == "ANALYZING":
                         if auto_analysis_job is not None:
@@ -909,6 +1019,9 @@ async def main():
             elif event.type == pygame.MOUSEMOTION:
                 if event.buttons[0]:
                     active_touches[1] = event.pos[0]
+                    slider = volume_slider_for_state(state)
+                    if slider is not None and slider.inflate(0, 22).collidepoint(event.pos):
+                        set_music_volume((event.pos[0] - slider.x) / max(1, slider.width))
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button in active_touches:
                     del active_touches[event.button]
@@ -1106,35 +1219,43 @@ async def main():
                         draw_gradient_note(screen, note["lane"], max(0.0, min(1.15, p_tail)), max(0.0, min(1.15, p_head)), HOLD_TOP, HOLD_BOT, steps=8)
                     
                     lane_held = note["lane"] in pressed_lanes
-                    if lane_held and abs(time_diff) <= GREAT_TIME and not note["active"]:
-                        note["active"] = True
-                        award_sustain_tick(note, time_diff)
+                    can_join = (play_time >= note["time"] - LONG_NOTE_HEAD_WINDOW
+                                and play_time < note["end_time"])
+                    if lane_held and can_join and not note["active"]:
+                        connect_sustain_note(note, play_time, time_diff)
                         hit_x, hit_y, _ = get_perspective_pos(note["lane"], 1.0)
                         spawn_particles(hit_x, hit_y, HOLD_TOP, count=10)
 
                     if note["active"]:
                         if lane_held:
+                            note["off_lane_since"] = None
                             award_due_sustain_ticks(note, play_time)
                             hit_x, hit_y, _ = get_perspective_pos(note["lane"], 1.0)
                             spawn_particles(hit_x, hit_y, HOLD_TOP, count=3)
-                        elif play_time < note["end_time"] - 0.15:
-                            miss_sustain_note(note)
+                        elif play_time < note["end_time"]:
+                            disconnect_sustain_note(note, play_time)
+                            if not note["active"]:
+                                skip_missed_sustain_ticks(note, play_time)
+                    else:
+                        skip_missed_sustain_ticks(note, play_time)
 
-                        if not note["hit"] and play_time >= note["end_time"]:
-                            # A small release grace avoids losing the tail to frame/input latency.
+                    if not note["hit"] and play_time >= note["end_time"]:
+                        if note["active"] and (lane_held or
+                                (note.get("off_lane_since") is not None and
+                                 play_time - note["off_lane_since"] <= LONG_NOTE_RELEASE_GRACE)):
                             award_due_sustain_ticks(note, note["end_time"])
-                            note["hit"] = True
-                            combo_scale, feedback_scale = 1.35, 1.4
-                            hit_x, hit_y, _ = get_perspective_pos(note["lane"], 1.0)
-                            spawn_particles(hit_x, hit_y, (255, 255, 255), count=25, power=1.4)
-
-                    if time_diff < -GREAT_TIME and not note["active"]:
-                        miss_sustain_note(note)
+                        else:
+                            skip_missed_sustain_ticks(note, note["end_time"] + LONG_NOTE_TICK_LATE + 0.001)
+                        note["hit"] = True
+                        combo_scale, feedback_scale = 1.35, 1.4
+                        hit_x, hit_y, _ = get_perspective_pos(note["lane"], 1.0)
+                        spawn_particles(hit_x, hit_y, (255, 255, 255), count=25, power=1.4)
 
                 elif note["type"] == "SLIDE":
-                    t_head = play_time if note["active"] else note["time"]
                     t_tail = note["end_time"]
-                    t_vis_min = max(t_head, play_time - 0.05 * APPROACH_TIME)
+                    # Anchor the path to the chart's actual endpoints at every
+                    # frame. Early contact must not extend it before its head.
+                    t_vis_min = max(note["time"], play_time)
                     t_vis_max = min(t_tail, play_time + APPROACH_TIME)
                     
                     if t_vis_min < t_vis_max:
@@ -1144,46 +1265,51 @@ async def main():
                             t_curr = t_vis_min + (t_vis_max - t_vis_min) * (s / steps)
                             slide_ratio = (t_curr - note["time"]) / (note["end_time"] - note["time"])
                             curr_lane = note["lane"] + (note["end_lane"] - note["lane"]) * slide_ratio
-                            
-                            if note["active"]:
-                                p_ratio = (t_curr - play_time) / (note["end_time"] - play_time) if note["end_time"] > play_time else 0
-                                curr_p = 1.0 - p_ratio * (1.0 - (1.0 - ((note["end_time"] - play_time) / APPROACH_TIME)))
-                            else:
-                                curr_p = 1.0 - ((t_curr - play_time) / APPROACH_TIME)
-                            
+                            curr_p = 1.0 - ((t_curr - play_time) / APPROACH_TIME)
                             xc, yc, wc = get_perspective_pos(curr_lane, curr_p)
                             pts_l.append((xc - wc * 0.46, yc))
                             pts_r.append((xc + wc * 0.46, yc))
-                        pygame.draw.polygon(screen, SLIDE_BOT, pts_l + pts_r[::-1])
-                        pygame.draw.polygon(screen, (255, 255, 255), pts_l + pts_r[::-1], 2)
+                        for segment in range(steps):
+                            tint = interpolate_color(SLIDE_TOP, SLIDE_BOT, (segment + 0.5) / steps)
+                            quad = (pts_l[segment], pts_r[segment], pts_r[segment + 1], pts_l[segment + 1])
+                            pygame.draw.polygon(screen, tint, quad)
+                        outline = pts_l + pts_r[::-1]
+                        pygame.draw.polygon(screen, (244, 240, 255), outline, 2)
 
                     slide_duration = max(0.001, note["end_time"] - note["time"])
                     slide_ratio = max(0.0, min(1.0, (play_time - note["time"]) / slide_duration))
                     active_cur_lane = note["lane"] + (note["end_lane"] - note["lane"]) * slide_ratio
-                    lane_matches = any(abs(active_cur_lane - lane) <= 0.51 for lane in pressed_lanes)
-                    if not note["active"] and -GREAT_TIME <= time_diff <= GREAT_TIME and note["lane"] in pressed_lanes:
-                        note["active"] = True
-                        award_sustain_tick(note, time_diff)
-                    if note["active"] and not note["hit"] and play_time < note["end_time"] and not lane_matches:
-                        miss_sustain_note(note)
-                    elif note["active"] and not note["hit"] and lane_matches:
-                        award_due_sustain_ticks(note, play_time)
-                        if play_time < note["end_time"]:
+                    lane_matches = any(abs(active_cur_lane - lane) <= SLIDE_LANE_TOLERANCE for lane in pressed_lanes)
+                    can_join = (play_time >= note["time"] - LONG_NOTE_HEAD_WINDOW
+                                and play_time < note["end_time"])
+                    if not note["active"] and can_join and lane_matches:
+                        connect_sustain_note(note, play_time, time_diff)
+
+                    if note["active"] and not note["hit"] and play_time < note["end_time"]:
+                        if lane_matches:
+                            note["off_lane_since"] = None
+                            award_due_sustain_ticks(note, play_time)
                             hit_x, hit_y, _ = get_perspective_pos(active_cur_lane, 1.0)
                             spawn_particles(hit_x, hit_y, SLIDE_TOP, count=2)
-
-                    if note["active"] and not note["hit"] and play_time >= note["end_time"]:
-                        if lane_matches:
-                            award_due_sustain_ticks(note, note["end_time"])
-                            note["hit"] = True
-                            combo_scale, feedback_scale = 1.35, 1.4
-                            hit_x, hit_y, _ = get_perspective_pos(note["end_lane"], 1.0)
-                            spawn_particles(hit_x, hit_y, (255, 255, 255), count=25, power=1.5)
                         else:
-                            miss_sustain_note(note)
+                            disconnect_sustain_note(note, play_time)
+                            if not note["active"]:
+                                skip_missed_sustain_ticks(note, play_time)
+                    elif not note["active"]:
+                        skip_missed_sustain_ticks(note, play_time)
 
-                    if time_diff < -GREAT_TIME and not note["active"] and not note["hit"]:
-                        miss_sustain_note(note)
+                    if not note["hit"] and play_time >= note["end_time"]:
+                        still_connected = note["active"] and (lane_matches or
+                                (note.get("off_lane_since") is not None and
+                                 play_time - note["off_lane_since"] <= LONG_NOTE_RELEASE_GRACE))
+                        if still_connected:
+                            award_due_sustain_ticks(note, note["end_time"])
+                        else:
+                            skip_missed_sustain_ticks(note, note["end_time"] + LONG_NOTE_TICK_LATE + 0.001)
+                        note["hit"] = True
+                        combo_scale, feedback_scale = 1.35, 1.4
+                        hit_x, hit_y, _ = get_perspective_pos(note["end_lane"], 1.0)
+                        spawn_particles(hit_x, hit_y, (255, 255, 255), count=25, power=1.5)
 
             if hp <= 0 and not practice_mode:
                 state = "GAME_OVER"
@@ -1263,23 +1389,24 @@ async def main():
             dim_surf.fill((0, 0, 0))
             screen.blit(dim_surf, (0, 0))
             
-            box = pygame.Rect(CENTER_X - 140, 110, 280, 250)
+            box = pygame.Rect(CENTER_X - 140, 95, 280, 300)
             pygame.draw.rect(screen, (20, 25, 45), box, border_radius=16)
             pygame.draw.rect(screen, (0, 200, 255), box, width=2, border_radius=16)
             
-            draw_styled_text(screen, "PAUSED", font_large, CENTER_X, 150, (255, 255, 255))
+            draw_styled_text(screen, "PAUSED", font_large, CENTER_X, 140, (255, 255, 255))
             if practice_mode:
-                draw_styled_text(screen, "PRACTICE MODE · NO LIFE LOSS", font_small, CENTER_X, 176, (120, 228, 195))
+                draw_styled_text(screen, "PRACTICE MODE · NO LIFE LOSS", font_small, CENTER_X, 166, (120, 228, 195))
             
-            btn_resume, btn_retry, btn_home = pygame.Rect(CENTER_X - 100, 200, 200, 40), pygame.Rect(CENTER_X - 100, 250, 200, 40), pygame.Rect(CENTER_X - 100, 300, 200, 40)
+            btn_resume, btn_retry, btn_home = pygame.Rect(CENTER_X - 100, 185, 200, 40), pygame.Rect(CENTER_X - 100, 235, 200, 40), pygame.Rect(CENTER_X - 100, 285, 200, 40)
             
             pygame.draw.rect(screen, (0, 180, 220), btn_resume, border_radius=8)
             pygame.draw.rect(screen, (100, 100, 150), btn_retry, border_radius=8)
             pygame.draw.rect(screen, (220, 60, 80), btn_home, border_radius=8)
             
-            draw_styled_text(screen, "계속하기", font_med, CENTER_X, 220, (255, 255, 255))
-            draw_styled_text(screen, "다시하기", font_med, CENTER_X, 270, (255, 255, 255))
-            draw_styled_text(screen, "메뉴로", font_med, CENTER_X, 320, (255, 255, 255))
+            draw_styled_text(screen, "계속하기", font_med, CENTER_X, 205, (255, 255, 255))
+            draw_styled_text(screen, "다시하기", font_med, CENTER_X, 255, (255, 255, 255))
+            draw_styled_text(screen, "메뉴로", font_med, CENTER_X, 305, (255, 255, 255))
+            draw_volume_control(screen, volume_slider_for_state("PAUSED"), mouse_pos, mouse_click)
             
             if mouse_click:
                 if btn_resume.collidepoint(mouse_pos):
