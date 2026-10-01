@@ -430,7 +430,7 @@ ready_count_in_duration = 2.0
 # 판정 횟수 카운터
 perfect_count, great_count, miss_count = 0, 0, 0
 
-APPROACH_TIME = 1.2
+APPROACH_TIME = 0.8
 PERFECT_TIME = 0.07
 GREAT_TIME = 0.15
 LONG_NOTE_HEAD_WINDOW = 0.23
@@ -1025,6 +1025,18 @@ async def main():
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button in active_touches:
                     del active_touches[event.button]
+            elif event.type == pygame.FINGERDOWN:
+                touch_x = int(event.x * SCREEN_WIDTH)
+                active_touches[("finger", event.finger_id)] = touch_x
+                if state == "PLAY":
+                    track_left = CENTER_X - TRACK_BOTTOM_W / 2
+                    if track_left <= touch_x <= track_left + TRACK_BOTTOM_W:
+                        lane = min(3, max(0, int((touch_x - track_left) // (TRACK_BOTTOM_W / 4))))
+                        triggered_lanes.add(lane)
+            elif event.type == pygame.FINGERMOTION:
+                active_touches[("finger", event.finger_id)] = int(event.x * SCREEN_WIDTH)
+            elif event.type == pygame.FINGERUP:
+                active_touches.pop(("finger", event.finger_id), None)
             elif event.type == pygame.KEYUP:
                 if event.key in KEY_TO_LANE:
                     key_lanes_down.discard(KEY_TO_LANE[event.key])
