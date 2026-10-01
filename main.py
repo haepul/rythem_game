@@ -430,7 +430,10 @@ ready_count_in_duration = 2.0
 # 판정 횟수 카운터
 perfect_count, great_count, miss_count = 0, 0, 0
 
-APPROACH_TIME = 0.8
+BASE_APPROACH_TIME = 0.8
+NOTE_SPEED_LEVELS = (0.75, 0.9, 1.0, 1.15, 1.3, 1.5, 1.75, 2.0)
+note_speed_index = 2
+APPROACH_TIME = BASE_APPROACH_TIME / NOTE_SPEED_LEVELS[note_speed_index]
 PERFECT_TIME = 0.07
 GREAT_TIME = 0.15
 LONG_NOTE_HEAD_WINDOW = 0.23
@@ -625,6 +628,16 @@ def set_home_notice(message):
     home_notice = message
     home_notice_until = time.time() + 5.0
 
+def adjust_note_speed(direction):
+    global note_speed_index, APPROACH_TIME
+    next_index = max(0, min(len(NOTE_SPEED_LEVELS) - 1, note_speed_index + direction))
+    if next_index == note_speed_index:
+        return
+    note_speed_index = next_index
+    speed = NOTE_SPEED_LEVELS[note_speed_index]
+    APPROACH_TIME = BASE_APPROACH_TIME / speed
+    set_home_notice(f"노트 낙하 속도: {speed:.2f}×")
+
 def draw_button(surface, rect, label, accent=(112, 139, 255), active=False):
     fill = tuple(min(255, int(c * 1.22)) for c in accent) if active else (28, 34, 56)
     pygame.draw.rect(surface, fill, rect, border_radius=11)
@@ -661,6 +674,19 @@ def draw_home(mouse_pos, mouse_click):
     draw_styled_text(screen, "SONG LIBRARY", font_small, 524, 31, (155, 172, 212))
     draw_styled_text(screen, f"{len(MAP_LIST):02d} TRACKS", font_small, 733, 31, (113, 220, 207))
     draw_volume_control(screen, volume_slider_for_state("HOME"), mouse_pos, mouse_click)
+    speed_left = pygame.Rect(315, 48, 30, 25)
+    speed_value = pygame.Rect(350, 48, 76, 25)
+    speed_right = pygame.Rect(431, 48, 30, 25)
+    draw_styled_text(screen, "NOTE SPEED", font_small, 260, 60, (155, 172, 212))
+    for rect, label in ((speed_left, "−"), (speed_right, "+")):
+        hovered = rect.collidepoint(mouse_pos)
+        pygame.draw.rect(screen, (47, 57, 86) if hovered else (25, 31, 52), rect, border_radius=7)
+        pygame.draw.rect(screen, (102, 119, 166), rect, 1, border_radius=7)
+        draw_styled_text(screen, label, font_med, rect.centerx, rect.centery - 1, (237, 242, 255))
+    pygame.draw.rect(screen, (19, 25, 44), speed_value, border_radius=7)
+    pygame.draw.rect(screen, (86, 103, 150), speed_value, 1, border_radius=7)
+    speed = NOTE_SPEED_LEVELS[note_speed_index]
+    draw_styled_text(screen, f"{speed:.2f}×", font_small, speed_value.centerx, speed_value.centery, (121, 220, 207))
 
     hero = pygame.Rect(24, 101, 212, 286)
     pygame.draw.rect(screen, (17, 22, 41), hero, border_radius=18)
@@ -729,6 +755,12 @@ def draw_home(mouse_pos, mouse_click):
         draw_styled_text(screen, home_notice, font_small, notice_box.centerx, notice_box.centery, (218, 235, 255))
 
     if mouse_click:
+        if speed_left.collidepoint(mouse_pos):
+            adjust_note_speed(-1)
+            return None
+        if speed_right.collidepoint(mouse_pos):
+            adjust_note_speed(1)
+            return None
         for difficulty, rect in difficulty_buttons.items():
             if rect.collidepoint(mouse_pos):
                 selected_difficulty = difficulty

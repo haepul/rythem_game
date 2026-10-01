@@ -270,7 +270,7 @@ def _select_quantized_onsets(onsets, bpm, offset, hop_seconds, level, duration=N
     difficulty = "easy" if level <= 2 else "hard" if level <= 6 else "master"
     # Keep generated charts readable, especially on touch screens. Each pair
     # is the per-bar cap and minimum beat spacing for that difficulty.
-    limits = {"easy": (2, 1.35), "hard": (3, 1.05), "master": (4, 0.80)}
+    limits = {"easy": (2, 1.35), "hard": (3, 1.05), "master": (10, 0.32)}
     per_bar, min_gap = limits[difficulty]
     by_slot = {}
     for onset in onsets:
