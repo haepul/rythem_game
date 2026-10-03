@@ -169,18 +169,27 @@ def draw_gradient_note(surface, lane, p_top, p_bot, color_top, color_bot, width_
 # 4. 곡 데이터 (난이도 이름 적용) 및 로컬 기록 저장소
 # ---------------------------------------------------------
 MAP_LIST = [
-    {"title": "나다움", "song": "나다움", "level": 1, "bpm": 165, "offset": 0.0, "duration": 309.034, "audio": "나다움.mp4", "colors": ((15, 35, 25), (10, 50, 40), (5, 20, 15)), "accent": (100, 255, 180)},
-    {"title": "숙명", "song": "숙명", "level": 2, "bpm": 164, "offset": 0.0, "duration": 282.935, "audio": "숙명.mp4", "colors": ((25, 20, 40), (40, 30, 60), (10, 10, 25)), "accent": (180, 150, 255)},
-    {"title": "이단의 스타", "song": "이단의 스타", "level": 3, "bpm": 98, "offset": 0.0, "duration": 292.130, "audio": "이단의 스타.mp4", "colors": ((50, 15, 25), (60, 25, 20), (20, 5, 10)), "accent": (255, 120, 80)},
-    {"title": "Cry Baby", "song": "Cry Baby", "level": 4, "bpm": 200, "offset": 0.0, "duration": 240.419, "audio": "Cry Baby.mp4", "colors": ((10, 15, 35), (15, 25, 55), (5, 5, 15)), "accent": (80, 160, 255)},
-    {"title": "Gone Angels", "song": "Gone Angels", "level": 5, "bpm": 129.146, "offset": 0.319, "duration": 144.173, "audio": "Gone Angels.mp4", "colors": ((22, 12, 38), (48, 24, 64), (12, 8, 25)), "accent": (207, 145, 255)},
-    {"title": "Mixed Nuts", "song": "Mixed Nuts", "level": 6, "bpm": 150, "offset": 0.0, "duration": 215.899, "audio": "Mixed Nuts.mp4", "colors": ((10, 25, 40), (15, 40, 60), (5, 15, 25)), "accent": (100, 200, 255)},
-    {"title": "Pretender", "song": "Pretender", "level": 7, "bpm": 92, "offset": 0.0, "duration": 325.149, "audio": "Pretender.mp4", "colors": ((30, 30, 10), (50, 50, 15), (15, 15, 5)), "accent": (255, 230, 50)},
-    {"title": "Universe", "song": "Universe", "level": 10, "bpm": 186, "offset": 0.0, "duration": 285.164, "audio": "Universe.mp4", "colors": ((45, 10, 10), (65, 15, 15), (20, 5, 5)), "accent": (255, 60, 60)},
-    {"title": "괴수의 꽃노래", "song": "괴수의 꽃노래", "level": 8, "bpm": 135, "offset": 0.0, "duration": 225.210, "audio": "괴수의 꽃노래.mp4", "colors": ((34, 12, 42), (76, 20, 48), (16, 8, 24)), "accent": (255, 122, 190)},
-    {"title": "라일락", "song": "라일락", "level": 8, "bpm": 138, "offset": 0.0, "duration": 291.596, "audio": "라일락.mp4", "colors": ((28, 20, 52), (58, 34, 84), (13, 10, 35)), "accent": (194, 153, 255)},
-    {"title": "최종화", "song": "최종화", "level": 9, "bpm": 130, "offset": 0.0, "duration": 255.187, "audio": "최종화.mp4", "colors": ((34, 28, 12), (82, 56, 22), (20, 12, 8)), "accent": (255, 208, 118)},
-    {"title": "Ray", "song": "Ray", "level": 8, "bpm": 130, "offset": 0.0, "duration": 301.767, "audio": "Ray.mp4", "colors": ((10, 34, 50), (20, 60, 84), (5, 15, 33)), "accent": (98, 223, 255)},
+    {"title": "나다움", "song": "나다움", "level": 1, "bpm": 165, "offset": 0.0, "duration": 91.0, "audio": "나다움.mp4", "colors": ((15, 35, 25), (10, 50, 40), (5, 20, 15)), "accent": (100, 255, 180)},
+    {"title": "숙명", "song": "숙명", "level": 2, "bpm": 164, "offset": 0.0, "duration": 87.0, "audio": "숙명.mp4", "colors": ((25, 20, 40), (40, 30, 60), (10, 10, 25)), "accent": (180, 150, 255)},
+    {"title": "이단의 스타", "song": "이단의 스타", "level": 3, "bpm": 98, "offset": 0.0, "duration": 92.0, "audio": "이단의 스타.mp4", "colors": ((50, 15, 25), (60, 25, 20), (20, 5, 10)), "accent": (255, 120, 80)},
+    {"title": "Cry Baby", "song": "Cry Baby", "level": 4, "bpm": 200, "offset": 0.0, "duration": 95.0, "audio": "Cry Baby.mp4", "colors": ((10, 15, 35), (15, 25, 55), (5, 5, 15)), "accent": (80, 160, 255)},
+    {"title": "Gone Angels", "song": "Gone Angels", "level": 5, "bpm": 129.146, "offset": 0.319, "duration": 73.0, "audio": "Gone Angels.mp4", "colors": ((22, 12, 38), (48, 24, 64), (12, 8, 25)), "accent": (207, 145, 255)},
+    {"title": "Mixed Nuts", "song": "Mixed Nuts", "level": 6, "bpm": 150, "offset": 0.0, "duration": 96.0, "audio": "Mixed Nuts.mp4", "colors": ((10, 25, 40), (15, 40, 60), (5, 15, 25)), "accent": (100, 200, 255)},
+    {"title": "Pretender", "song": "Pretender", "level": 7, "bpm": 92, "offset": 0.0, "duration": 138.0, "audio": "Pretender.mp4", "colors": ((30, 30, 10), (50, 50, 15), (15, 15, 5)), "accent": (255, 230, 50)},
+    {"title": "Universe", "song": "Universe", "level": 10, "bpm": 186, "offset": 0.0, "duration": 128.0, "audio": "Universe.mp4", "colors": ((45, 10, 10), (65, 15, 15), (20, 5, 5)), "accent": (255, 60, 60)},
+    {"title": "괴수의 꽃노래", "song": "괴수의 꽃노래", "level": 8, "bpm": 150, "offset": 0.0, "duration": 76.0, "audio": "괴수의 꽃노래.mp4", "colors": ((34, 12, 42), (76, 20, 48), (16, 8, 24)), "accent": (255, 122, 190)},
+    {"title": "라일락", "song": "라일락", "level": 8, "bpm": 138, "offset": 0.0, "duration": 96.0, "audio": "라일락.mp4", "colors": ((28, 20, 52), (58, 34, 84), (13, 10, 35)), "accent": (194, 153, 255)},
+    {"title": "최종화", "song": "최종화", "level": 9, "bpm": 130, "offset": 0.0, "duration": 98.0, "audio": "최종화.mp4", "colors": ((34, 28, 12), (82, 56, 22), (20, 12, 8)), "accent": (255, 208, 118)},
+    {"title": "Ray", "song": "Ray", "level": 8, "bpm": 130, "offset": 0.0, "duration": 108.0, "audio": "Ray.mp4", "colors": ((10, 34, 50), (20, 60, 84), (5, 15, 33)), "accent": (98, 223, 255)},
+    {"title": "White Noise", "song": "White Noise", "level": 9, "bpm": 143, "offset": 0.0, "duration": 100.0, "audio": "white-noise.mp3", "colors": ((14, 37, 45), (22, 78, 83), (7, 20, 36)), "accent": (100, 228, 239)},
+    {"title": "괴물 Cover", "song": "괴물 Cover", "level": 9, "bpm": 170, "offset": 0.0, "duration": 76.0, "audio": "monster-cover.mp3", "colors": ((38, 24, 18), (83, 43, 25), (27, 14, 26)), "accent": (255, 153, 92)},
+    {"title": "별자리가 될 수 있다면", "song": "별자리가 될 수 있다면", "level": 7, "bpm": 123, "offset": 0.0, "duration": 108.0, "audio": "seiza-ni-naretara.mp3", "colors": ((21, 30, 66), (45, 52, 120), (14, 21, 53)), "accent": (158, 181, 255)},
+    {"title": "봄꿈", "song": "봄꿈", "level": 7, "bpm": 76, "offset": 0.0, "duration": 87.0, "audio": "springdream.mp3", "colors": ((47, 26, 46), (91, 45, 78), (27, 14, 35)), "accent": (255, 151, 201)},
+    {"title": "사무라이 하트", "song": "사무라이 하트", "level": 8, "bpm": 113, "offset": 0.0, "duration": 89.0, "audio": "samurai-heart.mp3", "colors": ((27, 28, 37), (66, 50, 68), (17, 18, 33)), "accent": (255, 151, 183)},
+    {"title": "소실", "song": "소실", "level": 33, "bpm": 240, "offset": 0.0, "duration": 139.0, "audio": "hatsune-miku-no-shoushitsu.mp3", "colors": ((21, 27, 67), (53, 34, 118), (14, 19, 50)), "accent": (136, 174, 255)},
+    {"title": "여로", "song": "여로", "level": 8, "bpm": 123, "offset": 0.0, "duration": 94.0, "audio": "yeoro.mp3", "colors": ((14, 37, 59), (21, 76, 105), (8, 21, 43)), "accent": (89, 216, 255)},
+    {"title": "I Wanna Be...", "song": "I Wanna Be...", "level": 9, "bpm": 126, "offset": 0.0, "duration": 94.0, "audio": "i-wanna-be.mp3", "colors": ((40, 19, 49), (85, 30, 72), (26, 10, 35)), "accent": (255, 118, 207)},
+    {"title": "SPLASH FREE", "song": "SPLASH FREE", "level": 7, "bpm": 128.5, "offset": 0.0, "duration": 94.0, "audio": "splash-free.mp3", "colors": ((12, 36, 53), (17, 86, 114), (6, 24, 40)), "accent": (79, 215, 247)},
 ]
 
 # ASCII-only, percent-encoded filenames avoid Unicode corruption when PyGBag
@@ -198,7 +207,19 @@ WEB_AUDIO_FILES = (
     "%EB%9D%BC%EC%9D%BC%EB%9D%BD.mp4",
     "%EC%B5%9C%EC%A2%85%ED%99%94.mp4",
     "Ray.mp4",
+    "white-noise.mp3",
+    "monster-cover.mp3",
+    "seiza-ni-naretara.mp3",
+    "springdream.mp3",
+    "samurai-heart.mp3",
+    "hatsune-miku-no-shoushitsu.mp3",
+    "yeoro.mp3",
+    "i-wanna-be.mp3",
+    "splash-free.mp3",
 )
+
+SONGS_PER_PAGE = 12
+FADE_OUT_SECONDS = 1.35
 
 DIFFICULTIES = {"easy": "EASY", "hard": "HARD", "master": "MASTER"}
 
@@ -232,8 +253,10 @@ _chart_meta_cache = {"mtime": None, "entries": {}}
 _auto_chart_meta_cache = {"mtime": None, "entries": {}}
 
 def song_audio_path(audio_name):
-    stem = os.path.splitext(os.path.basename(audio_name))[0]
-    return os.path.join(GAME_DIR, "music", stem + ".ogg")
+    name = os.path.basename(audio_name)
+    stem, extension = os.path.splitext(name)
+    audio_extension = ".mp3" if extension.lower() == ".mp3" else ".ogg"
+    return os.path.join(GAME_DIR, "music", stem + audio_extension)
 
 def audio_signature(path):
     stat = os.stat(path)
@@ -407,6 +430,7 @@ def generate_chart(level, duration, bpm, offset=0.0):
 state = "HOME"
 current_map, current_map_idx = None, -1
 selected_map_idx = 0
+song_page = 0
 selected_difficulty = "hard"
 current_difficulty = "hard"
 practice_mode = False
@@ -422,6 +446,7 @@ hp = 100.0
 particles = []
 audio_element = None
 music_volume = 0.8
+music_fade_gain = 1.0
 auto_analysis_job = None
 audio_ended_at = None
 ready_start_time = 0.0
@@ -578,16 +603,20 @@ def disconnect_sustain_note(note, play_time):
         feedback_time = time.time()
         feedback_scale = 1.0
 
+def apply_music_volume():
+    volume = max(0.0, min(1.0, music_volume * music_fade_gain))
+    try:
+        if audio_element is not None:
+            audio_element.volume = volume
+        if pygame.mixer.get_init():
+            pygame.mixer.music.set_volume(volume)
+    except Exception:
+        pass
+
 def set_music_volume(value):
     global music_volume
     music_volume = max(0.0, min(1.0, float(value)))
-    try:
-        if audio_element is not None:
-            audio_element.volume = music_volume
-        if pygame.mixer.get_init():
-            pygame.mixer.music.set_volume(music_volume)
-    except Exception:
-        pass
+    apply_music_volume()
 
 def draw_volume_control(surface, slider_rect, mouse_pos, mouse_click, label="VOL"):
     if mouse_click and slider_rect.inflate(0, 14).collidepoint(mouse_pos):
@@ -660,7 +689,7 @@ def draw_album_art(surface, rect, accent, index):
     pygame.draw.rect(surface, accent, rect, width=2, border_radius=14)
 
 def draw_home(mouse_pos, mouse_click):
-    global selected_map_idx, selected_difficulty
+    global selected_map_idx, selected_difficulty, song_page
     screen.blit(default_bg_surface, (0, 0))
     overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
     pygame.draw.circle(overlay, (64, 77, 174, 32), (680, 80), 260)
@@ -716,8 +745,23 @@ def draw_home(mouse_pos, mouse_click):
 
     grid_x, grid_y = 252, 102
     card_w, card_h, gap_x, gap_y = 126, 87, 7, 8
-    for i, song in enumerate(MAP_LIST):
-        col, row = i % 4, i // 4
+    page_count = max(1, (len(MAP_LIST) + SONGS_PER_PAGE - 1) // SONGS_PER_PAGE)
+    previous_page_button = pygame.Rect(650, 386, 39, 18)
+    next_page_button = pygame.Rect(739, 386, 39, 18)
+    if mouse_click and previous_page_button.collidepoint(mouse_pos) and song_page > 0:
+        song_page -= 1
+        selected_map_idx = song_page * SONGS_PER_PAGE
+        return None
+    if mouse_click and next_page_button.collidepoint(mouse_pos) and song_page + 1 < page_count:
+        song_page += 1
+        selected_map_idx = song_page * SONGS_PER_PAGE
+        return None
+
+    first_song = song_page * SONGS_PER_PAGE
+    for i in range(first_song, min(first_song + SONGS_PER_PAGE, len(MAP_LIST))):
+        song = MAP_LIST[i]
+        local_index = i - first_song
+        col, row = local_index % 4, local_index // 4
         rect = pygame.Rect(grid_x + col * (card_w + gap_x), grid_y + row * (card_h + gap_y), card_w, card_h)
         hovered = rect.collidepoint(mouse_pos)
         if mouse_click and hovered:
@@ -734,6 +778,17 @@ def draw_home(mouse_pos, mouse_click):
         if i == selected_map_idx:
             pygame.draw.rect(screen, (241, 244, 255), rect, width=2, border_radius=14)
 
+    if page_count > 1:
+        for rect, label, enabled in (
+            (previous_page_button, "‹", song_page > 0),
+            (next_page_button, "›", song_page + 1 < page_count),
+        ):
+            pygame.draw.rect(screen, (33, 43, 69) if enabled else (23, 28, 44), rect, border_radius=6)
+            pygame.draw.rect(screen, (87, 109, 158) if enabled else (48, 55, 77), rect, 1, border_radius=6)
+            draw_styled_text(screen, label, font_small, rect.centerx, rect.centery - 1,
+                             (236, 242, 255) if enabled else (98, 105, 126))
+        draw_styled_text(screen, f"{song_page + 1} / {page_count}", font_small, 714, 395, (171, 181, 209))
+
     # Controls are deliberately separated from song cards, like a web player action bar.
     if sys.platform == "emscripten":
         play_button = pygame.Rect(255, 406, 128, 44)
@@ -749,7 +804,7 @@ def draw_home(mouse_pos, mouse_click):
         draw_button(screen, editor_button, "CHART STUDIO", (154, 135, 255))
     draw_styled_text(screen, "D F J K  ·  MOUSE & TOUCH     /     VOLUME: SLIDER OR - / +", font_small, SCREEN_WIDTH // 2, 466, (140, 153, 184))
     if home_notice and time.time() < home_notice_until:
-        notice_box = pygame.Rect(253, 378, 524, 24)
+        notice_box = pygame.Rect(253, 386, 390, 18)
         pygame.draw.rect(screen, (25, 39, 58), notice_box, border_radius=8)
         pygame.draw.rect(screen, (91, 129, 184), notice_box, 1, border_radius=8)
         draw_styled_text(screen, home_notice, font_small, notice_box.centerx, notice_box.centery, (218, 235, 255))
@@ -865,7 +920,7 @@ def start_game(m_idx, practice=False, chart_entry=None, chart_source="SAVED CHAR
     current_bg_surface = generate_bg_surface(current_map["colors"], current_map["accent"])
     stop_music()
     ready_start_time = time.perf_counter()
-    ready_count_in_duration = min(4.5, max(1.5, 240.0 / max(40.0, current_bpm)))
+    ready_count_in_duration = min(4.5, max(1.0, 240.0 / max(40.0, current_bpm)))
     audio_ended_at = None
     state = "READY"
     active_touches.clear()
@@ -934,7 +989,8 @@ def finish_auto_analysis():
         set_home_notice(f"자동채보 완료 · {result['bpm']:.2f} BPM · 노트 {len(result['notes'])}개")
 
 def start_music(path):
-    global audio_element
+    global audio_element, music_fade_gain
+    music_fade_gain = 1.0
     if sys.platform == "emscripten":
         try:
             import platform as browser_platform
@@ -953,8 +1009,8 @@ def start_music(path):
             return
         except Exception:
             audio_element = None
-    # Native Pygame uses the converted OGG copy; the original MP4 remains the web source.
-    audio_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "music", os.path.splitext(os.path.basename(path))[0] + ".ogg")
+    # Existing MP4 tracks use their OGG conversions; newly added MP3 tracks play directly.
+    audio_path = song_audio_path(path)
     try:
         if os.path.isfile(audio_path):
             if not pygame.mixer.get_init(): pygame.mixer.init()
@@ -995,6 +1051,7 @@ async def main():
     global state, current_map, current_map_idx, chart, score, combo, max_combo, total_notes, hit_score, hp, particles, key_lanes_down
     global perfect_count, great_count, miss_count, active_touches, combo_scale, feedback_scale
     global last_feedback, last_feedback_color, feedback_time, pause_start_time, game_start_time, current_bg_surface, audio_ended_at
+    global music_fade_gain
 
     # 웹 로딩 시 폰트 파일이 비동기 준비될 수 있도록 0.1초 양보 대기
     await asyncio.sleep(0.1)
@@ -1152,6 +1209,20 @@ async def main():
                         play_time = current_map["duration"] + (time.perf_counter() - audio_ended_at)
             except Exception:
                 pass
+            now = time.perf_counter()
+            if audio_ended_at is None:
+                if play_time >= current_map["duration"]:
+                    music_fade_gain = 0.0
+                    apply_music_volume()
+                    stop_music()
+                    audio_ended_at = now
+                    play_time = current_map["duration"]
+                else:
+                    seconds_left = current_map["duration"] - play_time
+                    music_fade_gain = min(1.0, max(0.0, seconds_left / FADE_OUT_SECONDS))
+                    apply_music_volume()
+            else:
+                play_time = current_map["duration"] + (now - audio_ended_at)
             screen.blit(current_bg_surface, (0, 0))
             
             top_l, top_r = CENTER_X - TRACK_TOP_W / 2, CENTER_X + TRACK_TOP_W / 2

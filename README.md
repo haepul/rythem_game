@@ -16,4 +16,4 @@ Pop-Location
 Copy-Item .\webapp\build\web\webapp.tar.gz .\game.tar.gz -Force
 ```
 
-The archive must remain named `game.tar.gz`, which is what `index.html` loads. Increment the `v=` value in `index.html` whenever replacing the archive so browsers do not keep an older cached build. Keep `music/*.mp4` at the repository root for GitHub Pages audio streaming.
+The archive must remain named `game.tar.gz`, which is what `index.html` loads. Increment the `v=` value in `index.html` whenever replacing the archive so browsers do not keep an older cached build. Keep each selected `.mp4` or `.mp3` audio file in the repository's `music/` directory for on-demand GitHub Pages streaming.
