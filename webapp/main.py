@@ -451,6 +451,7 @@ auto_analysis_job = None
 audio_ended_at = None
 ready_start_time = 0.0
 ready_count_in_duration = 2.0
+music_scheduled_start = None
 
 # 판정 횟수 카운터
 perfect_count, great_count, miss_count = 0, 0, 0
@@ -897,7 +898,7 @@ def start_game(m_idx, practice=False, chart_entry=None, chart_source="SAVED CHAR
     global current_map, current_map_idx, chart, total_notes, score, combo, max_combo, hit_score, hp
     global perfect_count, great_count, miss_count, game_start_time, current_bg_surface, state, audio_ended_at
     global practice_mode, current_bpm, current_offset, current_chart_source, current_difficulty
-    global ready_start_time, ready_count_in_duration
+    global ready_start_time, ready_count_in_duration, music_scheduled_start
     
     current_map_idx = m_idx
     current_map = MAP_LIST[m_idx]
@@ -922,6 +923,7 @@ def start_game(m_idx, practice=False, chart_entry=None, chart_source="SAVED CHAR
     ready_start_time = time.perf_counter()
     ready_count_in_duration = min(4.5, max(1.0, 240.0 / max(40.0, current_bpm)))
     audio_ended_at = None
+    music_scheduled_start = None
     state = "READY"
     active_touches.clear()
     key_lanes_down.clear()
@@ -951,14 +953,17 @@ def draw_ready_screen():
     draw_styled_text(screen, "ESC  ·  취소", font_small, CENTER_X, 462, (112, 126, 158))
 
 def begin_play():
-    global game_start_time, audio_ended_at, state
+    global game_start_time, audio_ended_at, state, music_scheduled_start
     if current_map is None:
         state = "HOME"
         return
     active_touches.clear()
     key_lanes_down.clear()
-    start_music(current_map["audio"])
-    game_start_time = time.perf_counter()
+    # Give the first notes a short silent approach so the playfield is empty
+    # when gameplay opens. The song begins exactly when the chart reaches t=0.
+    lead_in = max(0.45, APPROACH_TIME * 2.0)
+    game_start_time = time.perf_counter() + lead_in
+    music_scheduled_start = game_start_time
     audio_ended_at = None
     state = "PLAY"
 
@@ -1051,7 +1056,7 @@ async def main():
     global state, current_map, current_map_idx, chart, score, combo, max_combo, total_notes, hit_score, hp, particles, key_lanes_down
     global perfect_count, great_count, miss_count, active_touches, combo_scale, feedback_scale
     global last_feedback, last_feedback_color, feedback_time, pause_start_time, game_start_time, current_bg_surface, audio_ended_at
-    global music_fade_gain
+    global music_fade_gain, music_scheduled_start
 
     # 웹 로딩 시 폰트 파일이 비동기 준비될 수 있도록 0.1초 양보 대기
     await asyncio.sleep(0.1)
@@ -1095,8 +1100,12 @@ async def main():
                         pause_music()
                     elif state == "PAUSED":
                         state = "PLAY"
-                        game_start_time += (time.perf_counter() - pause_start_time)
-                        resume_music()
+                        paused_for = time.perf_counter() - pause_start_time
+                        game_start_time += paused_for
+                        if music_scheduled_start is not None:
+                            music_scheduled_start += paused_for
+                        else:
+                            resume_music()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_click = True
                 active_touches[event.button] = event.pos[0]
@@ -1189,6 +1198,11 @@ async def main():
         # SCENE: PLAY
         # ==========================================
         elif state == "PLAY":
+            now = time.perf_counter()
+            if music_scheduled_start is not None and now >= music_scheduled_start:
+                start_music(current_map["audio"])
+                game_start_time = time.perf_counter()
+                music_scheduled_start = None
             play_time = time.perf_counter() - game_start_time
             try:
                 if audio_element is not None and not audio_element.paused:
@@ -1444,10 +1458,11 @@ async def main():
             max_combo = max(max_combo, combo)
             draw_styled_text(screen, f"점수: {score:,}", font_med, 90, 20, (255, 255, 255))
             
-            prog_ratio = min(1.0, max(0.0, play_time / current_map["duration"]))
+            display_play_time = max(0.0, play_time)
+            prog_ratio = min(1.0, max(0.0, display_play_time / current_map["duration"]))
             bar_w, bar_h = 240, 8
             bar_x, bar_y = CENTER_X - bar_w // 2, 35
-            time_str = f"{format_time(play_time)} / {format_time(current_map['duration'])}"
+            time_str = f"{format_time(display_play_time)} / {format_time(current_map['duration'])}"
             title_str = f"{current_map['song']}  /  {DIFFICULTIES[current_difficulty]}  ·  {current_chart_source}"
             
             pygame.draw.rect(screen, (10, 14, 32), (0, 0, SCREEN_WIDTH, 58))
@@ -1532,8 +1547,12 @@ async def main():
             if mouse_click:
                 if btn_resume.collidepoint(mouse_pos):
                     state = "PLAY"
-                    game_start_time += (time.perf_counter() - pause_start_time)
-                    resume_music()
+                    paused_for = time.perf_counter() - pause_start_time
+                    game_start_time += paused_for
+                    if music_scheduled_start is not None:
+                        music_scheduled_start += paused_for
+                    else:
+                        resume_music()
                 elif btn_retry.collidepoint(mouse_pos):
                     request_game_start(current_map_idx, practice=practice_mode, difficulty=current_difficulty)
                 elif btn_home.collidepoint(mouse_pos):
