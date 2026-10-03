@@ -431,6 +431,9 @@ state = "HOME"
 current_map, current_map_idx = None, -1
 selected_map_idx = 0
 song_page = 0
+selected_length = "verse"
+current_length = "verse"
+LENGTH_LABELS = {"verse": "1절", "full": "전체 곡"}
 selected_difficulty = "hard"
 current_difficulty = "hard"
 practice_mode = False
@@ -452,6 +455,10 @@ audio_ended_at = None
 ready_start_time = 0.0
 ready_count_in_duration = 2.0
 music_scheduled_start = None
+music_load_job = None
+music_load_lock = threading.Lock() if sys.platform != "emscripten" else None
+active_chart_notes = []
+next_chart_index = 0
 
 # 판정 횟수 카운터
 perfect_count, great_count, miss_count = 0, 0, 0
@@ -689,8 +696,16 @@ def draw_album_art(surface, rect, accent, index):
         pygame.draw.rect(surface, accent, (x, art.bottom - 9 - height, 5, height), border_radius=3)
     pygame.draw.rect(surface, accent, rect, width=2, border_radius=14)
 
+def song_duration(song, mode, entry=None):
+    if mode == "verse":
+        return song["duration"]
+    entry = entry or get_auto_chart_entry(song["audio"]) or {}
+    duration = float(entry.get("duration", song["duration"]))
+    return duration if math.isfinite(duration) and duration > 0 else song["duration"]
+
+
 def draw_home(mouse_pos, mouse_click):
-    global selected_map_idx, selected_difficulty, song_page
+    global selected_map_idx, selected_difficulty, selected_length, song_page
     screen.blit(default_bg_surface, (0, 0))
     overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
     pygame.draw.circle(overlay, (64, 77, 174, 32), (680, 80), 260)
@@ -729,7 +744,7 @@ def draw_home(mouse_pos, mouse_click):
     draw_styled_text(screen, selected["song"], title_font, hero.centerx, hero.y + 164, (248, 249, 255))
     selected_bpm = get_saved_bpm(selected["audio"], selected["bpm"])
     draw_styled_text(screen, f"{DIFFICULTIES[selected_difficulty]}   ·   {selected_bpm:g} BPM", font_small, hero.centerx, hero.y + 194, selected["accent"])
-    draw_styled_text(screen, f"{format_time(selected['duration'])}   ·   4 LANES", font_small, hero.centerx, hero.y + 218, (171, 181, 209))
+    draw_styled_text(screen, f"{format_time(song_duration(selected, selected_length))}   ·   4 LANES", font_small, hero.centerx, hero.y + 218, (171, 181, 209))
     draw_styled_text(screen, "SELECT CHART LEVEL", font_small, hero.centerx, hero.y + 238, (142, 156, 194))
     difficulty_buttons = {}
     button_y = hero.y + 250
@@ -743,6 +758,16 @@ def draw_home(mouse_pos, mouse_click):
         pygame.draw.rect(screen, fill, rect, border_radius=8)
         pygame.draw.rect(screen, (235, 240, 255) if active else (61, 72, 104), rect, 1, border_radius=8)
         draw_styled_text(screen, DIFFICULTIES[difficulty], font_small, rect.centerx, rect.centery, ink)
+
+    length_buttons = {}
+    for index, mode in enumerate(("verse", "full")):
+        rect = pygame.Rect(24 + index * 99, 409, 94, 38)
+        length_buttons[mode] = rect
+        active = mode == selected_length
+        pygame.draw.rect(screen, (53, 73, 105) if active else (22, 28, 47), rect, border_radius=9)
+        pygame.draw.rect(screen, selected["accent"] if active else (60, 72, 99), rect, 2 if active else 1, border_radius=9)
+        draw_styled_text(screen, LENGTH_LABELS[mode], font_small, rect.centerx, rect.centery,
+                         (241, 247, 255) if active else (158, 173, 201))
 
     grid_x, grid_y = 252, 102
     card_w, card_h, gap_x, gap_y = 126, 87, 7, 8
@@ -781,13 +806,16 @@ def draw_home(mouse_pos, mouse_click):
 
     if page_count > 1:
         for rect, label, enabled in (
-            (previous_page_button, "‹", song_page > 0),
-            (next_page_button, "›", song_page + 1 < page_count),
+            (previous_page_button, -1, song_page > 0),
+            (next_page_button, 1, song_page + 1 < page_count),
         ):
             pygame.draw.rect(screen, (33, 43, 69) if enabled else (23, 28, 44), rect, border_radius=6)
             pygame.draw.rect(screen, (87, 109, 158) if enabled else (48, 55, 77), rect, 1, border_radius=6)
-            draw_styled_text(screen, label, font_small, rect.centerx, rect.centery - 1,
-                             (236, 242, 255) if enabled else (98, 105, 126))
+            # Draw chevrons directly: independent of bundled font glyph coverage.
+            cx, cy = rect.center
+            pygame.draw.lines(screen, (236, 242, 255) if enabled else (98, 105, 126), False,
+                              [(cx - label * 3, cy - 5), (cx + label * 3, cy),
+                               (cx - label * 3, cy + 5)], 2)
         draw_styled_text(screen, f"{song_page + 1} / {page_count}", font_small, 714, 395, (171, 181, 209))
 
     # Controls are deliberately separated from song cards, like a web player action bar.
@@ -817,6 +845,10 @@ def draw_home(mouse_pos, mouse_click):
         if speed_right.collidepoint(mouse_pos):
             adjust_note_speed(1)
             return None
+        for mode, rect in length_buttons.items():
+            if rect.collidepoint(mouse_pos):
+                selected_length = mode
+                return None
         for difficulty, rect in difficulty_buttons.items():
             if rect.collidepoint(mouse_pos):
                 selected_difficulty = difficulty
@@ -898,10 +930,13 @@ def start_game(m_idx, practice=False, chart_entry=None, chart_source="SAVED CHAR
     global current_map, current_map_idx, chart, total_notes, score, combo, max_combo, hit_score, hp
     global perfect_count, great_count, miss_count, game_start_time, current_bg_surface, state, audio_ended_at
     global practice_mode, current_bpm, current_offset, current_chart_source, current_difficulty
-    global ready_start_time, ready_count_in_duration, music_scheduled_start
+    global ready_start_time, ready_count_in_duration, music_scheduled_start, current_length
+    global active_chart_notes, next_chart_index
     
     current_map_idx = m_idx
-    current_map = MAP_LIST[m_idx]
+    current_map = dict(MAP_LIST[m_idx])
+    current_length = selected_length
+    current_map["duration"] = song_duration(current_map, current_length, chart_entry)
     current_difficulty = difficulty or selected_difficulty
     chart_entry = chart_entry_for_difficulty(chart_entry, current_difficulty)
     chart, current_bpm, current_offset = load_authored_chart(
@@ -924,7 +959,10 @@ def start_game(m_idx, practice=False, chart_entry=None, chart_source="SAVED CHAR
     ready_count_in_duration = min(4.5, max(1.0, 240.0 / max(40.0, current_bpm)))
     audio_ended_at = None
     music_scheduled_start = None
-    state = "READY"
+    active_chart_notes = []
+    next_chart_index = 0
+    prepare_music(current_map["audio"])
+    state = "LOADING"
     active_touches.clear()
     key_lanes_down.clear()
 
@@ -940,14 +978,14 @@ def draw_ready_screen():
     overlay.fill((3, 6, 18, 148))
     screen.blit(overlay, (0, 0))
     draw_styled_text(screen, current_map["song"], font_large, CENTER_X, 112, (246, 248, 255))
-    draw_styled_text(screen, f"{DIFFICULTIES[current_difficulty]}  ·  {current_bpm:.1f} BPM", font_small, CENTER_X, 150, current_map["accent"])
+    draw_styled_text(screen, f"{DIFFICULTIES[current_difficulty]}  ·  {LENGTH_LABELS[current_length]}  ·  {current_bpm:.1f} BPM", font_small, CENTER_X, 150, current_map["accent"])
     ring = pygame.Rect(CENTER_X - 74, 188, 148, 148)
     pygame.draw.circle(screen, (31, 40, 67), ring.center, 70, 2)
     pygame.draw.arc(screen, current_map["accent"], ring,
                     -math.pi / 2, -math.pi / 2 + max(0.1, pulse * math.pi * 1.7), 5)
     draw_styled_text(screen, str(count), font_combo_num, CENTER_X, ring.centery, (249, 250, 255), scale=1.0 + pulse * 0.06)
     draw_styled_text(screen, "GET READY", font_med, CENTER_X, 365, (220, 229, 248))
-    draw_styled_text(screen, "곡이 시작되면 첫 노트가 나타납니다", font_small, CENTER_X, 396, (151, 166, 199))
+    draw_styled_text(screen, "음악 준비 완료 · 판정선에 맞춰 연주하세요", font_small, CENTER_X, 396, (151, 166, 199))
     if practice_mode:
         draw_styled_text(screen, "PRACTICE · NO FAIL", font_small, CENTER_X, 431, (120, 228, 195))
     draw_styled_text(screen, "ESC  ·  취소", font_small, CENTER_X, 462, (112, 126, 158))
@@ -964,6 +1002,11 @@ def begin_play():
     lead_in = max(0.45, APPROACH_TIME * 2.0)
     game_start_time = time.perf_counter() + lead_in
     music_scheduled_start = game_start_time
+    if audio_element is not None:
+        audio_element.volume = music_volume
+        if not audio_element.play(lead_in):
+            state = "LOADING"
+            return
     audio_ended_at = None
     state = "PLAY"
 
@@ -993,39 +1036,108 @@ def finish_auto_analysis():
         counts = result.get("type_counts", {})
         set_home_notice(f"자동채보 완료 · {result['bpm']:.2f} BPM · 노트 {len(result['notes'])}개")
 
-def start_music(path):
-    global audio_element, music_fade_gain
+def _load_native_music(job, path):
+    # SDL's streaming decoder is opened before the count-in, never on frame zero.
+    try:
+        with music_load_lock:
+            if job is not music_load_job:
+                return
+            if not pygame.mixer.get_init():
+                pygame.mixer.init()
+            pygame.mixer.music.load(path)
+        job["done"] = True
+    except Exception as exc:
+        job["error"] = str(exc)
+        job["done"] = True
+
+
+def prepare_music(path):
+    global audio_element, music_load_job, music_fade_gain
     music_fade_gain = 1.0
+    music_load_job = {"done": False, "error": ""}
     if sys.platform == "emscripten":
         try:
             import platform as browser_platform
-            if audio_element is None:
-                audio_element = browser_platform.window.document.createElement("audio")
-                audio_element.preload = "auto"
-                audio_element.style.display = "none"
-                browser_platform.window.document.body.appendChild(audio_element)
-            audio_element.pause()
-            # Keep the large music files outside game.tar.gz. GitHub Pages serves
-            # the selected track directly, so the browser downloads only one song.
-            audio_element.src = "music/" + WEB_AUDIO_FILES[current_map_idx]
-            audio_element.load()
-            audio_element.volume = music_volume
-            audio_element.play()
-            return
-        except Exception:
-            audio_element = None
-    # Existing MP4 tracks use their OGG conversions; newly added MP3 tracks play directly.
-    audio_path = song_audio_path(path)
+            audio_element = browser_platform.window.rhythmAudio
+            audio_element.prepare("music/" + WEB_AUDIO_FILES[current_map_idx])
+        except Exception as exc:
+            music_load_job.update(done=True, error=str(exc))
+    else:
+        threading.Thread(target=_load_native_music,
+                         args=(music_load_job, song_audio_path(path)), daemon=True).start()
+
+
+def draw_loading_screen(mouse_pos, mouse_click):
+    global state, ready_start_time, chart, total_notes
+    screen.blit(current_bg_surface, (0, 0))
+    ready = False
+    error = music_load_job.get("error", "") if music_load_job else ""
+    progress = 0.0
+    unlocked = True
+    if audio_element is not None and not error:
+        status = str(audio_element.status)
+        error = str(audio_element.error) if status == "error" else ""
+        ready = status == "ready"
+        progress = float(audio_element.progress)
+        unlocked = bool(audio_element.unlocked)
+    elif music_load_job and not error:
+        ready = music_load_job["done"]
+    draw_styled_text(screen, current_map["song"], font_large, CENTER_X, 125, (248, 249, 255))
+    label = "곡을 준비하는 중" if not error else "곡을 불러오지 못했습니다"
+    if ready and not unlocked:
+        label = "화면을 눌러 음악을 시작해 주세요"
+    draw_styled_text(screen, label, font_med, CENTER_X, 210, (224, 234, 252))
+    detail = "다운로드와 오디오 준비가 끝나면 카운트다운을 시작합니다"
+    if error:
+        detail = error[:65]
+    draw_styled_text(screen, detail, font_small, CENTER_X, 250, (154, 177, 212))
+    pygame.draw.rect(screen, (24, 31, 53), (240, 292, 320, 8), border_radius=4)
+    if not error:
+        width = int(320 * progress) if progress else int(60 + 30 * math.sin(time.perf_counter() * 3))
+        pygame.draw.rect(screen, current_map["accent"], (240, 292, width, 8), border_radius=4)
+    back = pygame.Rect(245, 345, 145, 45)
+    retry = pygame.Rect(410, 345, 145, 45)
+    draw_button(screen, back, "메뉴로", (85, 105, 150))
+    if error:
+        draw_button(screen, retry, "다시 시도", current_map["accent"])
+    if mouse_click and back.collidepoint(mouse_pos):
+        if audio_element is not None:
+            audio_element.cancel()
+        stop_music()
+        state = "HOME"
+        return
+    if mouse_click and error and retry.collidepoint(mouse_pos):
+        prepare_music(current_map["audio"])
+        return
+    if ready and unlocked and not error:
+        if audio_element is not None:
+            # Encoded container lengths may differ slightly from analysis PCM.
+            actual_duration = float(audio_element.duration)
+            if 0 < actual_duration < current_map["duration"]:
+                current_map["duration"] = actual_duration
+                chart = [note for note in chart if note["time"] < actual_duration]
+                for note in chart:
+                    if "end_time" in note:
+                        note["end_time"] = min(note["end_time"], actual_duration)
+                total_notes = prepare_sustain_combo_ticks(chart, current_bpm)
+        ready_start_time = time.perf_counter()
+        state = "READY"
+
+
+def start_music(path):
+    global music_fade_gain
+    music_fade_gain = 1.0
+    # Web playback was already scheduled on the audio clock in begin_play().
+    if audio_element is not None:
+        return True
     try:
-        if os.path.isfile(audio_path):
-            if not pygame.mixer.get_init(): pygame.mixer.init()
-            pygame.mixer.music.load(audio_path)
-            pygame.mixer.music.set_volume(music_volume)
-            pygame.mixer.music.play()
-        else:
-            print(f"음악 파일을 찾을 수 없습니다: {audio_path}")
+        pygame.mixer.music.set_volume(music_volume)
+        pygame.mixer.music.play()
+        return True
     except pygame.error as exc:
-        print(f"음악 재생 실패 ({audio_path}): {exc}")
+        set_home_notice(f"음악 재생 실패: {exc}")
+        return False
+
 
 def pause_music():
     global audio_element
@@ -1056,7 +1168,7 @@ async def main():
     global state, current_map, current_map_idx, chart, score, combo, max_combo, total_notes, hit_score, hp, particles, key_lanes_down
     global perfect_count, great_count, miss_count, active_touches, combo_scale, feedback_scale
     global last_feedback, last_feedback_color, feedback_time, pause_start_time, game_start_time, current_bg_surface, audio_ended_at
-    global music_fade_gain, music_scheduled_start
+    global music_fade_gain, music_scheduled_start, next_chart_index, active_chart_notes
 
     # 웹 로딩 시 폰트 파일이 비동기 준비될 수 있도록 0.1초 양보 대기
     await asyncio.sleep(0.1)
@@ -1084,13 +1196,15 @@ async def main():
                     set_music_volume(music_volume - 0.05)
                 elif event.key in (pygame.K_EQUALS, pygame.K_KP_PLUS):
                     set_music_volume(music_volume + 0.05)
-                if event.key == pygame.K_ESCAPE and state in ["READY", "PLAY", "PAUSED", "ANALYZING"]:
+                if event.key == pygame.K_ESCAPE and state in ["LOADING", "READY", "PLAY", "PAUSED", "ANALYZING"]:
                     if state == "ANALYZING":
                         if auto_analysis_job is not None:
                             auto_analysis_job["pending"] = False
                         state = "HOME"
                         set_home_notice("분석은 계속 진행되며 결과는 다음 플레이에 사용됩니다.")
-                    elif state == "READY":
+                    elif state in ("READY", "LOADING"):
+                        if audio_element is not None:
+                            audio_element.cancel()
                         stop_music()
                         state = "HOME"
                         set_home_notice("게임 시작을 취소했습니다.")
@@ -1104,7 +1218,7 @@ async def main():
                         game_start_time += paused_for
                         if music_scheduled_start is not None:
                             music_scheduled_start += paused_for
-                        else:
+                        if music_scheduled_start is None or audio_element is not None:
                             resume_music()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_click = True
@@ -1189,6 +1303,9 @@ async def main():
         # ==========================================
         # SCENE: PLAY
         # ==========================================
+        elif state == "LOADING":
+            draw_loading_screen(mouse_pos, mouse_click)
+
         elif state == "READY":
             draw_ready_screen()
             if time.perf_counter() - ready_start_time >= ready_count_in_duration:
@@ -1200,13 +1317,20 @@ async def main():
         elif state == "PLAY":
             now = time.perf_counter()
             if music_scheduled_start is not None and now >= music_scheduled_start:
-                start_music(current_map["audio"])
+                if not start_music(current_map["audio"]):
+                    state = "HOME"
+                    continue
                 game_start_time = time.perf_counter()
                 music_scheduled_start = None
             play_time = time.perf_counter() - game_start_time
             try:
-                if audio_element is not None and not audio_element.paused:
-                    play_time = current_map["duration"] + 1.6 if audio_element.ended else float(audio_element.currentTime)
+                if audio_element is not None:
+                    # A suspended audio context freezes the notes with the sound.
+                    play_time = float(audio_element.currentTime)
+                    if audio_element.ended:
+                        play_time = max(current_map["duration"], play_time)
+                elif music_scheduled_start is not None:
+                    pass  # Negative pre-roll time; an idle mixer is not song end.
                 elif pygame.mixer.get_init() and pygame.mixer.music.get_busy():
                     mixer_time = pygame.mixer.music.get_pos()
                     if mixer_time >= 0:
@@ -1303,7 +1427,12 @@ async def main():
             SLIDE_TOP = interpolate_color((255, 203, 255), combo_top, combo_mix * 0.9)
             SLIDE_BOT = interpolate_color((151, 90, 255), combo_bottom, combo_mix * 0.9)
 
-            for note in chart[:]:
+            # Only visit approaching notes and unfinished sustains, even in full songs.
+            while next_chart_index < len(chart) and chart[next_chart_index]["time"] <= play_time + APPROACH_TIME * 1.25:
+                active_chart_notes.append(chart[next_chart_index])
+                next_chart_index += 1
+            active_chart_notes = [note for note in active_chart_notes if not note["hit"]]
+            for note in active_chart_notes:
                 if note["hit"]: continue
                 
                 time_diff = note["time"] - play_time
@@ -1317,6 +1446,7 @@ async def main():
                         abs_diff = abs(time_diff)
                         if abs_diff <= GREAT_TIME:
                             note["hit"] = True
+                            triggered_lanes.discard(note["lane"])
                             combo += 1
                             combo_scale, feedback_scale = 1.35, 1.4
                             hit_x, hit_y, _ = get_perspective_pos(note["lane"], 1.0)
@@ -1551,7 +1681,7 @@ async def main():
                     game_start_time += paused_for
                     if music_scheduled_start is not None:
                         music_scheduled_start += paused_for
-                    else:
+                    if music_scheduled_start is None or audio_element is not None:
                         resume_music()
                 elif btn_retry.collidepoint(mouse_pos):
                     request_game_start(current_map_idx, practice=practice_mode, difficulty=current_difficulty)
@@ -1596,7 +1726,7 @@ async def main():
             grade_str, grade_color = get_grade(accuracy)
             
             draw_styled_text(screen, current_map["song"], font_large, CENTER_X, 48, (255, 255, 255))
-            draw_styled_text(screen, "STAGE CLEAR!", font_med, CENTER_X, 83, current_map["accent"])
+            draw_styled_text(screen, f"STAGE CLEAR!  ·  {LENGTH_LABELS[current_length]}  ·  {DIFFICULTIES[current_difficulty]}", font_med, CENTER_X, 83, current_map["accent"])
             if practice_mode:
                 draw_styled_text(screen, "PRACTICE · RECORD NOT SAVED", font_small, CENTER_X, 123, (120, 228, 195))
             

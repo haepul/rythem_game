@@ -270,7 +270,7 @@ def _select_quantized_onsets(onsets, bpm, offset, hop_seconds, level, duration=N
     difficulty = "easy" if level <= 2 else "hard" if level <= 6 else "master"
     # Keep generated charts readable, especially on touch screens. Each pair
     # is the per-bar cap and minimum beat spacing for that difficulty.
-    limits = {"easy": (2, 1.60), "hard": (4, 0.90), "master": (10, 0.32)}
+    limits = {"easy": (2, 1.60), "hard": (4, 0.90), "master": (14, 0.25)}
     per_bar, min_gap = limits[difficulty]
     by_slot = {}
     for onset in onsets:
@@ -447,6 +447,38 @@ def _add_master_chords(events):
     return sorted(events + extras, key=lambda event: (event["beat"], not event.get("chord_accent", False)))
 
 
+def intensify_master(notes, bpm):
+    """Add accents at existing melody attacks without shifting their timing.
+
+    At most two simultaneous contacts; reserve the whole path of a slide.
+    This is also used to upgrade saved charts without re-quantizing their BPM.
+    """
+    result = [dict(note) for note in notes]
+    gap = 0.11 * bpm / 60.0
+    candidates = [note for note in notes if note["type"] == "TAP"]
+    for index, note in enumerate(candidates):
+        if index % 5 not in (0, 2):
+            continue
+        beat = note["beat"]
+        nearby = [other for other in result
+                  if other["beat"] - gap <= beat <= other.get("end_beat", other["beat"]) + gap]
+        simultaneous = [other for other in nearby
+                        if other["beat"] <= beat + 0.001 and other.get("end_beat", other["beat"]) >= beat - 0.001]
+        if len(simultaneous) >= 2:
+            continue
+        blocked = set()
+        for other in nearby:
+            if other["type"] == "SLIDE":
+                blocked.update(range(min(other["lane"], other["end_lane"]), max(other["lane"], other["end_lane"]) + 1))
+            else:
+                blocked.add(other["lane"])
+        options = [lane for lane in range(4) if lane not in blocked]
+        if options:
+            lane = max(options, key=lambda value: abs(value - note["lane"]))
+            result.append({"type": "TAP", "beat": beat, "lane": lane})
+    return sorted(result, key=lambda note: (note["beat"], note["lane"]))
+
+
 def _generate_levels_from_audio(path, preferred_bpm):
     """Analyze once, then select distinct melody-led Easy/Hard/Master charts."""
     samples, sample_rate = _downsample_mono(path)
@@ -464,6 +496,8 @@ def _generate_levels_from_audio(path, preferred_bpm):
         if name == "master":
             events = _add_master_chords(events)
         notes = _optimize_lanes(events, level)
+        if name == "master":
+            notes = intensify_master(notes, bpm)
         counts = {kind: sum(note["type"] == kind for note in notes)
                   for kind in ("TAP", "HOLD", "SLIDE")}
         charts[name] = {"notes": notes, "type_counts": counts, "selected_count": len(selected)}
