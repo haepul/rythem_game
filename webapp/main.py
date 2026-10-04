@@ -10,6 +10,7 @@ import json
 import base64
 import subprocess
 import threading
+from sustain_judgement import SustainJudge, HEAD_WINDOW, MIN_CONTINUOUS_HOLD, TAIL_EARLY_WINDOW
 
 
 # ---------------------------------------------------------
@@ -469,10 +470,6 @@ note_speed_index = 2
 APPROACH_TIME = BASE_APPROACH_TIME / NOTE_SPEED_LEVELS[note_speed_index]
 PERFECT_TIME = 0.07
 GREAT_TIME = 0.15
-LONG_NOTE_HEAD_WINDOW = 0.23
-LONG_NOTE_RELEASE_GRACE = 0.20
-LONG_NOTE_TICK_LATE = 0.08
-SLIDE_LANE_TOLERANCE = 0.72
 
 active_touches = {}
 key_lanes_down = set()
@@ -510,33 +507,35 @@ def prepare_sustain_combo_ticks(notes, bpm):
         note["ticks_awarded"] = 0
         if note["type"] in {"HOLD", "SLIDE"}:
             note["active"] = False
-            note["ever_started"] = False
-            note["off_lane_since"] = None
             duration = max(0.0, note["end_time"] - note["time"])
             note["tick_interval"] = interval
             ticks = [note["time"]]
             tick_number = 1
-            while tick_number * interval < duration - 1e-9:
-                ticks.append(note["time"] + tick_number * interval)
+            while tick_number * interval < duration - TAIL_EARLY_WINDOW - 1e-9:
+                # The accepted head/tail windows must not overlap body ticks.
+                if tick_number * interval >= HEAD_WINDOW + MIN_CONTINUOUS_HOLD:
+                    ticks.append(note["time"] + tick_number * interval)
                 tick_number += 1
             if duration > 1e-9:
                 ticks.append(note["end_time"])
             note["tick_times"] = ticks
             note["tick_total"] = len(ticks)
+            note["sustain_judge"] = SustainJudge(note, ticks)
             total += note["tick_total"]
         else:
             total += 1
     return total
 
-def award_sustain_tick(note, timing_diff=0.0):
-    global score, hit_score, combo, hp, perfect_count, great_count
+def award_sustain_tick(note, grade="PERFECT"):
+    global score, hit_score, combo, max_combo, hp, perfect_count, great_count
     global last_feedback, last_feedback_color, feedback_time, feedback_scale, combo_scale
     if note["ticks_awarded"] >= note["tick_total"]:
         return
     combo += 1
+    max_combo = max(max_combo, combo)
     combo_scale = max(combo_scale, 1.18)
     note["ticks_awarded"] += 1
-    if note["ticks_awarded"] == 1 and abs(timing_diff) > PERFECT_TIME:
+    if grade == "GREAT":
         score += 100 + combo * 5
         hit_score += 70
         great_count += 1
@@ -551,65 +550,42 @@ def award_sustain_tick(note, timing_diff=0.0):
     feedback_time = time.time()
     feedback_scale = 1.15
 
-def award_due_sustain_ticks(note, play_time):
-    """Catch up tick awards after a slow frame without dropping combo events."""
-    while note["ticks_awarded"] < note["tick_total"]:
-        ordinal = note["ticks_awarded"]
-        tick_time = note["tick_times"][ordinal]
-        if play_time + 1e-6 < tick_time:
-            break
-        award_sustain_tick(note)
-
-def skip_missed_sustain_ticks(note, play_time):
-    """Record elapsed sustain ticks as misses without removing the long note."""
-    global miss_count, combo, hp
-    skipped = 0
-    while note["ticks_awarded"] < note["tick_total"]:
-        ordinal = note["ticks_awarded"]
-        tick_time = note["tick_times"][ordinal]
-        # Keep the first tick available for the wider long-note head window.
-        if ordinal == 0 and play_time < note["time"] + LONG_NOTE_HEAD_WINDOW:
-            break
-        if tick_time >= play_time - LONG_NOTE_TICK_LATE:
-            break
+def apply_sustain_grades(note, grades):
+    """Resolve every head, body and tail once; missed time cannot be reclaimed."""
+    global miss_count, combo, hp, last_feedback, last_feedback_color
+    global feedback_time, feedback_scale
+    for grade in grades:
+        if grade != "MISS":
+            award_sustain_tick(note, grade)
+            continue
         note["ticks_awarded"] += 1
-        skipped += 1
-    if skipped:
-        miss_count += skipped
+        miss_count += 1
         combo = 0
         if not practice_mode:
-            hp = max(0.0, hp - min(5.0, skipped * 0.8))
+            hp = max(0.0, hp - 0.8)
+        last_feedback, last_feedback_color = "MISS", (255, 60, 60)
+        feedback_time, feedback_scale = time.time(), 1.15
 
-def connect_sustain_note(note, play_time, timing_diff):
-    """Start or rejoin a hold/slide, preserving only ticks the player can still hit."""
-    global last_feedback, last_feedback_color, feedback_time, feedback_scale
-    first_tick_available = note["ticks_awarded"] == 0
-    note["active"] = True
-    note["ever_started"] = True
-    note["off_lane_since"] = None
-    if first_tick_available and abs(timing_diff) <= LONG_NOTE_HEAD_WINDOW:
-        award_sustain_tick(note, timing_diff)
-    else:
-        was_missed = note["ticks_awarded"] > 0
-        skip_missed_sustain_ticks(note, play_time)
-        award_due_sustain_ticks(note, play_time)
-        if was_missed:
-            last_feedback, last_feedback_color = "REJOIN", (120, 228, 195)
-            feedback_time = time.time()
-            feedback_scale = 1.0
 
-def disconnect_sustain_note(note, play_time):
-    """Allow a short release grace, then break combo while leaving the note recoverable."""
-    global combo, last_feedback, last_feedback_color, feedback_time, feedback_scale
-    if note.get("off_lane_since") is None:
-        note["off_lane_since"] = play_time
-    elif play_time - note["off_lane_since"] >= LONG_NOTE_RELEASE_GRACE:
-        note["active"] = False
-        note["off_lane_since"] = None
-        combo = 0
-        last_feedback, last_feedback_color = "REJOIN", (120, 228, 195)
-        feedback_time = time.time()
-        feedback_scale = 1.0
+def physical_lanes():
+    lanes = set(key_lanes_down)
+    left = CENTER_X - TRACK_BOTTOM_W / 2
+    for touch_x in active_touches.values():
+        if left <= touch_x <= left + TRACK_BOTTOM_W:
+            lanes.add(min(3, max(0, int((touch_x - left) // (TRACK_BOTTOM_W / 4)))))
+    return lanes
+
+
+def update_sustain(note, play_time, initial_lanes, changes, triggered_lanes):
+    judge = note["sustain_judge"]
+    available = {lane for _, _, fresh in changes for lane in fresh}
+    apply_sustain_grades(note, judge.update(play_time, initial_lanes, changes))
+    note["active"] = judge.connected
+    note["hit"] = judge.finished
+    remaining = {lane for _, _, fresh in changes for lane in fresh}
+    triggered_lanes.difference_update(available - remaining)
+    return judge
+
 
 def apply_music_volume():
     volume = max(0.0, min(1.0, music_volume * music_fade_gain))
@@ -645,20 +621,6 @@ def volume_slider_for_state(scene):
     if scene == "PAUSED":
         return pygame.Rect(CENTER_X - 40, 350, 100, 10)
     return None
-
-def miss_sustain_note(note):
-    global miss_count, combo, hp
-    global last_feedback, last_feedback_color, feedback_time, feedback_scale
-    remaining = max(1, note["tick_total"] - note["ticks_awarded"])
-    miss_count += remaining
-    note["ticks_awarded"] = note["tick_total"]
-    note["hit"] = True
-    combo = 0
-    if not practice_mode:
-        hp -= 18.0
-    last_feedback, last_feedback_color = "MISS", (255, 60, 60)
-    feedback_time = time.time()
-    feedback_scale = 1.2
 
 def set_home_notice(message):
     global home_notice, home_notice_until
@@ -1184,14 +1146,36 @@ async def main():
         mouse_click = False
         triggered_lanes = set()
         mouse_pos = pygame.mouse.get_pos()
-        
+        initial_lanes = physical_lanes()
+        event_lanes = set(initial_lanes)
+        input_changes = []
+
         for event in pygame.event.get():
+            # Touch-generated mouse events duplicate the same finger and can
+            # otherwise leave a phantom held lane after FINGERUP.
+            if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION) and getattr(event, "touch", False):
+                continue
+            received_at = time.perf_counter()
+            timestamp = getattr(event, "timestamp", None)
+            if timestamp is not None:
+                age_ms = (pygame.time.get_ticks() - int(timestamp)) % (2 ** 32)
+                if age_ms <= 250:
+                    received_at -= age_ms / 1000.0
             if event.type == pygame.QUIT:
                 running = False
+            elif event.type == pygame.WINDOWFOCUSLOST:
+                key_lanes_down.clear()
+                active_touches.clear()
+                if state == "PLAY":
+                    state = "PAUSED"
+                    pause_start_time = time.perf_counter()
+                    pause_music()
             elif event.type == pygame.KEYDOWN:
                 if event.key in KEY_TO_LANE:
-                    key_lanes_down.add(KEY_TO_LANE[event.key])
-                    triggered_lanes.add(KEY_TO_LANE[event.key])
+                    lane = KEY_TO_LANE[event.key]
+                    if lane not in key_lanes_down:
+                        triggered_lanes.add(lane)
+                    key_lanes_down.add(lane)
                 elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
                     set_music_volume(music_volume - 0.05)
                 elif event.key in (pygame.K_EQUALS, pygame.K_KP_PLUS):
@@ -1220,7 +1204,7 @@ async def main():
                             music_scheduled_start += paused_for
                         if music_scheduled_start is None or audio_element is not None:
                             resume_music()
-            elif event.type == pygame.MOUSEBUTTONDOWN:
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mouse_click = True
                 active_touches[event.button] = event.pos[0]
                 if state == "PLAY":
@@ -1257,15 +1241,12 @@ async def main():
                 if event.key in KEY_TO_LANE:
                     key_lanes_down.discard(KEY_TO_LANE[event.key])
 
-        pressed_lanes = list(key_lanes_down)
-        track_b_left = CENTER_X - (TRACK_BOTTOM_W / 2)
-        lane_w_bottom = TRACK_BOTTOM_W / 4.0
-        
-        if state == "PLAY":
-            for touch_x in active_touches.values():
-                if track_b_left <= touch_x <= track_b_left + TRACK_BOTTOM_W:
-                    lane_idx = int((touch_x - track_b_left) // lane_w_bottom)
-                    pressed_lanes.append(min(3, max(0, lane_idx)))
+            lanes_now = physical_lanes()
+            if lanes_now != event_lanes:
+                input_changes.append((received_at, frozenset(lanes_now), lanes_now - event_lanes))
+                event_lanes = lanes_now
+
+        pressed_lanes = physical_lanes() if state == "PLAY" else set()
 
         combo_scale = max(1.0, combo_scale - dt * 2.5)
         feedback_scale = max(1.0, feedback_scale - dt * 3.0)
@@ -1361,8 +1342,11 @@ async def main():
                     apply_music_volume()
             else:
                 play_time = current_map["duration"] + (now - audio_ended_at)
+            sample_wall_time = time.perf_counter()
+            sustain_changes = [(play_time - max(0.0, sample_wall_time - when), lanes, fresh)
+                               for when, lanes, fresh in input_changes]
             screen.blit(current_bg_surface, (0, 0))
-            
+
             top_l, top_r = CENTER_X - TRACK_TOP_W / 2, CENTER_X + TRACK_TOP_W / 2
             bot_l, bot_r = CENTER_X - TRACK_BOTTOM_W / 2, CENTER_X + TRACK_BOTTOM_W / 2
 
@@ -1447,6 +1431,8 @@ async def main():
                         if abs_diff <= GREAT_TIME:
                             note["hit"] = True
                             triggered_lanes.discard(note["lane"])
+                            for _, _, fresh in sustain_changes:
+                                fresh.discard(note["lane"])
                             combo += 1
                             combo_scale, feedback_scale = 1.35, 1.4
                             hit_x, hit_y, _ = get_perspective_pos(note["lane"], 1.0)
@@ -1475,41 +1461,17 @@ async def main():
                         feedback_scale, feedback_time = 1.2, time.time()
 
                 elif note["type"] == "HOLD":
-                    p_head = 1.0 if note["active"] else progress
+                    p_head = min(1.0, progress)
                     p_tail = 1.0 - ((note["end_time"] - play_time) / APPROACH_TIME)
                     
                     if p_head >= 0.0 and p_tail <= 1.15:
                         draw_gradient_note(screen, note["lane"], max(0.0, min(1.15, p_tail)), max(0.0, min(1.15, p_head)), HOLD_TOP, HOLD_BOT, steps=8)
                     
-                    lane_held = note["lane"] in pressed_lanes
-                    can_join = (play_time >= note["time"] - LONG_NOTE_HEAD_WINDOW
-                                and play_time < note["end_time"])
-                    if lane_held and note["lane"] in triggered_lanes and can_join and not note["active"]:
-                        connect_sustain_note(note, play_time, time_diff)
+                    judge = update_sustain(note, play_time, initial_lanes, sustain_changes, triggered_lanes)
+                    if judge.contact and note["active"]:
                         hit_x, hit_y, _ = get_perspective_pos(note["lane"], 1.0)
-                        spawn_particles(hit_x, hit_y, HOLD_TOP, count=10)
-
-                    if note["active"]:
-                        if lane_held:
-                            note["off_lane_since"] = None
-                            award_due_sustain_ticks(note, play_time)
-                            hit_x, hit_y, _ = get_perspective_pos(note["lane"], 1.0)
-                            spawn_particles(hit_x, hit_y, HOLD_TOP, count=3)
-                        elif play_time < note["end_time"]:
-                            disconnect_sustain_note(note, play_time)
-                            if not note["active"]:
-                                skip_missed_sustain_ticks(note, play_time)
-                    else:
-                        skip_missed_sustain_ticks(note, play_time)
-
-                    if not note["hit"] and play_time >= note["end_time"]:
-                        if note["active"] and (lane_held or
-                                (note.get("off_lane_since") is not None and
-                                 play_time - note["off_lane_since"] <= LONG_NOTE_RELEASE_GRACE)):
-                            award_due_sustain_ticks(note, note["end_time"])
-                        else:
-                            skip_missed_sustain_ticks(note, note["end_time"] + LONG_NOTE_TICK_LATE + 0.001)
-                        note["hit"] = True
+                        spawn_particles(hit_x, hit_y, HOLD_TOP, count=3)
+                    if judge.finished and judge.tail_hit:
                         combo_scale, feedback_scale = 1.35, 1.4
                         hit_x, hit_y, _ = get_perspective_pos(note["lane"], 1.0)
                         spawn_particles(hit_x, hit_y, (255, 255, 255), count=25, power=1.4)
@@ -1539,39 +1501,11 @@ async def main():
                         outline = pts_l + pts_r[::-1]
                         pygame.draw.polygon(screen, (244, 240, 255), outline, 2)
 
-                    slide_duration = max(0.001, note["end_time"] - note["time"])
-                    slide_ratio = max(0.0, min(1.0, (play_time - note["time"]) / slide_duration))
-                    active_cur_lane = note["lane"] + (note["end_lane"] - note["lane"]) * slide_ratio
-                    lane_matches = any(abs(active_cur_lane - lane) <= SLIDE_LANE_TOLERANCE for lane in pressed_lanes)
-                    lane_repressed = any(abs(active_cur_lane - lane) <= SLIDE_LANE_TOLERANCE
-                                         for lane in triggered_lanes)
-                    can_join = (play_time >= note["time"] - LONG_NOTE_HEAD_WINDOW
-                                and play_time < note["end_time"])
-                    if not note["active"] and can_join and lane_matches and lane_repressed:
-                        connect_sustain_note(note, play_time, time_diff)
-
-                    if note["active"] and not note["hit"] and play_time < note["end_time"]:
-                        if lane_matches:
-                            note["off_lane_since"] = None
-                            award_due_sustain_ticks(note, play_time)
-                            hit_x, hit_y, _ = get_perspective_pos(active_cur_lane, 1.0)
-                            spawn_particles(hit_x, hit_y, SLIDE_TOP, count=2)
-                        else:
-                            disconnect_sustain_note(note, play_time)
-                            if not note["active"]:
-                                skip_missed_sustain_ticks(note, play_time)
-                    elif not note["active"]:
-                        skip_missed_sustain_ticks(note, play_time)
-
-                    if not note["hit"] and play_time >= note["end_time"]:
-                        still_connected = note["active"] and (lane_matches or
-                                (note.get("off_lane_since") is not None and
-                                 play_time - note["off_lane_since"] <= LONG_NOTE_RELEASE_GRACE))
-                        if still_connected:
-                            award_due_sustain_ticks(note, note["end_time"])
-                        else:
-                            skip_missed_sustain_ticks(note, note["end_time"] + LONG_NOTE_TICK_LATE + 0.001)
-                        note["hit"] = True
+                    judge = update_sustain(note, play_time, initial_lanes, sustain_changes, triggered_lanes)
+                    if judge.contact and note["active"]:
+                        hit_x, hit_y, _ = get_perspective_pos(judge.position(play_time), 1.0)
+                        spawn_particles(hit_x, hit_y, SLIDE_TOP, count=2)
+                    if judge.finished and judge.tail_hit:
                         combo_scale, feedback_scale = 1.35, 1.4
                         hit_x, hit_y, _ = get_perspective_pos(note["end_lane"], 1.0)
                         spawn_particles(hit_x, hit_y, (255, 255, 255), count=25, power=1.5)
