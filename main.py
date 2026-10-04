@@ -10,6 +10,8 @@ import json
 import base64
 import subprocess
 import threading
+from functools import lru_cache
+from tap_judgement import match_tap_presses
 from sustain_judgement import SustainJudge, HEAD_WINDOW, MIN_CONTINUOUS_HOLD, TAIL_EARLY_WINDOW
 
 
@@ -26,6 +28,7 @@ SCREEN_WIDTH, SCREEN_HEIGHT = 800, 480
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Rhythm Stage")
 clock = pygame.time.Clock()
+pressed_glow_surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
 GAME_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def load_korean_font(size, bold=False):
@@ -126,9 +129,14 @@ def combo_gradient_colors(combo_count):
             return interpolate_color(first[1], second[1], phase), interpolate_color(first[2], second[2], phase)
     return stops[-1][1], stops[-1][2]
 
+@lru_cache(maxsize=384)
+def cached_text(font, text, color):
+    return font.render(text, True, color)
+
+
 def draw_styled_text(surface, text, font, center_x, center_y, text_color, shadow_color=(0, 0, 0), scale=1.0):
-    base_img = font.render(text, True, text_color)
-    shadow_img = font.render(text, True, shadow_color)
+    base_img = cached_text(font, text, tuple(text_color))
+    shadow_img = cached_text(font, text, tuple(shadow_color))
     if scale != 1.0:
         w = max(1, int(base_img.get_width() * scale))
         h = max(1, int(base_img.get_height() * scale))
@@ -489,7 +497,7 @@ def get_grade(accuracy):
     return "F", (255, 60, 60)
 
 def spawn_particles(x, y, color, count=16, power=1.0):
-    for _ in range(count):
+    for _ in range(min(count, max(0, 180 - len(particles)))):
         vx = random.uniform(-8 * power, 8 * power)
         vy = random.uniform(-10 * power, -2 * power)
         size = random.uniform(3, 9)
@@ -966,6 +974,7 @@ def begin_play():
     music_scheduled_start = game_start_time
     if audio_element is not None:
         audio_element.volume = music_volume
+        audio_element.clearKeys()
         if not audio_element.play(lead_in):
             state = "LOADING"
             return
@@ -1140,7 +1149,8 @@ async def main():
     btn_pause = pygame.Rect(740, 15, 45, 35)
 
     while running:
-        dt = clock.tick(60) / 1000.0
+        # Pygbag already yields to the browser scheduler; an SDL sleep blocks input.
+        dt = clock.tick(0 if sys.platform == "emscripten" else 120) / 1000.0
         if auto_analysis_job is not None and auto_analysis_job.get("done"):
             finish_auto_analysis()
         mouse_click = False
@@ -1149,6 +1159,23 @@ async def main():
         initial_lanes = physical_lanes()
         event_lanes = set(initial_lanes)
         input_changes = []
+        raw_tap_presses = []
+        web_key_input = audio_element is not None
+        if web_key_input:
+            # DOM timestamps survive a slow Python frame and retain repeated presses.
+            for action, lane, song_time in json.loads(str(audio_element.drainKeys())):
+                received_at = time.perf_counter()
+                if action == "down":
+                    if lane not in key_lanes_down:
+                        triggered_lanes.add(lane)
+                        raw_tap_presses.append((received_at, lane, float(song_time)))
+                    key_lanes_down.add(lane)
+                else:
+                    key_lanes_down.discard(lane)
+                lanes_now = physical_lanes()
+                if lanes_now != event_lanes:
+                    input_changes.append((received_at, frozenset(lanes_now), lanes_now - event_lanes, float(song_time)))
+                    event_lanes = lanes_now
 
         for event in pygame.event.get():
             # Touch-generated mouse events duplicate the same finger and can
@@ -1161,6 +1188,8 @@ async def main():
                 age_ms = (pygame.time.get_ticks() - int(timestamp)) % (2 ** 32)
                 if age_ms <= 250:
                     received_at -= age_ms / 1000.0
+            if web_key_input and event.type in (pygame.KEYDOWN, pygame.KEYUP) and event.key in KEY_TO_LANE:
+                continue
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.WINDOWFOCUSLOST:
@@ -1175,6 +1204,7 @@ async def main():
                     lane = KEY_TO_LANE[event.key]
                     if lane not in key_lanes_down:
                         triggered_lanes.add(lane)
+                        raw_tap_presses.append((received_at, lane, None))
                     key_lanes_down.add(lane)
                 elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
                     set_music_volume(music_volume - 0.05)
@@ -1212,6 +1242,7 @@ async def main():
                     if track_left <= event.pos[0] <= track_left + TRACK_BOTTOM_W:
                         lane = min(3, max(0, int((event.pos[0] - track_left) // (TRACK_BOTTOM_W / 4))))
                         triggered_lanes.add(lane)
+                        raw_tap_presses.append((received_at, lane, None))
             elif event.type == pygame.MOUSEMOTION:
                 if event.buttons[0]:
                     active_touches[1] = event.pos[0]
@@ -1230,6 +1261,7 @@ async def main():
                     if track_left <= touch_x <= track_left + TRACK_BOTTOM_W:
                         lane = min(3, max(0, int((touch_x - track_left) // (TRACK_BOTTOM_W / 4))))
                         triggered_lanes.add(lane)
+                        raw_tap_presses.append((received_at, lane, None))
                 else:
                     mouse_click = True
                     mouse_pos = (touch_x, touch_y)
@@ -1243,7 +1275,7 @@ async def main():
 
             lanes_now = physical_lanes()
             if lanes_now != event_lanes:
-                input_changes.append((received_at, frozenset(lanes_now), lanes_now - event_lanes))
+                input_changes.append((received_at, frozenset(lanes_now), lanes_now - event_lanes, None))
                 event_lanes = lanes_now
 
         pressed_lanes = physical_lanes() if state == "PLAY" else set()
@@ -1343,8 +1375,11 @@ async def main():
             else:
                 play_time = current_map["duration"] + (now - audio_ended_at)
             sample_wall_time = time.perf_counter()
-            sustain_changes = [(play_time - max(0.0, sample_wall_time - when), lanes, fresh)
-                               for when, lanes, fresh in input_changes]
+            sustain_changes = [(direct if direct is not None else play_time - max(0.0, sample_wall_time - when), lanes, fresh)
+                               for when, lanes, fresh, direct in input_changes]
+            sustain_changes.sort(key=lambda change: change[0])
+            tap_presses = [[direct if direct is not None else play_time - max(0.0, sample_wall_time - when), lane, False]
+                           for when, lane, direct in raw_tap_presses]
             screen.blit(current_bg_surface, (0, 0))
 
             top_l, top_r = CENTER_X - TRACK_TOP_W / 2, CENTER_X + TRACK_TOP_W / 2
@@ -1368,7 +1403,8 @@ async def main():
                     grid_color = (75, 72, 111) if beat_ahead > 1 else (109, 94, 152)
                     pygame.draw.line(screen, grid_color, (left_x, grid_y), (right_x, grid_y), 1 if beat_ahead > 1 else 2)
             
-            pressed_glow = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+            pressed_glow = pressed_glow_surface
+            pressed_glow.fill((0, 0, 0, 0))
             for lane in set(pressed_lanes):
                 x1_l, y1, _ = get_perspective_pos(lane - 0.5, 0.0)
                 x1_r, y1, _ = get_perspective_pos(lane + 0.5, 0.0)
@@ -1416,6 +1452,43 @@ async def main():
                 active_chart_notes.append(chart[next_chart_index])
                 next_chart_index += 1
             active_chart_notes = [note for note in active_chart_notes if not note["hit"]]
+            tap_hits = match_tap_presses(active_chart_notes, tap_presses, GREAT_TIME)
+            tap_results = [(press[0], note, delta) for note, delta, press in tap_hits]
+            for note, _, press in tap_hits:
+                for when, _, fresh in sustain_changes:
+                    if when == press[0]:
+                        fresh.discard(note["lane"])
+            for note in active_chart_notes:
+                if note["type"] == "TAP" and not note["hit"] and play_time - note["time"] > GREAT_TIME:
+                    note["hit"] = True
+                    tap_results.append((note["time"] + GREAT_TIME, note, None))
+            for _, note, delta in sorted(tap_results, key=lambda item: item[0]):
+                if delta is None:
+                    combo = 0
+                    miss_count += 1
+                    if not practice_mode:
+                        hp -= 18.0
+                    last_feedback, last_feedback_color = "MISS", (255, 60, 60)
+                    feedback_scale, feedback_time = 1.2, time.time()
+                    continue
+                combo += 1
+                max_combo = max(max_combo, combo)
+                combo_scale, feedback_scale = 1.35, 1.4
+                hit_x, hit_y, _ = get_perspective_pos(note["lane"], 1.0)
+                spawn_particles(hit_x, hit_y, TAP_TOP, count=10)
+                if abs(delta) <= PERFECT_TIME:
+                    score += 200 + combo * 10
+                    hit_score += 100
+                    perfect_count += 1
+                    hp = min(100.0, hp + 2.0)
+                    last_feedback, last_feedback_color = "PERFECT", (255, 215, 0)
+                else:
+                    score += 100 + combo * 5
+                    hit_score += 70
+                    great_count += 1
+                    hp = min(100.0, hp + 1.0)
+                    last_feedback, last_feedback_color = "GREAT", (0, 255, 255)
+                feedback_time = time.time()
             for note in active_chart_notes:
                 if note["hit"]: continue
                 
@@ -1424,42 +1497,8 @@ async def main():
                 
                 if note["type"] == "TAP":
                     if -0.2 <= progress <= 1.2:
-                        draw_gradient_note(screen, note["lane"], progress - 0.065, progress + 0.065, TAP_TOP, TAP_BOT)
+                        draw_gradient_note(screen, note["lane"], progress - 0.055, progress + 0.055, TAP_TOP, TAP_BOT, steps=5)
                     
-                    if note["lane"] in triggered_lanes:
-                        abs_diff = abs(time_diff)
-                        if abs_diff <= GREAT_TIME:
-                            note["hit"] = True
-                            triggered_lanes.discard(note["lane"])
-                            for _, _, fresh in sustain_changes:
-                                fresh.discard(note["lane"])
-                            combo += 1
-                            combo_scale, feedback_scale = 1.35, 1.4
-                            hit_x, hit_y, _ = get_perspective_pos(note["lane"], 1.0)
-                            spawn_particles(hit_x, hit_y, TAP_TOP, count=16)
-                            
-                            if abs_diff <= PERFECT_TIME:
-                                score += 200 + (combo * 10)
-                                hit_score += 100
-                                perfect_count += 1
-                                hp = min(100.0, hp + 2.0)
-                                last_feedback, last_feedback_color = "PERFECT", (255, 215, 0)
-                            else:
-                                score += 100 + (combo * 5)
-                                hit_score += 70
-                                great_count += 1
-                                hp = min(100.0, hp + 1.0)
-                                last_feedback, last_feedback_color = "GREAT", (0, 255, 255)
-                            feedback_time = time.time()
-                    
-                    if time_diff < -GREAT_TIME:
-                        note["hit"] = True
-                        combo = 0
-                        miss_count += 1
-                        if not practice_mode: hp -= 18.0
-                        last_feedback, last_feedback_color = "MISS", (255, 60, 60)
-                        feedback_scale, feedback_time = 1.2, time.time()
-
                 elif note["type"] == "HOLD":
                     p_head = min(1.0, progress)
                     p_tail = 1.0 - ((note["end_time"] - play_time) / APPROACH_TIME)
@@ -1514,8 +1553,10 @@ async def main():
                 state = "GAME_OVER"
                 stop_music()
 
+            effect_step = min(3.0, dt * 60.0)
             for p in particles[:]:
-                p[0] += p[2]; p[1] += p[3]; p[3] += 0.45; p[4] -= 0.14
+                p[0] += p[2] * effect_step; p[1] += p[3] * effect_step
+                p[3] += 0.45 * effect_step; p[4] -= 0.14 * effect_step
                 if p[4] > 0: pygame.draw.circle(screen, p[5], (int(p[0]), int(p[1])), int(p[4]))
                 else: particles.remove(p)
 

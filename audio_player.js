@@ -6,11 +6,12 @@
       this.context = null; this.buffer = null; this.source = null;
       this.position = 0; this.startedAt = 0; this._paused = true;
       this._volume = 0.8; this.generation = 0; this.url = '';
+      this.keyEvents = []; this.heldKeys = new Set();
     }
     unlock() {
       const Context = window.AudioContext || window.webkitAudioContext;
       if (!this.context) {
-        this.context = new Context();
+        this.context = new Context({latencyHint: 'interactive'});
         this.gain = this.context.createGain();
         this.gain.connect(this.context.destination);
         this.gain.gain.value = this._volume;
@@ -61,8 +62,36 @@
     get duration() { return this.buffer?.duration || 0; }
     get paused() { return this._paused; }
     get currentTime() {
-      return this._paused ? this.position : this.context.currentTime - this.startedAt;
+      if (this._paused) return this.position;
+      // currentTime is the render head, ahead of the sound at the output device.
+      // Use the output timestamp to put the judgement line on the audible beat.
+      let audible = this.context.currentTime;
+      if (this.context.state === 'running') {
+        const stamp = this.context.getOutputTimestamp?.();
+        if (stamp && stamp.performanceTime > 0 && stamp.contextTime > 0) {
+          audible = Math.min(audible, stamp.contextTime +
+            Math.max(0, performance.now() - stamp.performanceTime) / 1000);
+        } else {
+          audible -= this.context.outputLatency || this.context.baseLatency || 0;
+        }
+      }
+      return audible - this.startedAt;
     }
+    recordKey(event, down) {
+      const lane = {KeyD: 0, KeyF: 1, KeyJ: 2, KeyK: 3}[event.code];
+      if (lane === undefined || (down && (event.repeat || this.heldKeys.has(event.code)))) return;
+      if (down) this.heldKeys.add(event.code); else this.heldKeys.delete(event.code);
+      const age = Math.max(0, Math.min(1, (performance.now() - event.timeStamp) / 1000));
+      const when = this.currentTime - (this._paused ? 0 : age);
+      this.keyEvents.push([down ? 'down' : 'up', lane, when]);
+      if (this.keyEvents.length > 256) this.keyEvents.shift();
+    }
+    drainKeys() {
+      const events = this.keyEvents;
+      this.keyEvents = [];
+      return JSON.stringify(events);
+    }
+    clearKeys() { this.keyEvents = []; this.heldKeys.clear(); }
     get ended() { return !!this.buffer && this.currentTime >= this.duration; }
     get volume() { return this._volume; }
     set volume(value) {
@@ -79,8 +108,9 @@
       this.source = this.context.createBufferSource();
       this.source.buffer = this.buffer;
       this.source.connect(this.gain);
-      this.startedAt = this.context.currentTime + wait - offset;
-      this.source.start(this.context.currentTime + wait, offset);
+      const startAt = this.context.currentTime + wait;
+      this.startedAt = startAt - offset;
+      this.source.start(startAt, offset);
       this._paused = false;
       return true;
     }
@@ -98,6 +128,9 @@
     }
   }
   window.rhythmAudio = new RhythmAudio();
+  window.addEventListener('keydown', event => window.rhythmAudio.recordKey(event, true));
+  window.addEventListener('keyup', event => window.rhythmAudio.recordKey(event, false));
+  window.addEventListener('blur', () => window.rhythmAudio.clearKeys());
   // Native DOM gestures unlock audio even when Python handles the click later.
   for (const event of ['pointerdown', 'touchend', 'keydown']) {
     window.addEventListener(event, () => window.rhythmAudio.unlock(), {passive: true});

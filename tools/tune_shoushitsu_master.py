@@ -7,7 +7,7 @@ path = ROOT / "auto_charts.json"
 entries = json.loads(path.read_text(encoding="utf-8"))
 entry = entries["hatsune-miku-no-shoushitsu"]
 revision = "20261004-lighter-runs-v2"
-if entry.get("balance_revision") != revision:
+if not entry.get("melody_revision") and entry.get("balance_revision") != revision:
     variant = entry["difficulty_charts"]["master"]
     notes = variant["notes"]
     seconds_per_beat = 60 / entry["bpm"]
@@ -30,4 +30,4 @@ if entry.get("balance_revision") != revision:
     path.write_text(json.dumps(entries, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"Shoushitsu MASTER: {len(notes)} -> {len(kept)} ({len(notes)-len(kept)} removed)")
 else:
-    print("Balance revision already applied.")
+    print("Balance revision already applied or superseded by melody charts.")

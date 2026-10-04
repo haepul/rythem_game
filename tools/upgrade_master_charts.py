@@ -31,7 +31,7 @@ for key, entry in entries.items():
     print(f'{key}: MASTER {len(old)} -> {len(upgraded)}', flush=True)
 
 entry = entries[SPECIAL]
-if entry.get('master_revision') != REVISION:
+if not entry.get('melody_revision') and entry.get('master_revision') != REVISION:
     pygame.mixer.init(44100, -16, 2)
     samples, rate = ac._downsample_mono(str(ROOT / 'music' / (SPECIAL + '.mp3')))
     hop = 256 / rate

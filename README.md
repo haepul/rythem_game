@@ -11,10 +11,40 @@ GitHub Pages build for the Pygame rhythm game. The page loads `game.tar.gz`; tra
   another song replaces it. Web Audio schedules the silent approach and uses the
   same audio clock for the chart. Native Pygame opens its decoder in a worker first.
 - Page arrows are drawn shapes, so they do not depend on font Unicode coverage.
-- The October 3 MASTER update adds accents at existing melody timestamps.
-  Shoushitsu MASTER has a sparse first 25 seconds and dense sixteenth-note runs
-  afterward. `tools/upgrade_master_charts.py` is the revision-guarded data migration;
-  it also replaces the invalid Shoushitsu HARD tail with full-song audio events.
+- The October 3 MASTER update adds accents at existing melody timestamps for
+  other songs. Shoushitsu uses the October 5 melody analysis described below;
+  the older upgrade/balance migrations leave this newer chart intact.
+
+## Shoushitsu melody charts
+
+`tools/rebuild_shoushitsu_melody.py` generates all three difficulties from the
+user's complete MP3. It detects spectral attacks and a smoothed harmonic pitch
+contour, fits the 240 BPM pulse/offset, and snaps only attacks within 14ms of the
+sixteenth grid. It never fills silent gaps with evenly spaced notes. Lane choices
+follow local pitch motion, hand alternation and repeated-motif penalties. Sustained
+phrases become holds/slides; strong isolated attacks can become two-hand accents.
+The first 25 seconds stay sparse. The game clips this same chart for verse mode.
+
+The arrangement references [Project Sekai's original Shoushitsu MASTER chart](https://www.youtube.com/watch?v=NbXzQJi5ntU)
+for changes between slides, runs and accents. That game's edited audio differs
+from this full MP3, so its note timestamps are not copied. Polyphonic pitch
+estimates are approximate and are not an isolated vocal transcription.
+
+The offline tool requires NumPy and little-endian mono int16 PCM at 11025Hz:
+`python tools/rebuild_shoushitsu_melody.py path/to/shoushitsu.pcm --apply`.
+It stores feature/report/candidate files beside the PCM. Delete the derived
+`.features.npz` before reusing the same filename for a different source. Runtime
+playback needs only the saved `auto_charts.json`, with no analysis dependency.
+
+## Fast-song input and rendering
+
+Browser D/F/J/K edges retain their DOM event times on the audible audio clock;
+multiple presses in one Python frame remain distinct. `tap_judgement.py` matches
+each edge to the closest eligible tap, with priority for a closer sustain head.
+An earlier missed tile no longer captures the next tile's more accurate input.
+Output timestamps compensate for the browser audio render buffer where supported.
+Text caching, reused lane glow surfaces and a particle cap reduce frame work;
+browser frames yield without an additional SDL frame-limit sleep.
 
 ## Rebuild the web archive
 
@@ -23,7 +53,7 @@ archive. After changing the game source or charts, copy the matching files from
 the repository root into `webapp/`, then run this from the repository root:
 
 ```powershell
-Copy-Item .\main.py, .\sustain_judgement.py, .\auto_chart.py, .\auto_charts.json, .\charts.json, .\font.ttf .\webapp\ -Force
+Copy-Item .\main.py, .\sustain_judgement.py, .\tap_judgement.py, .\auto_chart.py, .\auto_charts.json, .\charts.json, .\font.ttf .\webapp\ -Force
 Push-Location .\webapp
 python -m pygbag --build --PYBUILD 3.12 --app_name RhythmStage --title "Rhythm Stage" .
 Pop-Location
