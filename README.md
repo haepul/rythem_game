@@ -77,6 +77,13 @@ ordinary taps at the same time and lane for that play; saved charts remain intac
 The setting applies when starting a song and persists in browser localStorage
 or desktop `settings.json`. Turning ON restores the original MASTER flicks.
 
+ESC or the pause button also opens volume, flick ON/OFF and note fall speed
+controls (0.75–2×). The speed setting changes only the visual approach time;
+music speed, pitch, BPM and every note's judgement time remain unchanged.
+Faster scrolling spaces consecutive notes farther apart along the track.
+Changing flick while paused converts only unresolved flicks to/from taps;
+already judged notes, score, combo and song position are retained.
+
 Browser D/F/J/K edges retain their DOM event times on the audible audio clock;
 multiple presses in one Python frame remain distinct. `tap_judgement.py` matches
 each edge to the closest eligible tap, with priority for a closer sustain head.

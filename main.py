@@ -499,6 +499,18 @@ def chart_with_flick_setting(notes, enabled):
             for note in notes]
 
 
+def change_pause_flick():
+    global current_flick_enabled
+    if state != "PAUSED":
+        return
+    set_flick_enabled(not current_flick_enabled)
+    current_flick_enabled = flick_enabled
+    for note in chart:
+        if not note["hit"] and note.get("authored_type") == "FLICK":
+            note["type"] = "FLICK" if current_flick_enabled else "TAP"
+    clear_game_inputs()
+
+
 flick_enabled = load_flick_setting()
 current_flick_enabled = True
 practice_mode = False
@@ -727,7 +739,7 @@ def volume_slider_for_state(scene):
     if scene == "HOME":
         return pygame.Rect(657, 54, 93, 9)
     if scene == "PAUSED":
-        return pygame.Rect(CENTER_X - 40, 350, 100, 10)
+        return pygame.Rect(CENTER_X - 20, 270, 145, 10)
     return None
 
 def set_home_notice(message):
@@ -1022,6 +1034,9 @@ def start_game(m_idx, practice=False, chart_entry=None, chart_source="SAVED CHAR
         current_map["audio"], current_map["level"], current_map["duration"],
         current_map["bpm"], current_map["offset"], entry_override=chart_entry)
     current_flick_enabled = flick_enabled
+    for note in chart:
+        if note["type"] == "FLICK":
+            note["authored_type"] = "FLICK"
     chart = chart_with_flick_setting(chart, current_flick_enabled)
     if not chart:
         state = "HOME"
@@ -1816,26 +1831,42 @@ async def main():
             dim_surf.fill((0, 0, 0))
             screen.blit(dim_surf, (0, 0))
             
-            box = pygame.Rect(CENTER_X - 140, 95, 280, 300)
+            box = pygame.Rect(CENTER_X - 180, 25, 360, 435)
             pygame.draw.rect(screen, (20, 25, 45), box, border_radius=16)
             pygame.draw.rect(screen, (0, 200, 255), box, width=2, border_radius=16)
             
-            draw_styled_text(screen, "PAUSED", font_large, CENTER_X, 140, (255, 255, 255))
+            draw_styled_text(screen, "PAUSED", font_large, CENTER_X, 60, (255, 255, 255))
             if practice_mode:
-                draw_styled_text(screen, "PRACTICE MODE · NO LIFE LOSS", font_small, CENTER_X, 166, (120, 228, 195))
+                draw_styled_text(screen, "PRACTICE · NO LIFE LOSS", font_small, CENTER_X, 91, (120, 228, 195))
             
-            btn_resume, btn_retry, btn_home = pygame.Rect(CENTER_X - 100, 185, 200, 40), pygame.Rect(CENTER_X - 100, 235, 200, 40), pygame.Rect(CENTER_X - 100, 285, 200, 40)
+            btn_resume, btn_retry, btn_home = pygame.Rect(CENTER_X - 145, 112, 290, 38), pygame.Rect(CENTER_X - 145, 158, 140, 38), pygame.Rect(CENTER_X + 5, 158, 140, 38)
             
             pygame.draw.rect(screen, (0, 180, 220), btn_resume, border_radius=8)
             pygame.draw.rect(screen, (100, 100, 150), btn_retry, border_radius=8)
             pygame.draw.rect(screen, (220, 60, 80), btn_home, border_radius=8)
             
-            draw_styled_text(screen, "계속하기", font_med, CENTER_X, 205, (255, 255, 255))
-            draw_styled_text(screen, "다시하기", font_med, CENTER_X, 255, (255, 255, 255))
-            draw_styled_text(screen, "메뉴로", font_med, CENTER_X, 305, (255, 255, 255))
+            draw_styled_text(screen, "계속하기", font_med, btn_resume.centerx, btn_resume.centery, (255, 255, 255))
+            draw_styled_text(screen, "다시하기", font_med, btn_retry.centerx, btn_retry.centery, (255, 255, 255))
+            draw_styled_text(screen, "메뉴로", font_med, btn_home.centerx, btn_home.centery, (255, 255, 255))
             draw_volume_control(screen, volume_slider_for_state("PAUSED"), mouse_pos, mouse_click)
+            flick_button = pygame.Rect(CENTER_X - 145, 210, 290, 36)
+            draw_button(screen, flick_button, "플릭 ON" if current_flick_enabled else "플릭 OFF", (235, 102, 173) if current_flick_enabled else (101, 119, 159))
+            speed_minus = pygame.Rect(CENTER_X + 28, 333, 31, 32)
+            speed_plus = pygame.Rect(CENTER_X + 114, 333, 31, 32)
+            draw_styled_text(screen, "노트 낙하 속도", font_small, CENTER_X - 64, 349, (196, 210, 239))
+            draw_button(screen, speed_minus, "-", (93, 138, 183))
+            draw_button(screen, speed_plus, "+", (93, 138, 183))
+            draw_styled_text(screen, f"{NOTE_SPEED_LEVELS[note_speed_index]:g}×", font_small, CENTER_X + 86, 349, (137, 233, 219))
+            draw_styled_text(screen, "노트가 내려오는 속도만 조절합니다", font_small, CENTER_X, 398, (153, 171, 204))
+            draw_styled_text(screen, "음악 속도 · 박자 · 판정 타이밍 유지", font_small, CENTER_X, 423, (153, 171, 204))
             
             if mouse_click:
+                if flick_button.collidepoint(mouse_pos):
+                    change_pause_flick()
+                elif speed_minus.collidepoint(mouse_pos):
+                    adjust_note_speed(-1)
+                elif speed_plus.collidepoint(mouse_pos):
+                    adjust_note_speed(1)
                 if btn_resume.collidepoint(mouse_pos):
                     state = "PLAY"
                     paused_for = time.perf_counter() - pause_start_time
