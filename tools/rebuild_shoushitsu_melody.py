@@ -6,12 +6,15 @@ The production game only needs the generated JSON, not NumPy or this tool.
 import argparse
 import hashlib
 import json
+import sys
 from collections import Counter
 from pathlib import Path
 
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from flick_chart import add_master_flicks
 KEY = 'hatsune-miku-no-shoushitsu'
 REVISION = '20261005-melody-contour'
 RATE, HOP = 11025, 110
@@ -291,6 +294,8 @@ def main():
     for difficulty in ('easy', 'hard', 'master'):
         chosen = select(events, difficulty, bpm, offset)
         notes = arrange(chosen, data, difficulty, bpm, offset)
+        if difficulty == 'master':
+            notes = add_master_flicks(notes, bpm, offset, song_key=KEY)
         charts[difficulty] = {'notes': notes, 'type_counts': dict(Counter(n['type'] for n in notes)), 'selected_count': len(chosen)}
     report = {'revision': REVISION, 'duration': float(data['duration']), 'bpm': bpm,
               'offset': round(offset, 6), 'pulse_concentration': round(pulse_strength, 4),

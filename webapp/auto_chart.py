@@ -2,6 +2,8 @@
 from array import array
 import math
 import sys
+from pathlib import Path
+from flick_chart import add_master_flicks
 
 import pygame
 
@@ -498,8 +500,9 @@ def _generate_levels_from_audio(path, preferred_bpm):
         notes = _optimize_lanes(events, level)
         if name == "master":
             notes = intensify_master(notes, bpm)
+            notes = add_master_flicks(notes, bpm, offset, song_key=Path(path).stem)
         counts = {kind: sum(note["type"] == kind for note in notes)
-                  for kind in ("TAP", "HOLD", "SLIDE")}
+                  for kind in ("TAP", "HOLD", "SLIDE", "FLICK")}
         charts[name] = {"notes": notes, "type_counts": counts, "selected_count": len(selected)}
     return {
         "bpm": bpm,

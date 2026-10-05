@@ -12,6 +12,7 @@ import subprocess
 import threading
 from functools import lru_cache
 from tap_judgement import match_tap_presses
+from flick_judgement import KeyboardFlickInput, TouchFlickInput, match_flick_intents
 from sustain_judgement import SustainJudge, HEAD_WINDOW, MIN_CONTINUOUS_HOLD, TAIL_EARLY_WINDOW
 
 
@@ -173,6 +174,19 @@ def draw_gradient_note(surface, lane, p_top, p_bot, color_top, color_bot, width_
     edge = interpolate_color(color_top, (255, 255, 255), 0.52)
     pygame.draw.polygon(surface, edge, full_poly, 2)
     pygame.draw.line(surface, (255, 255, 255), (x_top - w_top * width_scale, y_top), (x_top + w_top * width_scale, y_top), 2)
+
+
+def draw_flick_note(surface, lane, progress):
+    """Distinct pink cap and drawn chevrons remain readable at every combo color."""
+    draw_gradient_note(surface, lane, progress - .055, progress + .055,
+                       (255, 204, 235), (243, 51, 131), steps=5)
+    x, y, width = get_perspective_pos(lane, max(0, progress))
+    half = max(8, width * .16)
+    rise = max(6, width * .095)
+    for lift in (rise * .55, rise * 1.5):
+        points = [(x-half, y-lift), (x, y-lift-rise), (x+half, y-lift)]
+        pygame.draw.lines(surface, (114, 24, 81), False, points, 6)
+        pygame.draw.lines(surface, (255, 249, 255), False, points, 3)
 
 # ---------------------------------------------------------
 # 4. 곡 데이터 (난이도 이름 적용) 및 로컬 기록 저장소
@@ -366,7 +380,7 @@ def load_authored_chart(audio_name, level, duration, default_bpm, default_offset
             kind = item.get("type", "TAP").upper()
             lane = int(item["lane"])
             start_beat = float(item["beat"])
-            if kind not in {"TAP", "HOLD", "SLIDE"} or lane not in range(4):
+            if kind not in {"TAP", "FLICK", "HOLD", "SLIDE"} or lane not in range(4):
                 continue
             if not math.isfinite(start_beat):
                 continue
@@ -445,6 +459,48 @@ current_length = "verse"
 LENGTH_LABELS = {"verse": "1절", "full": "전체 곡"}
 selected_difficulty = "hard"
 current_difficulty = "hard"
+SETTINGS_PATH = os.path.join(GAME_DIR, "settings.json")
+SETTINGS_STORAGE_KEY = "rhythm-stage-settings-v1"
+
+
+def load_flick_setting():
+    try:
+        if sys.platform == "emscripten":
+            import platform as browser_platform
+            raw = browser_platform.window.localStorage.getItem(SETTINGS_STORAGE_KEY)
+            saved = json.loads(str(raw)) if raw else {}
+        else:
+            with open(SETTINGS_PATH, encoding="utf-8") as stream:
+                saved = json.load(stream)
+        value = saved.get("flick_enabled", True)
+        return value if isinstance(value, bool) else True
+    except Exception:
+        return True
+
+
+def set_flick_enabled(enabled):
+    global flick_enabled
+    flick_enabled = bool(enabled)
+    saved = json.dumps({"flick_enabled": flick_enabled})
+    try:
+        if sys.platform == "emscripten":
+            import platform as browser_platform
+            browser_platform.window.localStorage.setItem(SETTINGS_STORAGE_KEY, saved)
+        else:
+            with open(SETTINGS_PATH, "w", encoding="utf-8") as stream:
+                stream.write(saved)
+    except Exception:
+        # Storage can be unavailable in a private browser; this session still works.
+        pass
+
+
+def chart_with_flick_setting(notes, enabled):
+    return [{**note, "type": "TAP" if note["type"] == "FLICK" and not enabled else note["type"]}
+            for note in notes]
+
+
+flick_enabled = load_flick_setting()
+current_flick_enabled = True
 practice_mode = False
 current_bpm = 120.0
 current_offset = 0.0
@@ -482,6 +538,50 @@ GREAT_TIME = 0.15
 active_touches = {}
 key_lanes_down = set()
 KEY_TO_LANE = {pygame.K_d: 0, pygame.K_f: 1, pygame.K_j: 2, pygame.K_k: 3}
+CODE_TO_LANE = {"KeyD": 0, "KeyF": 1, "KeyJ": 2, "KeyK": 3}
+flick_keyboard = KeyboardFlickInput()
+flick_touch = TouchFlickInput()
+
+
+def touch_lane(x):
+    left = CENTER_X - TRACK_BOTTOM_W / 2
+    if left <= x <= left + TRACK_BOTTOM_W:
+        return min(3, max(0, int((x-left) / (TRACK_BOTTOM_W/4))))
+    return None
+
+
+def clear_game_inputs():
+    key_lanes_down.clear()
+    active_touches.clear()
+    flick_keyboard.reset()
+    flick_touch.reset()
+    if audio_element is not None:
+        audio_element.clearInput()
+
+
+def collect_flick_intents(events, play_time, sample_wall_time):
+    """Translate native/DOM edges to one song clock before recognizing gestures."""
+    timed = [(direct if direct is not None else play_time-max(0, sample_wall_time-wall),
+              kind, action, payload) for wall, direct, kind, action, payload in events]
+    intents = []
+    for when, kind, action, payload in sorted(timed, key=lambda row: row[0]):
+        if kind == "lane":
+            method = flick_keyboard.lane_down if action == "down" else flick_keyboard.lane_up
+            intents.extend(method(payload, when))
+        elif kind == "space":
+            method = flick_keyboard.space_down if action == "down" else flick_keyboard.space_up
+            intents.extend(method(when))
+        elif kind == "pointer":
+            pointer, x, y = payload
+            lane = touch_lane(x)
+            if action == "down":
+                if lane is not None and y >= TRACK_TOP_Y:
+                    intents.extend(flick_touch.begin(pointer, x, y, when, lane))
+            elif action in ("move", "up"):
+                intents.extend(flick_touch.move(pointer, x, y, when, lane))
+            if action in ("up", "cancel"):
+                flick_touch.end(pointer)
+    return intents
 combo_scale = 1.0
 feedback_scale = 1.0
 last_feedback = ""
@@ -702,6 +802,11 @@ def draw_home(mouse_pos, mouse_click):
     pygame.draw.rect(screen, (86, 103, 150), speed_value, 1, border_radius=7)
     speed = NOTE_SPEED_LEVELS[note_speed_index]
     draw_styled_text(screen, f"{speed:.2f}×", font_small, speed_value.centerx, speed_value.centery, (121, 220, 207))
+    flick_button = pygame.Rect(480, 46, 138, 30)
+    pygame.draw.rect(screen, (74, 31, 66) if flick_enabled else (25, 31, 52), flick_button, border_radius=7)
+    pygame.draw.rect(screen, (244, 124, 188) if flick_enabled else (102, 119, 166), flick_button, 1, border_radius=7)
+    draw_styled_text(screen, "플릭  ON" if flick_enabled else "플릭  OFF", font_small,
+                     flick_button.centerx, flick_button.centery, (255, 185, 220) if flick_enabled else (171, 181, 209))
 
     hero = pygame.Rect(24, 101, 212, 286)
     pygame.draw.rect(screen, (17, 22, 41), hero, border_radius=18)
@@ -801,7 +906,7 @@ def draw_home(mouse_pos, mouse_click):
     draw_button(screen, practice_button, "PRACTICE", (69, 197, 161))
     if editor_button is not None:
         draw_button(screen, editor_button, "CHART STUDIO", (154, 135, 255))
-    draw_styled_text(screen, "D F J K  ·  MOUSE & TOUCH     /     VOLUME: SLIDER OR - / +", font_small, SCREEN_WIDTH // 2, 466, (140, 153, 184))
+    draw_styled_text(screen, "D F J K  ·  플릭: 레인 키 + SPACE / 위로 스와이프  ·  볼륨 - / +", font_small, SCREEN_WIDTH // 2, 466, (174, 180, 205))
     if home_notice and time.time() < home_notice_until:
         notice_box = pygame.Rect(253, 386, 390, 18)
         pygame.draw.rect(screen, (25, 39, 58), notice_box, border_radius=8)
@@ -809,6 +914,9 @@ def draw_home(mouse_pos, mouse_click):
         draw_styled_text(screen, home_notice, font_small, notice_box.centerx, notice_box.centery, (218, 235, 255))
 
     if mouse_click:
+        if flick_button.collidepoint(mouse_pos):
+            set_flick_enabled(not flick_enabled)
+            return None
         if speed_left.collidepoint(mouse_pos):
             adjust_note_speed(-1)
             return None
@@ -902,6 +1010,7 @@ def start_game(m_idx, practice=False, chart_entry=None, chart_source="SAVED CHAR
     global practice_mode, current_bpm, current_offset, current_chart_source, current_difficulty
     global ready_start_time, ready_count_in_duration, music_scheduled_start, current_length
     global active_chart_notes, next_chart_index
+    global current_flick_enabled
     
     current_map_idx = m_idx
     current_map = dict(MAP_LIST[m_idx])
@@ -912,6 +1021,8 @@ def start_game(m_idx, practice=False, chart_entry=None, chart_source="SAVED CHAR
     chart, current_bpm, current_offset = load_authored_chart(
         current_map["audio"], current_map["level"], current_map["duration"],
         current_map["bpm"], current_map["offset"], entry_override=chart_entry)
+    current_flick_enabled = flick_enabled
+    chart = chart_with_flick_setting(chart, current_flick_enabled)
     if not chart:
         state = "HOME"
         set_home_notice("자동채보가 아직 준비되지 않았습니다. 다시 시작해 주세요.")
@@ -955,7 +1066,9 @@ def draw_ready_screen():
                     -math.pi / 2, -math.pi / 2 + max(0.1, pulse * math.pi * 1.7), 5)
     draw_styled_text(screen, str(count), font_combo_num, CENTER_X, ring.centery, (249, 250, 255), scale=1.0 + pulse * 0.06)
     draw_styled_text(screen, "GET READY", font_med, CENTER_X, 365, (220, 229, 248))
-    draw_styled_text(screen, "음악 준비 완료 · 판정선에 맞춰 연주하세요", font_small, CENTER_X, 396, (151, 166, 199))
+    ready_tip = ("분홍 화살표: 레인 키를 누른 채 SPACE / 터치는 위로" if current_flick_enabled
+                 else "플릭 OFF · 모든 플릭을 같은 박자의 일반 탭으로 연주합니다") if current_difficulty == "master" else "음악 준비 완료 · 판정선에 맞춰 연주하세요"
+    draw_styled_text(screen, ready_tip, font_small, CENTER_X, 396, (231, 163, 204) if current_difficulty == "master" else (151, 166, 199))
     if practice_mode:
         draw_styled_text(screen, "PRACTICE · NO FAIL", font_small, CENTER_X, 431, (120, 228, 195))
     draw_styled_text(screen, "ESC  ·  취소", font_small, CENTER_X, 462, (112, 126, 158))
@@ -965,8 +1078,7 @@ def begin_play():
     if current_map is None:
         state = "HOME"
         return
-    active_touches.clear()
-    key_lanes_down.clear()
+    clear_game_inputs()
     # Give the first notes a short silent approach so the playfield is empty
     # when gameplay opens. The song begins exactly when the chart reaches t=0.
     lead_in = max(0.45, APPROACH_TIME * 2.0)
@@ -974,12 +1086,13 @@ def begin_play():
     music_scheduled_start = game_start_time
     if audio_element is not None:
         audio_element.volume = music_volume
-        audio_element.clearKeys()
         if not audio_element.play(lead_in):
             state = "LOADING"
             return
     audio_ended_at = None
     state = "PLAY"
+    if audio_element is not None:
+        audio_element.setInputEnabled(True)
 
 def finish_auto_analysis():
     global auto_analysis_job, state
@@ -1112,6 +1225,9 @@ def start_music(path):
 
 def pause_music():
     global audio_element
+    clear_game_inputs()
+    if audio_element is not None:
+        audio_element.setInputEnabled(False)
     try:
         if audio_element is not None: audio_element.pause()
         else: pygame.mixer.music.pause()
@@ -1119,13 +1235,19 @@ def pause_music():
         pass
 
 def resume_music():
+    clear_game_inputs()
     try:
-        if audio_element is not None: audio_element.play()
+        if audio_element is not None:
+            audio_element.play()
+            audio_element.setInputEnabled(True)
         else: pygame.mixer.music.unpause()
     except Exception:
         pass
 
 def stop_music():
+    clear_game_inputs()
+    if audio_element is not None:
+        audio_element.setInputEnabled(False)
     try:
         if audio_element is not None: audio_element.pause()
         pygame.mixer.music.stop()
@@ -1160,24 +1282,56 @@ async def main():
         event_lanes = set(initial_lanes)
         input_changes = []
         raw_tap_presses = []
+        raw_flick_events = []
         web_key_input = audio_element is not None
+        web_pointer_input = web_key_input and state == "PLAY"
         if web_key_input:
-            # DOM timestamps survive a slow Python frame and retain repeated presses.
-            for action, lane, song_time in json.loads(str(audio_element.drainKeys())):
+            # DOM timestamps preserve keyboard and every finger's motion even
+            # when multiple events arrive during one slow Python frame.
+            for event_data in json.loads(str(audio_element.drainInput())):
+                if state != "PLAY":
+                    continue
                 received_at = time.perf_counter()
-                if action == "down":
-                    if lane not in key_lanes_down:
-                        triggered_lanes.add(lane)
-                        raw_tap_presses.append((received_at, lane, float(song_time)))
-                    key_lanes_down.add(lane)
+                kind, action = event_data[:2]
+                song_time = float(event_data[-1])
+                if kind == "key":
+                    code = event_data[2]
+                    if code == "Space":
+                        raw_flick_events.append((received_at, song_time, "space", action, None))
+                    elif code in CODE_TO_LANE:
+                        lane = CODE_TO_LANE[code]
+                        raw_flick_events.append((received_at, song_time, "lane", action, lane))
+                        if action == "down":
+                            if lane not in key_lanes_down:
+                                triggered_lanes.add(lane)
+                                raw_tap_presses.append((received_at, lane, song_time))
+                            key_lanes_down.add(lane)
+                        else:
+                            key_lanes_down.discard(lane)
                 else:
-                    key_lanes_down.discard(lane)
+                    pointer, x, y = event_data[2:5]
+                    pointer = ("pointer", pointer)
+                    raw_flick_events.append((received_at, song_time, "pointer", action, (pointer, x, y)))
+                    if action == "down":
+                        mouse_click, mouse_pos = True, (x, y)
+                        if y >= TRACK_TOP_Y:
+                            active_touches[pointer] = x
+                            lane = touch_lane(x)
+                            if lane is not None:
+                                triggered_lanes.add(lane)
+                                raw_tap_presses.append((received_at, lane, song_time))
+                    elif action == "move" and pointer in active_touches:
+                        active_touches[pointer] = x
+                    elif action in ("up", "cancel"):
+                        active_touches.pop(pointer, None)
                 lanes_now = physical_lanes()
                 if lanes_now != event_lanes:
-                    input_changes.append((received_at, frozenset(lanes_now), lanes_now - event_lanes, float(song_time)))
+                    input_changes.append((received_at, frozenset(lanes_now), lanes_now - event_lanes, song_time))
                     event_lanes = lanes_now
 
         for event in pygame.event.get():
+            if web_pointer_input and event.type in (pygame.FINGERDOWN, pygame.FINGERMOTION, pygame.FINGERUP):
+                continue
             # Touch-generated mouse events duplicate the same finger and can
             # otherwise leave a phantom held lane after FINGERUP.
             if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION) and getattr(event, "touch", False):
@@ -1188,7 +1342,7 @@ async def main():
                 age_ms = (pygame.time.get_ticks() - int(timestamp)) % (2 ** 32)
                 if age_ms <= 250:
                     received_at -= age_ms / 1000.0
-            if web_key_input and event.type in (pygame.KEYDOWN, pygame.KEYUP) and event.key in KEY_TO_LANE:
+            if web_key_input and event.type in (pygame.KEYDOWN, pygame.KEYUP) and (event.key in KEY_TO_LANE or event.key == pygame.K_SPACE):
                 continue
             if event.type == pygame.QUIT:
                 running = False
@@ -1202,10 +1356,13 @@ async def main():
             elif event.type == pygame.KEYDOWN:
                 if event.key in KEY_TO_LANE:
                     lane = KEY_TO_LANE[event.key]
+                    raw_flick_events.append((received_at, None, "lane", "down", lane))
                     if lane not in key_lanes_down:
                         triggered_lanes.add(lane)
                         raw_tap_presses.append((received_at, lane, None))
                     key_lanes_down.add(lane)
+                elif event.key == pygame.K_SPACE:
+                    raw_flick_events.append((received_at, None, "space", "down", None))
                 elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
                     set_music_volume(music_volume - 0.05)
                 elif event.key in (pygame.K_EQUALS, pygame.K_KP_PLUS):
@@ -1228,6 +1385,12 @@ async def main():
                         pause_music()
                     elif state == "PAUSED":
                         state = "PLAY"
+                        # Discard input made on the pause screen, including
+                        # key chords delivered before this ESC in the same batch.
+                        raw_tap_presses.clear()
+                        raw_flick_events.clear()
+                        input_changes.clear()
+                        initial_lanes = set()
                         paused_for = time.perf_counter() - pause_start_time
                         game_start_time += paused_for
                         if music_scheduled_start is not None:
@@ -1237,6 +1400,7 @@ async def main():
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mouse_click = True
                 active_touches[event.button] = event.pos[0]
+                raw_flick_events.append((received_at, None, "pointer", "down", ("mouse", *event.pos)))
                 if state == "PLAY":
                     track_left = CENTER_X - TRACK_BOTTOM_W / 2
                     if track_left <= event.pos[0] <= track_left + TRACK_BOTTOM_W:
@@ -1246,15 +1410,19 @@ async def main():
             elif event.type == pygame.MOUSEMOTION:
                 if event.buttons[0]:
                     active_touches[1] = event.pos[0]
+                    raw_flick_events.append((received_at, None, "pointer", "move", ("mouse", *event.pos)))
                     slider = volume_slider_for_state(state)
                     if slider is not None and slider.inflate(0, 22).collidepoint(event.pos):
                         set_music_volume((event.pos[0] - slider.x) / max(1, slider.width))
             elif event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 1:
+                    raw_flick_events.append((received_at, None, "pointer", "up", ("mouse", *event.pos)))
                 if event.button in active_touches:
                     del active_touches[event.button]
             elif event.type == pygame.FINGERDOWN:
                 touch_x = int(event.x * SCREEN_WIDTH)
                 touch_y = int(event.y * SCREEN_HEIGHT)
+                raw_flick_events.append((received_at, None, "pointer", "down", (("finger", event.finger_id), touch_x, touch_y)))
                 active_touches[("finger", event.finger_id)] = touch_x
                 if state == "PLAY":
                     track_left = CENTER_X - TRACK_BOTTOM_W / 2
@@ -1267,11 +1435,16 @@ async def main():
                     mouse_pos = (touch_x, touch_y)
             elif event.type == pygame.FINGERMOTION:
                 active_touches[("finger", event.finger_id)] = int(event.x * SCREEN_WIDTH)
+                raw_flick_events.append((received_at, None, "pointer", "move", (("finger", event.finger_id), event.x*SCREEN_WIDTH, event.y*SCREEN_HEIGHT)))
             elif event.type == pygame.FINGERUP:
                 active_touches.pop(("finger", event.finger_id), None)
+                raw_flick_events.append((received_at, None, "pointer", "up", (("finger", event.finger_id), event.x*SCREEN_WIDTH, event.y*SCREEN_HEIGHT)))
             elif event.type == pygame.KEYUP:
                 if event.key in KEY_TO_LANE:
                     key_lanes_down.discard(KEY_TO_LANE[event.key])
+                    raw_flick_events.append((received_at, None, "lane", "up", KEY_TO_LANE[event.key]))
+                elif event.key == pygame.K_SPACE:
+                    raw_flick_events.append((received_at, None, "space", "up", None))
 
             lanes_now = physical_lanes()
             if lanes_now != event_lanes:
@@ -1380,6 +1553,7 @@ async def main():
             sustain_changes.sort(key=lambda change: change[0])
             tap_presses = [[direct if direct is not None else play_time - max(0.0, sample_wall_time - when), lane, False]
                            for when, lane, direct in raw_tap_presses]
+            flick_intents = collect_flick_intents(raw_flick_events, play_time, sample_wall_time)
             screen.blit(current_bg_surface, (0, 0))
 
             top_l, top_r = CENTER_X - TRACK_TOP_W / 2, CENTER_X + TRACK_TOP_W / 2
@@ -1454,12 +1628,18 @@ async def main():
             active_chart_notes = [note for note in active_chart_notes if not note["hit"]]
             tap_hits = match_tap_presses(active_chart_notes, tap_presses, GREAT_TIME)
             tap_results = [(press[0], note, delta) for note, delta, press in tap_hits]
+            flick_hits = match_flick_intents(active_chart_notes, flick_intents, GREAT_TIME)
+            tap_results.extend((intent.time, note, delta) for note, delta, intent in flick_hits)
             for note, _, press in tap_hits:
                 for when, _, fresh in sustain_changes:
                     if when == press[0]:
                         fresh.discard(note["lane"])
             for note in active_chart_notes:
-                if note["type"] == "TAP" and not note["hit"] and play_time - note["time"] > GREAT_TIME:
+                # Keep a flick pending briefly for a reverse-order key chord or
+                # an interpolated touch crossing delivered in the next frame.
+                # Actual gesture matching still uses the strict +/-150ms window.
+                expiry = GREAT_TIME + (0.050 if note["type"] == "FLICK" else 0.0)
+                if note["type"] in ("TAP", "FLICK") and not note["hit"] and play_time - note["time"] > expiry:
                     note["hit"] = True
                     tap_results.append((note["time"] + GREAT_TIME, note, None))
             for _, note, delta in sorted(tap_results, key=lambda item: item[0]):
@@ -1475,8 +1655,8 @@ async def main():
                 max_combo = max(max_combo, combo)
                 combo_scale, feedback_scale = 1.35, 1.4
                 hit_x, hit_y, _ = get_perspective_pos(note["lane"], 1.0)
-                spawn_particles(hit_x, hit_y, TAP_TOP, count=10)
-                if abs(delta) <= PERFECT_TIME:
+                spawn_particles(hit_x, hit_y, (255, 112, 189) if note["type"] == "FLICK" else TAP_TOP, count=14 if note["type"] == "FLICK" else 10)
+                if abs(delta) <= PERFECT_TIME + 1e-7:
                     score += 200 + combo * 10
                     hit_score += 100
                     perfect_count += 1
@@ -1498,6 +1678,10 @@ async def main():
                 if note["type"] == "TAP":
                     if -0.2 <= progress <= 1.2:
                         draw_gradient_note(screen, note["lane"], progress - 0.055, progress + 0.055, TAP_TOP, TAP_BOT, steps=5)
+
+                elif note["type"] == "FLICK":
+                    if -0.2 <= progress <= 1.2:
+                        draw_flick_note(screen, note["lane"], progress)
                     
                 elif note["type"] == "HOLD":
                     p_head = min(1.0, progress)
@@ -1587,6 +1771,8 @@ async def main():
             draw_styled_text(screen, f"{current_bpm:.2f} BPM", font_small, CENTER_X - 185, 38, current_map["accent"])
             if practice_mode:
                 draw_styled_text(screen, "PRACTICE", font_small, 674, 43, (120, 228, 195))
+            if current_difficulty == "master" and current_flick_enabled:
+                draw_styled_text(screen, "FLICK  ·  레인 키 + SPACE  /  위로 스와이프", font_small, CENTER_X, 459, (244, 161, 202))
 
             pygame.draw.rect(screen, (30, 40, 70), btn_pause, border_radius=8)
             pygame.draw.rect(screen, (0, 220, 255), btn_pause, width=2, border_radius=8)
@@ -1737,6 +1923,11 @@ async def main():
                 elif btn_retry.collidepoint(mouse_pos):
                     request_game_start(current_map_idx, practice=practice_mode, difficulty=current_difficulty)
 
+        if audio_element is not None:
+            audio_element.setInputEnabled(state == "PLAY")
+        if state != "PLAY":
+            flick_keyboard.reset()
+            flick_touch.reset()
         pygame.display.flip()
         
         # [핵심] 웹 브라우저 상의 비동기 양보
@@ -1746,4 +1937,5 @@ async def main():
     sys.exit()
 
 # 프로그램 실행 포인트
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

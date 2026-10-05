@@ -22,12 +22,17 @@ def match_tap_presses(notes, presses, window):
             continue
         note = min(candidates, key=lambda item: (abs(item['time'] - when), item['time']))
         # An eligible sustain head closer to this press gets first refusal.
-        sustain_heads = [item for item in notes if item['type'] != 'TAP' and not item['hit']
+        sustain_heads = [item for item in notes if item['type'] in ('HOLD', 'SLIDE') and not item['hit']
                          and not item['sustain_judge'].head_done
                          and when < item['end_time']
                          and item['sustain_judge'].matches((lane,), when)
                          and abs(item['time'] - when) < abs(note['time'] - when)]
-        if sustain_heads:
+        # A lane press/touch-down on a flick arms its gesture; it must not steal
+        # an adjacent ordinary tile while waiting for SPACE or upward movement.
+        flick_heads = [item for item in notes if item['type'] == 'FLICK' and not item['hit']
+                       and item['lane'] == lane and abs(item['time'] - when) <= window
+                       and abs(item['time'] - when) <= abs(note['time'] - when)]
+        if sustain_heads or flick_heads:
             continue
         note['hit'] = True
         press[2] = True
