@@ -92,6 +92,22 @@ Output timestamps compensate for the browser audio render buffer where supported
 Text caching, reused lane glow surfaces and a particle cap reduce frame work;
 browser frames yield without an additional SDL frame-limit sleep.
 
+## ALL PERFECT and sustain spacing
+
+While every judgement remains PERFECT, the combo number and AP COMBO label
+shine with an animated multicolor gradient. Completing every judgement, including
+hold/slide heads, body ticks and tails, awards the glowing ALL PERFECT result.
+A GREAT or MISS ends the AP effect; empty or partially judged charts cannot earn
+the award. Practice can display the result but continues to leave records alone.
+
+`chart_layout.py` checks full hold/slide paths, including crossings between slide
+endpoints and clearance around sustain tails. Saved charts are repaired on load,
+and newly generated charts pass through the same lane allocation before flick
+selection. Musical times stay fixed. All 63 current difficulty charts retain
+their 28,063 notes and original note types; 485 note placements are corrected.
+Overfilled custom charts may simplify an impossible sustain or omit an onset
+when all four lanes are occupied.
+
 ## Rebuild the web archive
 
 The browser build uses `webapp/` so the music files stay outside the startup
@@ -99,7 +115,7 @@ archive. After changing the game source or charts, copy the matching files from
 the repository root into `webapp/`, then run this from the repository root:
 
 ```powershell
-Copy-Item .\main.py, .\sustain_judgement.py, .\tap_judgement.py, .\flick_judgement.py, .\flick_chart.py, .\auto_chart.py, .\auto_charts.json, .\charts.json, .\font.ttf .\webapp\ -Force
+Copy-Item .\main.py, .\sustain_judgement.py, .\tap_judgement.py, .\flick_judgement.py, .\flick_chart.py, .\chart_layout.py, .\auto_chart.py, .\auto_charts.json, .\charts.json, .\font.ttf .\webapp\ -Force
 Push-Location .\webapp
 python -m pygbag --build --PYBUILD 3.12 --app_name RhythmStage --title "Rhythm Stage" .
 Pop-Location

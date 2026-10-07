@@ -14,6 +14,7 @@ from functools import lru_cache
 from tap_judgement import match_tap_presses
 from flick_judgement import KeyboardFlickInput, TouchFlickInput, match_flick_intents
 from sustain_judgement import SustainJudge, HEAD_WINDOW, MIN_CONTINUOUS_HOLD, TAIL_EARLY_WINDOW
+from chart_layout import resolve_note_overlaps
 
 
 # ---------------------------------------------------------
@@ -147,6 +148,46 @@ def draw_styled_text(surface, text, font, center_x, center_y, text_color, shadow
     shadow_rect = shadow_img.get_rect(center=(center_x + 2, center_y + 2))
     surface.blit(shadow_img, shadow_rect)
     surface.blit(base_img, rect)
+
+
+def is_all_perfect(total, perfect, great, miss, completed=True):
+    """Count every sustain head, body tick and tail; empty charts cannot earn AP."""
+    return (total > 0 and 0 < perfect <= total and great == 0 and miss == 0
+            and (not completed or perfect == total))
+
+
+def prism_color(position):
+    palette = ((111, 242, 255), (171, 150, 255), (255, 137, 212),
+               (255, 231, 147), (134, 255, 220))
+    position = (position % 1.0) * len(palette)
+    index = int(position)
+    return interpolate_color(palette[index], palette[(index + 1) % len(palette)], position - index)
+
+
+@lru_cache(maxsize=96)
+def prismatic_text_image(font, text, frame):
+    mask = cached_text(font, text, (255, 255, 255))
+    width, height = mask.get_size()
+    image = pygame.Surface((width, height), pygame.SRCALPHA)
+    for x in range(0, width, 3):
+        pygame.draw.rect(image, (*prism_color(x / max(1, width) + frame / 60.0), 255),
+                         (x, 0, 3, height))
+    image.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    return image
+
+
+def draw_prismatic_text(surface, text, font, center_x, center_y, scale=1.0):
+    now = time.perf_counter()
+    image = prismatic_text_image(font, text, int(now * 20) % 60)
+    if scale != 1.0:
+        image = pygame.transform.smoothscale(image, (max(1, int(image.get_width() * scale)),
+                                                    max(1, int(image.get_height() * scale))))
+    rect = image.get_rect(center=(center_x, center_y))
+    glow = image.copy()
+    glow.set_alpha(int(40 + 15 * math.sin(now * 3)))
+    for dx, dy in ((-4, 0), (4, 0), (0, -4), (0, 4), (-2, -2), (2, -2), (-2, 2), (2, 2)):
+        surface.blit(glow, rect.move(dx, dy))
+    surface.blit(image, rect)
 
 def draw_gradient_note(surface, lane, p_top, p_bot, color_top, color_bot, width_scale=0.40, steps=8):
     p_top_c = max(0.0, min(1.15, p_top))
@@ -403,7 +444,7 @@ def load_authored_chart(audio_name, level, duration, default_bpm, default_offset
             continue
     if not notes:
         return [], bpm, offset
-    return sorted(notes, key=lambda n: n["time"]), bpm, offset
+    return resolve_note_overlaps(notes), bpm, offset
 
 def generate_chart(level, duration, bpm, offset=0.0):
     notes = []
@@ -1269,6 +1310,41 @@ def stop_music():
     except Exception:
         pass
 
+
+def draw_result_summary(surface):
+    surface.blit(current_bg_surface, (0, 0))
+    accuracy = hit_score / total_notes if total_notes > 0 else 0
+    grade_str, grade_color = get_grade(accuracy)
+    draw_styled_text(surface, current_map["song"], font_large, CENTER_X, 38, (255, 255, 255))
+    draw_styled_text(surface, f"STAGE CLEAR!  ·  {LENGTH_LABELS[current_length]}  ·  {DIFFICULTIES[current_difficulty]}",
+                     font_med, CENTER_X, 75, current_map["accent"])
+
+    if is_all_perfect(total_notes, perfect_count, great_count, miss_count):
+        draw_prismatic_text(surface, "ALL PERFECT", font_large, CENTER_X, 122)
+        # Small moving highlights surround the award without covering the stats.
+        phase = time.perf_counter()
+        for index in range(6):
+            angle = phase * .6 + index * math.tau / 6
+            x = CENTER_X + math.cos(angle) * 167
+            y = 122 + math.sin(angle) * 19
+            tint = prism_color(index / 6 + phase / 3)
+            radius = 2 + int((1 + math.sin(phase * 3 + index)) * 1.5)
+            pygame.draw.line(surface, tint, (x-radius, y), (x+radius, y), 2)
+            pygame.draw.line(surface, tint, (x, y-radius), (x, y+radius), 2)
+    elif total_notes > 0 and miss_count == 0 and perfect_count + great_count == total_notes:
+        draw_styled_text(surface, "FULL COMBO!", font_large, CENTER_X, 122,
+                         (255, 215, 0), (120, 65, 20))
+    if practice_mode:
+        draw_styled_text(surface, "PRACTICE · RECORD NOT SAVED", font_small, CENTER_X, 159, (120, 228, 195))
+    draw_styled_text(surface, f"GRADE: {grade_str}", font_large, CENTER_X, 198, grade_color)
+    draw_styled_text(surface, f"최종 점수: {score:,}", font_med, CENTER_X, 238, (220, 220, 220))
+    for label, count, y, color in (("PERFECT", perfect_count, 283, (255, 215, 0)),
+                                   ("GREAT", great_count, 313, (0, 255, 255)),
+                                   ("MISS", miss_count, 343, (255, 60, 60))):
+        draw_styled_text(surface, f"{label} : {count}", font_med, CENTER_X - 105, y, color)
+    draw_styled_text(surface, f"최대 콤보: {max_combo}", font_med, CENTER_X + 110, 298, (220, 220, 220))
+    draw_styled_text(surface, f"정확도: {accuracy:.1f}%", font_med, CENTER_X + 110, 328, (220, 220, 220))
+
 # ---------------------------------------------------------
 # 6. 비동기 메인 루프 (Web/pygbag 전용)
 # ---------------------------------------------------------
@@ -1800,9 +1876,13 @@ async def main():
                 pause_music()
 
             if combo >= 3:
-                combo_color = interpolate_color(combo_top, combo_bottom, 0.48)
-                draw_styled_text(screen, f"{combo}", font_combo_num, CENTER_X, 150, combo_color, scale=combo_scale)
-                draw_styled_text(screen, "COMBO", font_combo_sub, CENTER_X, 190, (255, 255, 255))
+                if is_all_perfect(total_notes, perfect_count, great_count, miss_count, completed=False):
+                    draw_prismatic_text(screen, str(combo), font_combo_num, CENTER_X, 150, scale=combo_scale)
+                    draw_prismatic_text(screen, "AP COMBO", font_combo_sub, CENTER_X, 190)
+                else:
+                    combo_color = interpolate_color(combo_top, combo_bottom, 0.48)
+                    draw_styled_text(screen, f"{combo}", font_combo_num, CENTER_X, 150, combo_color, scale=combo_scale)
+                    draw_styled_text(screen, "COMBO", font_combo_sub, CENTER_X, 190, (255, 255, 255))
 
             if time.time() - feedback_time < 0.45:
                 draw_styled_text(screen, last_feedback, font_large, CENTER_X, 270, last_feedback_color, scale=feedback_scale)
@@ -1816,7 +1896,7 @@ async def main():
                     ranks = ["S", "A", "B", "C", "F", "-"]
                     if ranks.index(grade_str) < ranks.index(prev):
                         player_records[current_map_idx]["grade"] = grade_str
-                    if miss_count == 0:
+                    if total_notes > 0 and miss_count == 0 and perfect_count + great_count == total_notes:
                         player_records[current_map_idx]["fc"] = True
                     save_records(player_records)
                     
@@ -1913,33 +1993,10 @@ async def main():
         # SCENE: RESULT
         # ==========================================
         elif state == "RESULT":
-            screen.blit(current_bg_surface, (0, 0))
-            accuracy = (hit_score / (total_notes * 100)) * 100 if total_notes > 0 else 0
-            grade_str, grade_color = get_grade(accuracy)
+            draw_result_summary(screen)
             
-            draw_styled_text(screen, current_map["song"], font_large, CENTER_X, 48, (255, 255, 255))
-            draw_styled_text(screen, f"STAGE CLEAR!  ·  {LENGTH_LABELS[current_length]}  ·  {DIFFICULTIES[current_difficulty]}", font_med, CENTER_X, 83, current_map["accent"])
-            if practice_mode:
-                draw_styled_text(screen, "PRACTICE · RECORD NOT SAVED", font_small, CENTER_X, 123, (120, 228, 195))
-            
-            if miss_count == 0:
-                if perfect_count == total_notes:
-                    draw_styled_text(screen, "ALL PERFECT!!", font_large, CENTER_X, 105, (255, 255, 255), (0, 200, 255))
-                else:
-                    draw_styled_text(screen, "FULL COMBO!", font_large, CENTER_X, 105, (255, 215, 0), (255, 100, 0))
-            
-            draw_styled_text(screen, f"GRADE: {grade_str}", font_large, CENTER_X, 150, grade_color)
-            draw_styled_text(screen, f"최종 점수: {score:,}", font_med, CENTER_X, 200, (220, 220, 220))
-            
-            draw_styled_text(screen, f"PERFECT : {perfect_count}", font_med, CENTER_X - 100, 240, (255, 215, 0))
-            draw_styled_text(screen, f"GREAT : {great_count}", font_med, CENTER_X - 100, 270, (0, 255, 255))
-            draw_styled_text(screen, f"MISS : {miss_count}", font_med, CENTER_X - 100, 300, (255, 60, 60))
-            
-            draw_styled_text(screen, f"최대 콤보: {max_combo}", font_med, CENTER_X + 100, 255, (220, 220, 220))
-            draw_styled_text(screen, f"정확도: {accuracy:.1f}%", font_med, CENTER_X + 100, 285, (220, 220, 220))
-            
-            btn_home = pygame.Rect(CENTER_X - 170, 370, 150, 55)
-            btn_retry = pygame.Rect(CENTER_X + 20, 370, 150, 55)
+            btn_home = pygame.Rect(CENTER_X - 170, 391, 150, 55)
+            btn_retry = pygame.Rect(CENTER_X + 20, 391, 150, 55)
             
             pygame.draw.rect(screen, (0, 180, 220), btn_home, border_radius=12)
             pygame.draw.rect(screen, (255, 0, 100), btn_retry, border_radius=12)

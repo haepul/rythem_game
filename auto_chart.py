@@ -4,6 +4,7 @@ import math
 import sys
 from pathlib import Path
 from flick_chart import add_master_flicks
+from chart_layout import resolve_note_overlaps
 
 import pygame
 
@@ -500,6 +501,8 @@ def _generate_levels_from_audio(path, preferred_bpm):
         notes = _optimize_lanes(events, level)
         if name == "master":
             notes = intensify_master(notes, bpm)
+        notes = resolve_note_overlaps(notes, "beat", "end_beat", 60.0 / bpm)
+        if name == "master":
             notes = add_master_flicks(notes, bpm, offset, song_key=Path(path).stem)
         counts = {kind: sum(note["type"] == kind for note in notes)
                   for kind in ("TAP", "HOLD", "SLIDE", "FLICK")}
