@@ -1378,8 +1378,9 @@ def draw_result_summary(surface):
     draw_styled_text(surface, f"STAGE CLEAR!  ·  {LENGTH_LABELS[current_length]}  ·  {DIFFICULTIES[current_difficulty]}",
                      font_med, CENTER_X, 75, current_map["accent"])
 
-    if (total_notes > 0 and miss_count == 0 and perfect_count + great_count == total_notes
-            and not is_all_perfect(total_notes, perfect_count, great_count, miss_count)):
+    if is_all_perfect(total_notes, perfect_count, great_count, miss_count):
+        draw_prismatic_text(surface, "ALL PERFECT", font_large, CENTER_X, 122)
+    elif total_notes > 0 and miss_count == 0 and perfect_count + great_count == total_notes:
         draw_styled_text(surface, "FULL COMBO!", font_large, CENTER_X, 122,
                          (255, 215, 0), (120, 65, 20))
     if practice_mode:

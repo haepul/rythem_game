@@ -97,6 +97,7 @@ browser frames yield without an additional SDL frame-limit sleep.
 Completing every judgement, including hold/slide heads, body ticks and tails,
 shows a glowing ALL PERFECT announcement once after the song finishes. It stays
 visible for 1.25 seconds, fades out over 0.85 seconds, then opens the results.
+The results retain an animated gradient ALL PERFECT label for a successful run.
 During gameplay the normal combo display is used. A GREAT, MISS, empty chart or
 partially judged chart cannot earn AP. Practice can show the announcement but
 continues to leave records alone.
