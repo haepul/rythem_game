@@ -1,5 +1,6 @@
 import os
 import unittest
+from unittest.mock import patch
 
 os.environ['SDL_VIDEODRIVER'] = 'dummy'
 os.environ['SDL_AUDIODRIVER'] = 'dummy'
@@ -15,11 +16,50 @@ class AllPerfectTests(unittest.TestCase):
             with self.subTest(counts=counts):
                 self.assertFalse(game.is_all_perfect(*counts))
 
-    def test_live_ap_starts_after_first_perfect_and_stops_at_great(self):
-        self.assertFalse(game.is_all_perfect(100, 0, 0, 0, completed=False))
-        self.assertTrue(game.is_all_perfect(100, 3, 0, 0, completed=False))
-        self.assertFalse(game.is_all_perfect(100, 3, 1, 0, completed=False))
-        self.assertFalse(game.is_all_perfect(100, 3, 0, 1, completed=False))
+    def test_perfect_gameplay_uses_normal_combo_even_after_last_note(self):
+        replay = replay_tests.GameplayReplayTests()
+        notes = [replay_tests.note(1 + i*.3, i, 'TAP') for i in range(3)]
+        frames = [(1 + i*.3, [replay.down(key)])
+                  for i, key in enumerate((game.pygame.K_d, game.pygame.K_f, game.pygame.K_j))]
+        with patch.object(game, 'draw_prismatic_text') as award:
+            result = replay.replay(frames, notes)
+        self.assertEqual((result['perfect'], result['combo'], result['state']), (3, 3, 'PLAY'))
+        award.assert_not_called()
+
+    def test_completed_ap_holds_fades_and_enters_results_once(self):
+        with patch.multiple(game, practice_mode=True, state='PLAY', total_notes=100,
+                            perfect_count=100, great_count=0, miss_count=0, hit_score=10000,
+                            clear_started_at=None, clear_backdrop=None), \
+                patch.object(game, 'stop_music'), patch.object(game, 'save_records') as save, \
+                patch.object(game.time, 'perf_counter', return_value=100) as clock, \
+                patch.object(game, 'draw_result_summary') as results:
+            game.finish_song()
+            self.assertEqual(game.state, 'CLEAR')
+            game.draw_clear_celebration(game.screen)
+            self.assertEqual(game.clear_award_surface.get_alpha(), 255)
+            clock.return_value = 100 + game.AP_HOLD_SECONDS + game.AP_FADE_SECONDS / 2
+            game.draw_clear_celebration(game.screen)
+            self.assertAlmostEqual(game.clear_award_surface.get_alpha(), 128, delta=1)
+            self.assertEqual(game.state, 'CLEAR')
+            clock.return_value = 100 + game.AP_HOLD_SECONDS + game.AP_FADE_SECONDS + .01
+            game.draw_clear_celebration(game.screen)
+            self.assertEqual(game.state, 'RESULT')
+            self.assertIsNone(game.clear_started_at)
+            self.assertIsNone(game.clear_backdrop)
+            results.assert_called_once()
+            save.assert_not_called()
+
+    def test_non_ap_completion_skips_announcement_and_clears_old_animation(self):
+        for perfect, great, miss in ((99, 1, 0), (99, 0, 1), (99, 0, 0)):
+            with self.subTest(counts=(perfect, great, miss)), \
+                    patch.multiple(game, practice_mode=True, state='PLAY', total_notes=100,
+                                   perfect_count=perfect, great_count=great, miss_count=miss, hit_score=9900,
+                                   clear_started_at=50, clear_backdrop=game.screen.copy()), \
+                    patch.object(game, 'stop_music'):
+                game.finish_song()
+                self.assertEqual(game.state, 'RESULT')
+                self.assertIsNone(game.clear_started_at)
+                self.assertIsNone(game.clear_backdrop)
 
     def test_hold_head_body_and_tail_all_count_toward_ap(self):
         replay = replay_tests.GameplayReplayTests()

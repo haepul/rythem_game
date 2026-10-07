@@ -150,10 +150,9 @@ def draw_styled_text(surface, text, font, center_x, center_y, text_color, shadow
     surface.blit(base_img, rect)
 
 
-def is_all_perfect(total, perfect, great, miss, completed=True):
+def is_all_perfect(total, perfect, great, miss):
     """Count every sustain head, body tick and tail; empty charts cannot earn AP."""
-    return (total > 0 and 0 < perfect <= total and great == 0 and miss == 0
-            and (not completed or perfect == total))
+    return total > 0 and perfect == total and great == 0 and miss == 0
 
 
 def prism_color(position):
@@ -571,6 +570,11 @@ music_fade_gain = 1.0
 auto_analysis_job = None
 audio_ended_at = None
 ready_start_time = 0.0
+clear_started_at = None
+clear_backdrop = None
+AP_HOLD_SECONDS = 1.25
+AP_FADE_SECONDS = 0.85
+clear_award_surface = pygame.Surface((SCREEN_WIDTH, 160), pygame.SRCALPHA)
 ready_count_in_duration = 2.0
 music_scheduled_start = None
 music_load_job = None
@@ -1064,6 +1068,9 @@ def start_game(m_idx, practice=False, chart_entry=None, chart_source="SAVED CHAR
     global ready_start_time, ready_count_in_duration, music_scheduled_start, current_length
     global active_chart_notes, next_chart_index
     global current_flick_enabled
+    global clear_started_at, clear_backdrop
+
+    clear_started_at, clear_backdrop = None, None
     
     current_map_idx = m_idx
     current_map = dict(MAP_LIST[m_idx])
@@ -1311,6 +1318,58 @@ def stop_music():
         pass
 
 
+def finish_song():
+    """Record the completed run once, then show its optional clear animation."""
+    global state, clear_started_at, clear_backdrop
+    stop_music()
+    accuracy = hit_score / total_notes if total_notes > 0 else 0
+    grade_str, _ = get_grade(accuracy)
+    if not practice_mode:
+        prev = player_records[current_map_idx]["grade"]
+        ranks = ["S", "A", "B", "C", "F", "-"]
+        if ranks.index(grade_str) < ranks.index(prev):
+            player_records[current_map_idx]["grade"] = grade_str
+        if total_notes > 0 and miss_count == 0 and perfect_count + great_count == total_notes:
+            player_records[current_map_idx]["fc"] = True
+        save_records(player_records)
+    clear_started_at, clear_backdrop = None, None
+    if is_all_perfect(total_notes, perfect_count, great_count, miss_count):
+        clear_started_at = time.perf_counter()
+        clear_backdrop = current_bg_surface.copy()
+        veil = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+        veil.fill((8, 12, 25))
+        veil.set_alpha(90)
+        clear_backdrop.blit(veil, (0, 0))
+        state = "CLEAR"
+    else:
+        state = "RESULT"
+
+
+def draw_clear_celebration(surface):
+    """Show AP once after song completion, then fade it into the results."""
+    global state, clear_started_at, clear_backdrop
+    elapsed = time.perf_counter() - clear_started_at if clear_started_at is not None else float("inf")
+    if elapsed >= AP_HOLD_SECONDS + AP_FADE_SECONDS:
+        state = "RESULT"
+        clear_started_at, clear_backdrop = None, None
+        draw_result_summary(surface)
+        return
+    surface.blit(clear_backdrop, (0, 0))
+    remaining = 1.0 - max(0.0, elapsed - AP_HOLD_SECONDS) / AP_FADE_SECONDS
+    alpha = round(255 * remaining * remaining * (3.0 - 2.0 * remaining))
+    clear_award_surface.fill((0, 0, 0, 0))
+    draw_prismatic_text(clear_award_surface, "ALL PERFECT", font_large, CENTER_X, 80, scale=1.45)
+    for index in range(6):
+        angle = elapsed * .6 + index * math.tau / 6
+        x, y = CENTER_X + math.cos(angle) * 225, 80 + math.sin(angle) * 33
+        tint = prism_color(index / 6 + elapsed / 3)
+        radius = 2 + int((1 + math.sin(elapsed * 3 + index)) * 1.5)
+        pygame.draw.line(clear_award_surface, tint, (x-radius, y), (x+radius, y), 2)
+        pygame.draw.line(clear_award_surface, tint, (x, y-radius), (x, y+radius), 2)
+    clear_award_surface.set_alpha(alpha)
+    surface.blit(clear_award_surface, (0, SCREEN_HEIGHT // 2 - 80))
+
+
 def draw_result_summary(surface):
     surface.blit(current_bg_surface, (0, 0))
     accuracy = hit_score / total_notes if total_notes > 0 else 0
@@ -1319,19 +1378,8 @@ def draw_result_summary(surface):
     draw_styled_text(surface, f"STAGE CLEAR!  ·  {LENGTH_LABELS[current_length]}  ·  {DIFFICULTIES[current_difficulty]}",
                      font_med, CENTER_X, 75, current_map["accent"])
 
-    if is_all_perfect(total_notes, perfect_count, great_count, miss_count):
-        draw_prismatic_text(surface, "ALL PERFECT", font_large, CENTER_X, 122)
-        # Small moving highlights surround the award without covering the stats.
-        phase = time.perf_counter()
-        for index in range(6):
-            angle = phase * .6 + index * math.tau / 6
-            x = CENTER_X + math.cos(angle) * 167
-            y = 122 + math.sin(angle) * 19
-            tint = prism_color(index / 6 + phase / 3)
-            radius = 2 + int((1 + math.sin(phase * 3 + index)) * 1.5)
-            pygame.draw.line(surface, tint, (x-radius, y), (x+radius, y), 2)
-            pygame.draw.line(surface, tint, (x, y-radius), (x, y+radius), 2)
-    elif total_notes > 0 and miss_count == 0 and perfect_count + great_count == total_notes:
+    if (total_notes > 0 and miss_count == 0 and perfect_count + great_count == total_notes
+            and not is_all_perfect(total_notes, perfect_count, great_count, miss_count)):
         draw_styled_text(surface, "FULL COMBO!", font_large, CENTER_X, 122,
                          (255, 215, 0), (120, 65, 20))
     if practice_mode:
@@ -1876,31 +1924,15 @@ async def main():
                 pause_music()
 
             if combo >= 3:
-                if is_all_perfect(total_notes, perfect_count, great_count, miss_count, completed=False):
-                    draw_prismatic_text(screen, str(combo), font_combo_num, CENTER_X, 150, scale=combo_scale)
-                    draw_prismatic_text(screen, "AP COMBO", font_combo_sub, CENTER_X, 190)
-                else:
-                    combo_color = interpolate_color(combo_top, combo_bottom, 0.48)
-                    draw_styled_text(screen, f"{combo}", font_combo_num, CENTER_X, 150, combo_color, scale=combo_scale)
-                    draw_styled_text(screen, "COMBO", font_combo_sub, CENTER_X, 190, (255, 255, 255))
+                combo_color = interpolate_color(combo_top, combo_bottom, 0.48)
+                draw_styled_text(screen, f"{combo}", font_combo_num, CENTER_X, 150, combo_color, scale=combo_scale)
+                draw_styled_text(screen, "COMBO", font_combo_sub, CENTER_X, 190, (255, 255, 255))
 
             if time.time() - feedback_time < 0.45:
                 draw_styled_text(screen, last_feedback, font_large, CENTER_X, 270, last_feedback_color, scale=feedback_scale)
 
             if play_time > current_map["duration"] + 0.35:
-                accuracy = (hit_score / (total_notes * 100)) * 100 if total_notes > 0 else 0
-                grade_str, _ = get_grade(accuracy)
-                
-                if not practice_mode:
-                    prev = player_records[current_map_idx]["grade"]
-                    ranks = ["S", "A", "B", "C", "F", "-"]
-                    if ranks.index(grade_str) < ranks.index(prev):
-                        player_records[current_map_idx]["grade"] = grade_str
-                    if total_notes > 0 and miss_count == 0 and perfect_count + great_count == total_notes:
-                        player_records[current_map_idx]["fc"] = True
-                    save_records(player_records)
-                    
-                state = "RESULT"
+                finish_song()
 
         # ==========================================
         # SCENE: PAUSED
@@ -1990,8 +2022,11 @@ async def main():
                     stop_music()
 
         # ==========================================
-        # SCENE: RESULT
+        # SCENE: CLEAR / RESULT
         # ==========================================
+        elif state == "CLEAR":
+            draw_clear_celebration(screen)
+
         elif state == "RESULT":
             draw_result_summary(screen)
             

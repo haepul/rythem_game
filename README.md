@@ -94,11 +94,12 @@ browser frames yield without an additional SDL frame-limit sleep.
 
 ## ALL PERFECT and sustain spacing
 
-While every judgement remains PERFECT, the combo number and AP COMBO label
-shine with an animated multicolor gradient. Completing every judgement, including
-hold/slide heads, body ticks and tails, awards the glowing ALL PERFECT result.
-A GREAT or MISS ends the AP effect; empty or partially judged charts cannot earn
-the award. Practice can display the result but continues to leave records alone.
+Completing every judgement, including hold/slide heads, body ticks and tails,
+shows a glowing ALL PERFECT announcement once after the song finishes. It stays
+visible for 1.25 seconds, fades out over 0.85 seconds, then opens the results.
+During gameplay the normal combo display is used. A GREAT, MISS, empty chart or
+partially judged chart cannot earn AP. Practice can show the announcement but
+continues to leave records alone.
 
 `chart_layout.py` checks full hold/slide paths, including crossings between slide
 endpoints and clearance around sustain tails. Saved charts are repaired on load,
