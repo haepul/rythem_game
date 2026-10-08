@@ -13,7 +13,7 @@ import threading
 from functools import lru_cache
 from tap_judgement import match_tap_presses
 from flick_judgement import KeyboardFlickInput, TouchFlickInput, match_flick_intents
-from sustain_judgement import SustainJudge, HEAD_WINDOW, MIN_CONTINUOUS_HOLD, TAIL_EARLY_WINDOW
+from sustain_judgement import SustainJudge, TouchContact, HEAD_WINDOW, MIN_CONTINUOUS_HOLD, TAIL_EARLY_WINDOW
 from chart_layout import resolve_note_overlaps
 
 
@@ -741,6 +741,22 @@ def physical_lanes():
     return lanes
 
 
+def sustain_contacts():
+    """Keep finger motion continuous without changing tap/flick lane selection."""
+    contacts = set(key_lanes_down)
+    left = CENTER_X - TRACK_BOTTOM_W / 2
+    width = TRACK_BOTTOM_W / 4
+    for pointer, x in active_touches.items():
+        lane = touch_lane(x)
+        if lane is None:
+            continue
+        if isinstance(pointer, tuple) and pointer[0] in ("pointer", "finger"):
+            contacts.add(TouchContact(pointer, (x - left) / width - 0.5, lane))
+        else:
+            contacts.add(lane)
+    return frozenset(contacts)
+
+
 def update_sustain(note, play_time, initial_lanes, changes, triggered_lanes):
     judge = note["sustain_judge"]
     available = {lane for _, _, fresh in changes for lane in fresh}
@@ -1418,8 +1434,9 @@ async def main():
         mouse_click = False
         triggered_lanes = set()
         mouse_pos = pygame.mouse.get_pos()
-        initial_lanes = physical_lanes()
-        event_lanes = set(initial_lanes)
+        initial_lanes = sustain_contacts()
+        event_contacts = initial_lanes
+        event_lanes = physical_lanes()
         input_changes = []
         raw_tap_presses = []
         raw_flick_events = []
@@ -1465,8 +1482,10 @@ async def main():
                     elif action in ("up", "cancel"):
                         active_touches.pop(pointer, None)
                 lanes_now = physical_lanes()
-                if lanes_now != event_lanes:
-                    input_changes.append((received_at, frozenset(lanes_now), lanes_now - event_lanes, song_time))
+                contacts_now = sustain_contacts()
+                if contacts_now != event_contacts:
+                    input_changes.append((received_at, contacts_now, lanes_now - event_lanes, song_time))
+                    event_contacts = contacts_now
                     event_lanes = lanes_now
 
         for event in pygame.event.get():
@@ -1531,6 +1550,8 @@ async def main():
                         raw_flick_events.clear()
                         input_changes.clear()
                         initial_lanes = set()
+                        event_contacts = frozenset()
+                        event_lanes = set()
                         paused_for = time.perf_counter() - pause_start_time
                         game_start_time += paused_for
                         if music_scheduled_start is not None:
@@ -1587,8 +1608,10 @@ async def main():
                     raw_flick_events.append((received_at, None, "space", "up", None))
 
             lanes_now = physical_lanes()
-            if lanes_now != event_lanes:
-                input_changes.append((received_at, frozenset(lanes_now), lanes_now - event_lanes, None))
+            contacts_now = sustain_contacts()
+            if contacts_now != event_contacts:
+                input_changes.append((received_at, contacts_now, lanes_now - event_lanes, None))
+                event_contacts = contacts_now
                 event_lanes = lanes_now
 
         pressed_lanes = physical_lanes() if state == "PLAY" else set()

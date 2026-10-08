@@ -145,9 +145,15 @@ speaker/Bluetooth latency; device playtesting is a separate check.
 
 `sustain_judgement.py` measures actual held intervals on the song clock. Body
 ticks require 85% held time and a continuous contact ending at the tick. Rejoining
-never grants elapsed ticks. Slide lane transfers allow 50ms for reconnection but
+never grants elapsed ticks. Slide lane transfers allow 80ms for reconnection but
 do not count the gap as held time. The tail accepts release up to 60ms early after
 a sustained contact (up to 35ms: PERFECT; 35–60ms: GREAT); holding through the tail
 also succeeds. No release action is required. Head, body and tail resolve once.
 Ordered input edges include releases and re-presses within one frame. Synthetic
 mouse events from touch are ignored, and losing focus pauses and clears input.
+
+Moving sustains use continuous finger positions on both browser and native touch
+input, including movement within a single lane. Their horizontal tolerance is
+0.90 lane widths for touch and 0.78 for keyboard/mouse, measured from the moving
+path. Multiple fingers retain independent positions. Tap/flick timing windows,
+hold lane selection, sustained-contact requirements and tail timing are unchanged.

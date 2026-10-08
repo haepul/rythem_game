@@ -1,14 +1,34 @@
 """Time-based hold/slide judgement independent of rendering and score effects."""
 
+from dataclasses import dataclass
+
 HEAD_WINDOW = 0.23
 HEAD_PERFECT = 0.07
-SLIDE_TOLERANCE = 0.72
-SLIDE_TRANSFER_GRACE = 0.05
+SLIDE_TOLERANCE = 0.78
+TOUCH_SLIDE_TOLERANCE = 0.90
+SLIDE_TRANSFER_GRACE = 0.08
 MIN_COVERAGE = 0.85
 MIN_CONTINUOUS_HOLD = 0.06
 TAIL_EARLY_WINDOW = 0.06
 TAIL_PERFECT = 0.035
 EPSILON = 1e-7
+
+
+@dataclass(frozen=True)
+class TouchContact:
+    """Continuous position measured in lane widths; integer centers are lanes."""
+
+    pointer: object
+    position: float
+    lane: int
+
+
+def contact_position(contact):
+    return contact.position if isinstance(contact, TouchContact) else contact
+
+
+def contact_tolerance(contact):
+    return TOUCH_SLIDE_TOLERANCE if isinstance(contact, TouchContact) else SLIDE_TOLERANCE
 
 
 class SustainJudge:
@@ -37,9 +57,11 @@ class SustainJudge:
 
     def matches(self, lanes, when):
         if not self.slide:
-            return self.lane in lanes
+            return any((lane.lane if isinstance(lane, TouchContact) else lane) == self.lane
+                       for lane in lanes)
         position = self.position(when)
-        return any(abs(lane - position) <= SLIDE_TOLERANCE for lane in lanes)
+        return any(abs(contact_position(lane) - position) <= contact_tolerance(lane)
+                   for lane in lanes)
 
     def _lose_contact(self, when):
         self.contact = False
@@ -65,8 +87,9 @@ class SustainJudge:
         velocity = (self.end_lane - self.lane) / (self.end - self.start)
         spans = []
         for lane in lanes:
-            a = self.start + (lane - SLIDE_TOLERANCE - self.lane) / velocity
-            b = self.start + (lane + SLIDE_TOLERANCE - self.lane) / velocity
+            position, tolerance = contact_position(lane), contact_tolerance(lane)
+            a = self.start + (position - tolerance - self.lane) / velocity
+            b = self.start + (position + tolerance - self.lane) / velocity
             lo, hi = max(first, min(a, b)), min(last, max(a, b))
             if hi > lo:
                 spans.append((lo, hi))
