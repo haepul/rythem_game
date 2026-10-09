@@ -15,6 +15,7 @@ from tap_judgement import match_tap_presses
 from flick_judgement import KeyboardFlickInput, TouchFlickInput, match_flick_intents
 from sustain_judgement import SustainJudge, TouchContact, HEAD_WINDOW, MIN_CONTINUOUS_HOLD, TAIL_EARLY_WINDOW
 from chart_layout import resolve_note_overlaps
+from note_renderer import NoteRenderer
 
 
 # ---------------------------------------------------------
@@ -66,6 +67,9 @@ def get_perspective_pos(lane, progress):
     track_left = CENTER_X - (current_track_w / 2.0)
     x_center = track_left + (lane + 0.5) * lane_w
     return x_center, y, lane_w
+
+
+note_renderer = NoteRenderer(get_perspective_pos, (SCREEN_WIDTH, SCREEN_HEIGHT))
 
 def generate_bg_surface(colors, accent):
     surf = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -189,44 +193,13 @@ def draw_prismatic_text(surface, text, font, center_x, center_y, scale=1.0):
     surface.blit(image, rect)
 
 def draw_gradient_note(surface, lane, p_top, p_bot, color_top, color_bot, width_scale=0.40, steps=8):
-    p_top_c = max(0.0, min(1.15, p_top))
-    p_bot_c = max(0.0, min(1.15, p_bot))
-    if p_top_c >= p_bot_c: return
-    for i in range(steps):
-        t1, t2 = i / steps, (i + 1) / steps
-        curr_p1 = p_top_c + (p_bot_c - p_top_c) * t1
-        curr_p2 = p_top_c + (p_bot_c - p_top_c) * t2
-        x1, y1, w1 = get_perspective_pos(lane, curr_p1)
-        x2, y2, w2 = get_perspective_pos(lane, curr_p2)
-        col = interpolate_color(color_top, color_bot, t1)
-        poly = [
-            (x1 - w1 * width_scale, y1), (x1 + w1 * width_scale, y1),
-            (x2 + w2 * width_scale, y2), (x2 - w2 * width_scale, y2)
-        ]
-        pygame.draw.polygon(surface, col, poly)
-    
-    x_top, y_top, w_top = get_perspective_pos(lane, p_top_c)
-    x_bot, y_bot, w_bot = get_perspective_pos(lane, p_bot_c)
-    full_poly = [
-        (x_top - w_top * width_scale, y_top), (x_top + w_top * width_scale, y_top),
-        (x_bot + w_bot * width_scale, y_bot), (x_bot - w_bot * width_scale, y_bot)
-    ]
-    edge = interpolate_color(color_top, (255, 255, 255), 0.52)
-    pygame.draw.polygon(surface, edge, full_poly, 2)
-    pygame.draw.line(surface, (255, 255, 255), (x_top - w_top * width_scale, y_top), (x_top + w_top * width_scale, y_top), 2)
+    """Compatibility entry point: cap thickness no longer encodes a time span."""
+    note_renderer.head(surface, lane, (p_top + p_bot) / 2, color_top, color_bot, width_scale)
 
 
 def draw_flick_note(surface, lane, progress):
-    """Distinct pink cap and drawn chevrons remain readable at every combo color."""
-    draw_gradient_note(surface, lane, progress - .055, progress + .055,
-                       (255, 204, 235), (243, 51, 131), steps=5)
-    x, y, width = get_perspective_pos(lane, max(0, progress))
-    half = max(8, width * .16)
-    rise = max(6, width * .095)
-    for lift in (rise * .55, rise * 1.5):
-        points = [(x-half, y-lift), (x, y-lift-rise), (x+half, y-lift)]
-        pygame.draw.lines(surface, (114, 24, 81), False, points, 6)
-        pygame.draw.lines(surface, (255, 249, 255), False, points, 3)
+    """Pink glass and contrast-backed chevrons remain independent of combo tint."""
+    note_renderer.head(surface, lane, progress, (255, 206, 234), (249, 65, 143), flick=True)
 
 # ---------------------------------------------------------
 # 4. 곡 데이터 (난이도 이름 적용) 및 로컬 기록 저장소
@@ -1832,27 +1805,13 @@ async def main():
                     hp = min(100.0, hp + 1.0)
                     last_feedback, last_feedback_color = "GREAT", (0, 255, 255)
                 feedback_time = time.time()
+            note_renderer.draw(screen, active_chart_notes, play_time, APPROACH_TIME, {
+                "TAP": (TAP_TOP, TAP_BOT), "HOLD": (HOLD_TOP, HOLD_BOT),
+                "SLIDE": (SLIDE_TOP, SLIDE_BOT),
+            })
             for note in active_chart_notes:
                 if note["hit"]: continue
-                
-                time_diff = note["time"] - play_time
-                progress = 1.0 - (time_diff / APPROACH_TIME)
-                
-                if note["type"] == "TAP":
-                    if -0.2 <= progress <= 1.2:
-                        draw_gradient_note(screen, note["lane"], progress - 0.055, progress + 0.055, TAP_TOP, TAP_BOT, steps=5)
-
-                elif note["type"] == "FLICK":
-                    if -0.2 <= progress <= 1.2:
-                        draw_flick_note(screen, note["lane"], progress)
-                    
-                elif note["type"] == "HOLD":
-                    p_head = min(1.0, progress)
-                    p_tail = 1.0 - ((note["end_time"] - play_time) / APPROACH_TIME)
-                    
-                    if p_head >= 0.0 and p_tail <= 1.15:
-                        draw_gradient_note(screen, note["lane"], max(0.0, min(1.15, p_tail)), max(0.0, min(1.15, p_head)), HOLD_TOP, HOLD_BOT, steps=8)
-                    
+                if note["type"] == "HOLD":
                     judge = update_sustain(note, play_time, initial_lanes, sustain_changes, triggered_lanes)
                     if judge.contact and note["active"]:
                         hit_x, hit_y, _ = get_perspective_pos(note["lane"], 1.0)
@@ -1863,30 +1822,6 @@ async def main():
                         spawn_particles(hit_x, hit_y, (255, 255, 255), count=25, power=1.4)
 
                 elif note["type"] == "SLIDE":
-                    t_tail = note["end_time"]
-                    # Anchor the path to the chart's actual endpoints at every
-                    # frame. Early contact must not extend it before its head.
-                    t_vis_min = max(note["time"], play_time)
-                    t_vis_max = min(t_tail, play_time + APPROACH_TIME)
-                    
-                    if t_vis_min < t_vis_max:
-                        steps = 10
-                        pts_l, pts_r = [], []
-                        for s in range(steps + 1):
-                            t_curr = t_vis_min + (t_vis_max - t_vis_min) * (s / steps)
-                            slide_ratio = (t_curr - note["time"]) / (note["end_time"] - note["time"])
-                            curr_lane = note["lane"] + (note["end_lane"] - note["lane"]) * slide_ratio
-                            curr_p = 1.0 - ((t_curr - play_time) / APPROACH_TIME)
-                            xc, yc, wc = get_perspective_pos(curr_lane, curr_p)
-                            pts_l.append((xc - wc * 0.46, yc))
-                            pts_r.append((xc + wc * 0.46, yc))
-                        for segment in range(steps):
-                            tint = interpolate_color(SLIDE_TOP, SLIDE_BOT, (segment + 0.5) / steps)
-                            quad = (pts_l[segment], pts_r[segment], pts_r[segment + 1], pts_l[segment + 1])
-                            pygame.draw.polygon(screen, tint, quad)
-                        outline = pts_l + pts_r[::-1]
-                        pygame.draw.polygon(screen, (244, 240, 255), outline, 2)
-
                     judge = update_sustain(note, play_time, initial_lanes, sustain_changes, triggered_lanes)
                     if judge.contact and note["active"]:
                         hit_x, hit_y, _ = get_perspective_pos(judge.position(play_time), 1.0)

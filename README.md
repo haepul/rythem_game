@@ -112,6 +112,20 @@ when all four lanes are occupied.
 
 ## Rebuild the web archive
 
+The current source includes the **Glass** note skin. It is published separately
+at https://haepul.github.io/rythem_game/glass/. To update that version, run:
+
+```powershell
+.\tools\build_glass.ps1
+```
+
+This copies the renderer module into `webapp/`, creates `glass/game.tar.gz` and
+`glass/index.html`, and leaves the stable root page/archive intact. The preview
+uses the existing parent `music/` directory and audio bridge through its base URL.
+Pass `-Version` with a new cache token for later releases. The legacy root-build
+commands below replace the original site's archive; use the glass script for
+this preview.
+
 The browser build uses `webapp/` so the music files stay outside the startup
 archive. After changing the game source or charts, copy the matching files from
 the repository root into `webapp/`, then run this from the repository root:
@@ -151,6 +165,36 @@ a sustained contact (up to 35ms: PERFECT; 35–60ms: GREAT); holding through the
 also succeeds. No release action is required. Head, body and tail resolve once.
 Ordered input edges include releases and re-presses within one frame. Synthetic
 mouse events from touch are ignored, and losing focus pauses and clears input.
+
+## Glass note rendering
+
+`note_renderer.py` owns the read-only visual pass; `main.py` keeps the original
+song clock, perspective exponent (1.55), judgement calls and combo palette.
+`draw_gradient_note()` and `draw_flick_note()` delegate to the new head renderer.
+TAP caps use a thin glass bevel, bright centre, subtle glow and top highlight.
+FLICK caps retain pink colouring and contrast-backed white arrows at all combos.
+HOLD/SLIDE ribbons use alpha transparency, bright side edges, independent end
+caps and flow tied to song time. The slide samples the exact linear lane path
+at up to 64 segments; it adds no lane easing or altered timing. All ribbons are
+painted before the caps, which are ordered from far to near.
+
+One alpha layer is reused each frame. Canonical gradients (128), final head
+sprites (384), and ribbon palettes (96) have bounded caches. Colour and width
+buckets reduce allocations while scrolling. The new polygons and blending cost
+more than flat fills; actual browser/mobile performance depends on the device.
+
+Generate the four-type, dense/overlap, active-sustain and horizon previews plus
+a renderer-only desktop benchmark with:
+
+```powershell
+python tools/render_note_preview.py <output-directory>
+python -m unittest discover -s tests -p 'test_note_renderer.py' -v
+```
+
+The renderer checks cover path agreement with sustain judgement, time clipping,
+early-contact length, unchanged note data, cap layering, frozen pause animation,
+flick contrast, nearby fast jacks, and finished-note culling. These complement
+the existing gameplay replay tests; neither is a physical phone playtest.
 
 Moving sustains use continuous finger positions on both browser and native touch
 input, including movement within a single lane. Their horizontal tolerance is
