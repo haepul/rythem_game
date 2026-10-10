@@ -47,7 +47,7 @@ def glass_body(height, top, bottom, tail=False):
         for col in range(inset, w - inset, band):
             central = max(0, 1 - abs(col / w - .5) * 2)
             tint = mix(top, base, .88 + central * .12)
-            pygame.draw.rect(image, (*tint, 255), (x + col, y + row, min(band, w - inset - col), 1))
+            pygame.draw.rect(image, (*tint, 205), (x + col, y + row, min(band, w - inset - col), 1))
     pygame.draw.rect(image, (*mix(top, (255, 255, 255), .60), 235),
                      rect.inflate(-2, -2), 1, border_radius=radius)
     pygame.draw.line(image, (255, 255, 255, 245), (x + radius, y + 3), (x + w - radius, y + 3), 2)
@@ -107,9 +107,9 @@ class NoteRenderer:
             return
         x, y, lane_width = self.project(lane, progress)
         width = max(18, round(lane_width * width_scale) * 2)
-        # 10px at the horizon and 24px at the line. This is purely a visual size;
+        # 14px at the horizon and 34px at the line. This is purely a visual size;
         # the head centre stays on the exact musical time and perspective point.
-        height = max(10, round(lane_width * .13))
+        height = max(12, round(lane_width * .19))
         if flick:
             top, bottom = (255, 206, 234), (249, 65, 143)
         sprite = glass_sprite(width, height, color_key(top), color_key(bottom), flick, tail)

@@ -168,7 +168,8 @@ mouse events from touch are ignored, and losing focus pauses and clears input.
 
 ## Glass note rendering
 
-The 2026-10-10 revision increases head thickness to 10–24px and uses a broad
+The 2026-10-10 v3 revision increases head thickness to 14–34px with translucent
+faces (alpha 205/255), preserving ribbon transparency. It uses a broad
 light face, coloured lower bevel, small end markers, and a filled pink flick
 arrow. Ribbons are wider and brighter. See [the five-video reference review](VIDEO_REFERENCE_REVIEW.md)
 for inspected segments, concrete changes and the latest validation figures.

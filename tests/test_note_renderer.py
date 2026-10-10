@@ -63,9 +63,12 @@ class RenderingTests(unittest.TestCase):
             self.renderer.draw(self.surface, notes, 0, 1, PALETTE)
             x, y, _ = game.get_perspective_pos(1, .7)
             outputs.append(self.surface.get_at((round(x), round(y))))
-        # Alpha compositing can differ by one value over a different background.
         self.assertEqual(outputs[0], outputs[1])
-        self.assertLessEqual(max(abs(a-b) for a, b in zip(outputs[0], outputs[2])), 2)
+        self.surface.fill((10, 15, 20))
+        self.renderer.draw(self.surface, [hold], 0, 1, PALETTE)
+        self.renderer.head(self.surface, 1, .7, *PALETTE['TAP'])
+        self.assertEqual(outputs[0], self.surface.get_at((round(x), round(y))))
+        self.assertNotEqual(outputs[0], outputs[2])  # Ribbon shows through the face.
 
     def test_paused_song_clock_freezes_flow_and_head_positions(self):
         notes = [dict(type="SLIDE", lane=0, end_lane=3, time=-.2, end_time=.8, active=True)]
@@ -92,14 +95,13 @@ class RenderingTests(unittest.TestCase):
                   for dx in range(-12, 13) for dy in range(-20, -5)]
         self.assertTrue(any(min(pixel[:3]) > 210 for pixel in pixels))
 
-    def test_fast_jacks_keep_dark_space_near_judgement_line(self):
+    def test_fast_jacks_keep_separate_visible_centers_near_judgement_line(self):
         self.surface.fill((0, 0, 0))
         notes = [dict(type="TAP", lane=1, time=t) for t in (.05, .113)]
         self.renderer.draw(self.surface, notes, 0, 1, PALETTE)
-        a, b = [game.get_perspective_pos(1, 1-note["time"])[1] for note in notes]
-        progress = 1-(.05+.113)/2
-        x = game.get_perspective_pos(1, progress)[0]
-        self.assertLess(max(self.surface.get_at((round(x), round((a+b)/2)))[:3]), 20)
+        for note in notes:
+            x, y, _ = game.get_perspective_pos(1, 1-note['time'])
+            self.assertGreater(min(self.surface.get_at((round(x), round(y)))[:3]), 150)
 
     def test_near_head_has_a_broad_visible_face_without_shifting_its_center(self):
         self.surface.fill((0, 0, 0))
@@ -107,9 +109,15 @@ class RenderingTests(unittest.TestCase):
         x, y, _ = game.get_perspective_pos(1, 1)
         bright_rows = [row for row in range(round(y)-30, round(y)+30)
                        if max(self.surface.get_at((round(x), row))[:3]) > 150]
-        self.assertGreaterEqual(len(bright_rows), 22)
-        self.assertLessEqual(len(bright_rows), 26)
+        self.assertGreaterEqual(len(bright_rows), 32)
+        self.assertLessEqual(len(bright_rows), 36)
         self.assertLessEqual(abs((min(bright_rows)+max(bright_rows))/2-y), 1)
+
+    def test_head_faces_remain_translucent_for_all_note_types(self):
+        for flick, tail in ((False, False), (True, False), (False, True)):
+            sprite = glass_sprite(160, 34, *PALETTE['TAP'], flick=flick, tail=tail)
+            arrow = 45 if flick else 0
+            self.assertEqual(sprite.get_at((55, 22 + arrow)).a, 205)
 
     def test_finished_notes_are_not_rendered_and_cache_is_bounded(self):
         self.surface.fill((0, 0, 0))
