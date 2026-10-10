@@ -192,7 +192,7 @@ def draw_prismatic_text(surface, text, font, center_x, center_y, scale=1.0):
         surface.blit(glow, rect.move(dx, dy))
     surface.blit(image, rect)
 
-def draw_gradient_note(surface, lane, p_top, p_bot, color_top, color_bot, width_scale=0.40, steps=8):
+def draw_gradient_note(surface, lane, p_top, p_bot, color_top, color_bot, width_scale=0.44, steps=8):
     """Compatibility entry point: cap thickness no longer encodes a time span."""
     note_renderer.head(surface, lane, (p_top + p_bot) / 2, color_top, color_bot, width_scale)
 

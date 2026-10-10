@@ -1,5 +1,8 @@
 # Glass 노트 렌더링 변경 보고서
 
+이 문서는 2026-10-09 첫 버전 기록이다. 2026-10-10의 두께 확대와 영상 5개
+검토 결과는 [최신 변경 보고서](VIDEO_REFERENCE_REVIEW.md)를 참고한다.
+
 배포 주소: https://haepul.github.io/rythem_game/glass/
 
 ## 기존 코드 분석

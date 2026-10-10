@@ -28,27 +28,37 @@ def glass_body(height, top, bottom, tail=False):
     size = (width + pad * 2, height + pad * 2)
     image = pygame.Surface((size[0] * scale, size[1] * scale), pygame.SRCALPHA)
     x, y, w, h = pad * scale, pad * scale, width * scale, height * scale
-    radius = max(2, h // 4)
+    radius = 2 * scale
     rect = pygame.Rect(x, y, w, h)
     for spread, alpha in ((4, 8), (2, 16)):
         pygame.draw.rect(image, (*bottom, alpha), rect.inflate(spread * 2, spread * 2),
                          border_radius=radius + spread)
     pygame.draw.rect(image, (9, 12, 30, 245), rect, border_radius=radius)
-    # A bright centre, darker bevel and restrained coloured ends separate jacks.
+    # Broad luminous face and a separate coloured lower bevel, as observed in
+    # gameplay references. Keep a crisp dark silhouette between fast jacks.
     for row in range(2, h - 2):
         v = (row - 2) / max(1, h - 5)
-        base = mix(top, bottom, v)
-        base = mix(base, (255, 255, 255), .36 * math.sin(v * math.pi))
+        if v < .70:
+            base = mix(top, (255, 255, 255), .78 - .16 * v)
+        else:
+            base = mix(bottom, (255, 255, 255), .34 * (1-v) / .30)
         inset = 3 + max(0, radius - min(row, h - 1 - row))
         band = max(4, math.ceil((w - inset * 2) / 16))
         for col in range(inset, w - inset, band):
             central = max(0, 1 - abs(col / w - .5) * 2)
-            tint = mix(bottom, base, .60 + central * .40)
-            pygame.draw.rect(image, (*tint, 245), (x + col, y + row, min(band, w - inset - col), 1))
+            tint = mix(top, base, .88 + central * .12)
+            pygame.draw.rect(image, (*tint, 255), (x + col, y + row, min(band, w - inset - col), 1))
     pygame.draw.rect(image, (*mix(top, (255, 255, 255), .60), 235),
                      rect.inflate(-2, -2), 1, border_radius=radius)
     pygame.draw.line(image, (255, 255, 255, 245), (x + radius, y + 3), (x + w - radius, y + 3), 2)
     pygame.draw.line(image, (*bottom, 240), (x + radius, y + h - 3), (x + w - radius, y + h - 3), 2)
+    tab_size = max(4, round(h * .22))
+    tab_y = y + round(h * .32)
+    tab_color = mix(bottom, (74, 49, 135), .48)
+    for tab_x in (x + 5, x + w - 5 - tab_size):
+        pygame.draw.rect(image, (*tab_color, 255), (tab_x, tab_y, tab_size, tab_size))
+        pygame.draw.line(image, (*mix(tab_color, (255, 255, 255), .40), 255),
+                         (tab_x, tab_y), (tab_x + tab_size - 1, tab_y), 1)
     if tail:
         # A small terminal diamond identifies the independent release-end cap.
         cx, cy = x + w / 2, y + h / 2
@@ -64,21 +74,24 @@ def glass_sprite(width, height, top, bottom, flick=False, tail=False):
     body = pygame.transform.smoothscale(glass_body(height, top, bottom, tail), (width + 10, height + 10))
     if not flick:
         return body
-    arrow_h = max(12, round(width * .17))
+    arrow_h = max(20, round(width * .28))
     size = (width + 10, height + 10 + arrow_h)
     scale = 2
     image = pygame.Surface((size[0] * scale, size[1] * scale), pygame.SRCALPHA)
     x, y, w = 10, (5 + arrow_h) * scale, width * scale
-    if flick:
-        cx = x + w / 2
-        half = max(12, w * .145)
-        rise = arrow_h * scale * .47
-        for lift in (.12, .55):
-            baseline = y - arrow_h * scale * lift
-            pts = [(cx-half, baseline), (cx, baseline-rise), (cx+half, baseline)]
-            stroke = max(4, round(height * .60))
-            pygame.draw.lines(image, (62, 12, 49, 255), False, pts, stroke + 4)
-            pygame.draw.lines(image, (255, 250, 255, 255), False, pts, stroke)
+    cx = x + w / 2
+    half = max(13, w * .23)
+    rise = arrow_h * scale * .76
+    arrow_top = y - rise - 6 * scale
+    pts = [(cx-half, arrow_top+rise*.60), (cx, arrow_top),
+           (cx+half, arrow_top+rise*.60), (cx+half*.72, arrow_top+rise),
+           (cx, arrow_top+rise*.40), (cx-half*.72, arrow_top+rise)]
+    pygame.draw.polygon(image, (83, 21, 65, 235), [(a, b+3) for a,b in pts])
+    pygame.draw.polygon(image, (248, 88, 162, 255), pts)
+    pygame.draw.polygon(image, (255, 228, 246, 255), pts, 3)
+    pygame.draw.lines(image, (255, 158, 213, 255), False,
+                      [(cx-half*.72, arrow_top+rise*.62), (cx, arrow_top+rise*.18),
+                       (cx+half*.72, arrow_top+rise*.62)], 2)
     result = pygame.transform.smoothscale(image, size)
     result.blit(body, (0, arrow_h))
     return result
@@ -89,17 +102,18 @@ class NoteRenderer:
         self.project = project
         self.ribbon_layer = pygame.Surface(size, pygame.SRCALPHA)
 
-    def head(self, surface, lane, progress, top, bottom, width_scale=.40, flick=False, tail=False):
+    def head(self, surface, lane, progress, top, bottom, width_scale=.44, flick=False, tail=False):
         if not 0 <= progress <= 1.15:
             return
         x, y, lane_width = self.project(lane, progress)
         width = max(18, round(lane_width * width_scale) * 2)
-        # Thickness is visual, not a time interval: 6px at the horizon, 11px at the line.
-        height = max(5, round(4 + lane_width * .038))
+        # 10px at the horizon and 24px at the line. This is purely a visual size;
+        # the head centre stays on the exact musical time and perspective point.
+        height = max(10, round(lane_width * .13))
         if flick:
             top, bottom = (255, 206, 234), (249, 65, 143)
         sprite = glass_sprite(width, height, color_key(top), color_key(bottom), flick, tail)
-        arrow_h = max(12, round(width * .17)) if flick else 0
+        arrow_h = max(20, round(width * .28)) if flick else 0
         surface.blit(sprite, (round(x - sprite.get_width() / 2), round(y - height / 2 - 5 - arrow_h)))
 
     @staticmethod
@@ -126,7 +140,7 @@ class NoteRenderer:
             when = first + (last - first) * i / segments
             progress = 1 - (when - now) / approach
             x, y, width = self.project(self.lane_at(note, when), progress)
-            points.append((when, x, y, width * .29))
+            points.append((when, x, y, width * .38))
         return points
 
     def ribbon(self, note, now, approach, colors):
@@ -143,13 +157,13 @@ class NoteRenderer:
             ratio = ((when + end) / 2 - note["time"]) / duration
             tint = palette[max(0, min(32, round(ratio * 32)))]
             quad = [(x-half, y), (x+half, y), (nx+nhalf, ny), (nx-nhalf, ny)]
-            pygame.draw.polygon(layer, (*tint, 102 if active else 75), quad)
-            inner = [(x-half*.52, y), (x+half*.52, y), (nx+nhalf*.52, ny), (nx-nhalf*.52, ny)]
-            pygame.draw.polygon(layer, (*mix(tint, (255, 255, 255), .30), 65 if active else 42), inner)
+            pygame.draw.polygon(layer, (*mix(tint, (230, 255, 250), .20), 160 if active else 125), quad)
+            inner = [(x-half*.76, y), (x+half*.76, y), (nx+nhalf*.76, ny), (nx-nhalf*.76, ny)]
+            pygame.draw.polygon(layer, (*mix(tint, (255, 255, 255), .15), 160 if active else 125), inner)
             edge = mix(tint, (255, 255, 255), .62)
             for side in (-1, 1):
                 a, b = (x+side*half, y), (nx+side*nhalf, ny)
-                pygame.draw.line(layer, (*tint, 30), a, b, 5)
+                pygame.draw.line(layer, (*tint, 150), a, b, 3)
                 pygame.draw.aaline(layer, (*edge, 210), a, b)
         # Small travelling highlights follow the same timed path. No wall clock
         # is used, so pausing freezes both the ribbon and its animation.

@@ -168,6 +168,11 @@ mouse events from touch are ignored, and losing focus pauses and clears input.
 
 ## Glass note rendering
 
+The 2026-10-10 revision increases head thickness to 10–24px and uses a broad
+light face, coloured lower bevel, small end markers, and a filled pink flick
+arrow. Ribbons are wider and brighter. See [the five-video reference review](VIDEO_REFERENCE_REVIEW.md)
+for inspected segments, concrete changes and the latest validation figures.
+
 `note_renderer.py` owns the read-only visual pass; `main.py` keeps the original
 song clock, perspective exponent (1.55), judgement calls and combo palette.
 `draw_gradient_note()` and `draw_flick_note()` delegate to the new head renderer.

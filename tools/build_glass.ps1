@@ -1,4 +1,4 @@
-param([string]$Version = '20261009-glass-v1')
+param([string]$Version = '20261010-stage-v2')
 $ErrorActionPreference = 'Stop'
 $repoPath = Split-Path $PSScriptRoot -Parent
 $webPath = Join-Path $repoPath 'webapp'

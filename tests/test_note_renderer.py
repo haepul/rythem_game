@@ -101,6 +101,16 @@ class RenderingTests(unittest.TestCase):
         x = game.get_perspective_pos(1, progress)[0]
         self.assertLess(max(self.surface.get_at((round(x), round((a+b)/2)))[:3]), 20)
 
+    def test_near_head_has_a_broad_visible_face_without_shifting_its_center(self):
+        self.surface.fill((0, 0, 0))
+        self.renderer.head(self.surface, 1, 1, *PALETTE["TAP"])
+        x, y, _ = game.get_perspective_pos(1, 1)
+        bright_rows = [row for row in range(round(y)-30, round(y)+30)
+                       if max(self.surface.get_at((round(x), row))[:3]) > 150]
+        self.assertGreaterEqual(len(bright_rows), 22)
+        self.assertLessEqual(len(bright_rows), 26)
+        self.assertLessEqual(abs((min(bright_rows)+max(bright_rows))/2-y), 1)
+
     def test_finished_notes_are_not_rendered_and_cache_is_bounded(self):
         self.surface.fill((0, 0, 0))
         before = pygame.image.tobytes(self.surface, "RGB")
