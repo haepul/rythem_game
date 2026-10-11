@@ -1,8 +1,8 @@
 # October 11 song additions
 
 The original root-site Pygame renderer is retained verbatim from the previous
-`game.tar.gz` (commit 3666134). `main.py` only gains a data-catalog load after the
-existing song list. `/glass/` is not rebuilt or changed by this release.
+`game.tar.gz` (commit 3666134). The catalog load and complete-title wrapping are
+the only UI additions. `/glass/` is not rebuilt or changed by this release.
 
 All nine additions have offline-generated EASY, HARD and MASTER charts. MASTER
 includes ordinary flicks using the existing algorithm; existing 21 song entries
@@ -22,16 +22,17 @@ ends at the listed point; full mode uses the complete analyzed song duration.
 | 일도 | 1:29.6 | First refrain, instrumental release |
 | AIZO | 1:46.4 | Refrain after the first verse; approximate lyric timing |
 | Camelia | 2:37.3 | Expanded refrain after the opening refrain and first verse |
-| Rendezvous | 1:13.0 | Uploaded excerpt's existing fade; not the complete commercial song |
-| Salt, Pepper, Birds, and the Thought Police | 0:54.8 | First narrative section and refrain, before the next scene |
+| Rendezvous | 1:21.5 | First refrain release; full mode now uses the replacement MP3 |
+| Salt, Pepper, Birds, and the Thought Police | 1:47.8 | Include the train scene and first repeated chorus before the next section |
 | String Theocracy | 0:58.6 | First refrain, before the next verse |
 | Nightmare | 1:09.6 | Instrumental first-section edit, not a literal vocal verse |
 
-Rendezvous decodes to 90.07 seconds but fades to near-silence around 71–73 seconds
-and remains silent afterward. Both modes end at 73 seconds for this already-short
-source. A complete source file is needed for a genuinely longer full version.
-The long Salt… title is retained in metadata, with `Salt, Pepper, Birds` as the
-display label so it fits the existing design.
+The replacement `Mili - Rendezvous [Limbus Company] (1).mp3` decodes to 225.512
+seconds. All three full charts were regenerated; the old 73-second duration
+override was removed. Audio URLs include a content hash to avoid stale MP3 cache.
+The importer detects source replacements and reanalyzes them instead of silently
+reusing existing files. Salt's full title is now preserved in the display field
+and wrapped in both its card and featured panel, as well as full-width screens.
 
 ## References
 

@@ -7,6 +7,7 @@
     "offset": 0.09287981859410431,
     "duration": 81.6,
     "audio": "where-our-blue-is.mp3",
+    "audio_version": "73d31305b699",
     "colors": [
       [
         18,
@@ -38,6 +39,7 @@
     "offset": 0.046439909297052155,
     "duration": 85.9,
     "audio": "kaikai-kitan.mp3",
+    "audio_version": "a131708c70b8",
     "colors": [
       [
         18,
@@ -69,6 +71,7 @@
     "offset": 0.017414965986394557,
     "duration": 89.6,
     "audio": "ichizu.mp3",
+    "audio_version": "1fcd689c3a02",
     "colors": [
       [
         18,
@@ -100,6 +103,7 @@
     "offset": 0.1741496598639456,
     "duration": 106.4,
     "audio": "aizo.mp3",
+    "audio_version": "51e9a10eb739",
     "colors": [
       [
         18,
@@ -131,6 +135,7 @@
     "offset": 0.12770975056689343,
     "duration": 157.3,
     "audio": "camelia.mp3",
+    "audio_version": "93638c18b6a8",
     "colors": [
       [
         18,
@@ -158,10 +163,11 @@
     "title": "Rendezvous",
     "song": "Rendezvous",
     "level": 9,
-    "bpm": 66.15057162661996,
-    "offset": 0.43537414965986393,
-    "duration": 73.0,
+    "bpm": 66.0975392576979,
+    "offset": 0.3889342403628118,
+    "duration": 81.5,
     "audio": "rendezvous.mp3",
+    "audio_version": "f7c67c15fa13",
     "colors": [
       [
         18,
@@ -187,12 +193,13 @@
   },
   {
     "title": "Salt, Pepper, Birds, and the Thought Police",
-    "song": "Salt, Pepper, Birds",
+    "song": "Salt, Pepper, Birds, and the Thought Police",
     "level": 9,
     "bpm": 155.62441530428512,
     "offset": 0.08126984126984127,
-    "duration": 54.8,
+    "duration": 107.8,
     "audio": "salt-pepper-birds.mp3",
+    "audio_version": "41824d0d5895",
     "colors": [
       [
         18,
@@ -224,6 +231,7 @@
     "offset": 0.2786394557823129,
     "duration": 58.6,
     "audio": "string-theocracy.mp3",
+    "audio_version": "1b6bcc61a7bb",
     "colors": [
       [
         18,
@@ -255,6 +263,7 @@
     "offset": 0.06965986394557823,
     "duration": 69.6,
     "audio": "nightmare.mp3",
+    "audio_version": "4db519d5be90",
     "colors": [
       [
         18,

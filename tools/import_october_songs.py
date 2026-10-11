@@ -1,5 +1,6 @@
 """Generate offline melody charts for the October 11 MP3 additions."""
 import json
+import hashlib
 import os
 from pathlib import Path
 import shutil
@@ -17,7 +18,7 @@ SONGS = [
     ('King Gnu - 일도.mp3', 'ichizu', '일도'),
     ('King Gnu - AIZO.mp3', 'aizo', 'AIZO'),
     ('Mili - Camelia [4K].mp3', 'camelia', 'Camelia'),
-    ('Mili - Rendezvous [Limbus Company].mp3', 'rendezvous', 'Rendezvous'),
+    ('Mili - Rendezvous [Limbus Company] (1).mp3', 'rendezvous', 'Rendezvous'),
     ('Mili - Salt, Pepper, Birds, and the Thought Police.mp3', 'salt-pepper-birds', 'Salt, Pepper, Birds, and the Thought Police'),
     ('Mili - String Theocracy Library of Ruina theme song.mp3', 'string-theocracy', 'String Theocracy'),
     ('Nightmare-M2U.mp3', 'nightmare', 'Nightmare'),
@@ -27,11 +28,10 @@ SONGS = [
 PREFERRED_BPM = {'kaikai-kitan': 185, 'aizo': 190, 'camelia': 126,
                  'salt-pepper-birds': 156, 'nightmare': 190}
 # Local-file seconds; lyric section boundaries followed by short release space.
-# Instrumental Nightmare uses its first major section. Rendezvous is already
-# an excerpt with an existing fade and a long silent tail.
+# Instrumental Nightmare uses its first major section.
 VERSE_ENDS = {'where-our-blue-is': 81.6, 'kaikai-kitan': 85.9, 'ichizu': 89.6,
-              'aizo': 106.4, 'camelia': 157.3, 'rendezvous': 73.0,
-              'salt-pepper-birds': 54.8, 'string-theocracy': 58.6, 'nightmare': 69.6}
+              'aizo': 106.4, 'camelia': 157.3, 'rendezvous': 81.5,
+              'salt-pepper-birds': 107.8, 'string-theocracy': 58.6, 'nightmare': 69.6}
 
 def main():
     source = Path(sys.argv[1])
@@ -42,10 +42,14 @@ def main():
     pygame.mixer.init(44100, -16, 2)
     for index, (filename, slug, title) in enumerate(SONGS):
         target = ROOT / 'music' / (slug + '.mp3')
-        if not target.exists():
-            shutil.copy2(source / filename, target)
+        incoming = source / filename
+        changed = incoming.exists() and (not target.exists() or
+            hashlib.sha256(incoming.read_bytes()).digest() != hashlib.sha256(target.read_bytes()).digest())
+        if changed:
+            shutil.copy2(incoming, target)
+        digest = hashlib.sha256(target.read_bytes()).hexdigest()
         preferred = PREFERRED_BPM.get(slug)
-        if slug not in cache or cache[slug].get('preferred_bpm') != preferred:
+        if changed or slug not in cache or cache[slug].get('preferred_bpm') != preferred:
             print('Analyzing ' + title, flush=True)
             result = generate_auto_chart_levels(str(target), preferred)
             result['preferred_bpm'] = preferred
@@ -55,14 +59,11 @@ def main():
             cache[slug] = result
             cache_path.write_text(json.dumps(cache, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
         entry = cache[slug]
-        if slug == 'rendezvous':
-            entry['source_duration'] = 90.07020408163265
-            entry['duration'] = 73.0
+        entry['source_sha256'] = digest
         accents = [(98, 223, 255), (194, 153, 255), (255, 122, 190)]
-        display = 'Salt, Pepper, Birds' if slug == 'salt-pepper-birds' else title
-        catalog.append(dict(title=title, song=display, level=9, bpm=entry['bpm'],
+        catalog.append(dict(title=title, song=title, level=9, bpm=entry['bpm'],
                             offset=entry['offset'], duration=VERSE_ENDS[slug],
-                            audio=slug+'.mp3', colors=[[18, 14, 40], [25, 38, 66], [6, 10, 23]],
+                            audio=slug+'.mp3', audio_version=digest[:12], colors=[[18, 14, 40], [25, 38, 66], [6, 10, 23]],
                             accent=accents[index % len(accents)]))
         print(json.dumps({'song': title, 'seconds': entry['duration'], 'bpm': entry['bpm'],
                           'notes': {k: len(v['notes']) for k, v in entry['difficulty_charts'].items()}},
