@@ -26,7 +26,7 @@ class MasterFlickChartTests(unittest.TestCase):
         cls.migrated = migrate_cache(cls.original)
 
     def test_every_song_has_master_flicks_and_easy_hard_unchanged(self):
-        self.assertEqual(len(self.original), 21)
+        self.assertEqual(len(self.original), 30)
         for song, before in self.original.items():
             with self.subTest(song=song):
                 after = self.migrated[song]

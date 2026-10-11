@@ -93,7 +93,7 @@ class ChartLayoutTests(unittest.TestCase):
                         self.assertFalse(any(notes_overlap(n, p, 'beat', 'end_beat', step) for p in active))
                         active.append(n)
                     count += 1
-        self.assertEqual(count, 63)
+        self.assertEqual(count, 90)
 
 
 if __name__ == '__main__':

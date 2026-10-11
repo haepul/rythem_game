@@ -1,4 +1,4 @@
-param([string]$Version = '20261011-song-fixes-v2')
+param([string]$Version = '20261011-song-fixes-v3')
 $ErrorActionPreference = 'Stop'
 $repoPath = Split-Path $PSScriptRoot -Parent
 $stablePath = Join-Path $repoPath 'stable'

@@ -53,6 +53,18 @@ and wrapped in both its card and featured panel, as well as full-width screens.
 
 ## Analysis repair
 
+## v3 verification
+
+Long-title layout now chooses the largest fitting wrapped layout instead of
+shrinking a six-line block. The bundled web font shows Salt's complete title in
+three card lines and two featured-panel lines. Python: 98 tests passed; browser
+input contract: 13 tests passed. Regression coverage includes separate durations,
+decoded replacement audio, content-version URLs, complete title bounds, and all
+three difficulty charts extending into full mode and clipping at each endpoint.
+Catalog-count expectations were updated from 21/63 to 30 songs/90 charts.
+
+## Analysis repair details
+
 `auto_chart._find_onsets` could receive a four-field enriched onset when merging
 another nearby pitch change, then incorrectly unpack all fields as three.
 Reading its first three fields preserves the existing change score and allows

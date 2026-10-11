@@ -849,20 +849,26 @@ def draw_album_art(surface, rect, accent, index):
 @lru_cache(maxsize=128)
 def wrapped_title_image(text, font, width, height):
     """Keep the complete title readable inside the existing panel bounds."""
-    lines, line = [], ""
-    for word in text.split():
-        candidate = (line + " " + word).strip()
-        if line and font.size(candidate)[0] > width:
-            lines.append(line)
-            line = word
-        else:
-            line = candidate
-    if line:
-        lines.append(line)
-    if not lines:
-        lines = [""]
-    images = [cached_text(font, value, (248, 249, 255)) for value in lines]
     line_height = font.get_linesize()
+    # Try wider unscaled layouts before shrinking: wrapping at the final width
+    # first made a long title six tiny lines instead of three readable lines.
+    best_scale, lines = -1.0, [""]
+    for step in range(31):
+        wrap_width = width / (1.0 - step * .025)
+        candidate_lines, line = [], ""
+        for word in text.split():
+            candidate = (line + " " + word).strip()
+            if line and font.size(candidate)[0] > wrap_width:
+                candidate_lines.append(line)
+                line = word
+            else:
+                line = candidate
+        candidate_lines.append(line)
+        natural_width = max(1, max(font.size(value)[0] for value in candidate_lines))
+        fit = min(1.0, width/natural_width, height/(line_height*len(candidate_lines)))
+        if fit > best_scale:
+            best_scale, lines = fit, candidate_lines
+    images = [cached_text(font, value, (248, 249, 255)) for value in lines]
     canvas = pygame.Surface((max(1, max(img.get_width() for img in images)),
                              max(1, line_height * len(images))), pygame.SRCALPHA)
     for index, img in enumerate(images):
