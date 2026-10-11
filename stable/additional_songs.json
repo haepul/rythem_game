@@ -1,0 +1,281 @@
+[
+  {
+    "title": "푸르름이 사는 곳",
+    "song": "푸르름이 사는 곳",
+    "level": 9,
+    "bpm": 152.1191379393759,
+    "offset": 0.09287981859410431,
+    "duration": 81.6,
+    "audio": "where-our-blue-is.mp3",
+    "colors": [
+      [
+        18,
+        14,
+        40
+      ],
+      [
+        25,
+        38,
+        66
+      ],
+      [
+        6,
+        10,
+        23
+      ]
+    ],
+    "accent": [
+      98,
+      223,
+      255
+    ]
+  },
+  {
+    "title": "회회기담",
+    "song": "회회기담",
+    "level": 9,
+    "bpm": 185.05019465593338,
+    "offset": 0.046439909297052155,
+    "duration": 85.9,
+    "audio": "kaikai-kitan.mp3",
+    "colors": [
+      [
+        18,
+        14,
+        40
+      ],
+      [
+        25,
+        38,
+        66
+      ],
+      [
+        6,
+        10,
+        23
+      ]
+    ],
+    "accent": [
+      194,
+      153,
+      255
+    ]
+  },
+  {
+    "title": "일도",
+    "song": "일도",
+    "level": 9,
+    "bpm": 160.8521147643196,
+    "offset": 0.017414965986394557,
+    "duration": 89.6,
+    "audio": "ichizu.mp3",
+    "colors": [
+      [
+        18,
+        14,
+        40
+      ],
+      [
+        25,
+        38,
+        66
+      ],
+      [
+        6,
+        10,
+        23
+      ]
+    ],
+    "accent": [
+      255,
+      122,
+      190
+    ]
+  },
+  {
+    "title": "AIZO",
+    "song": "AIZO",
+    "level": 9,
+    "bpm": 188.63902692228731,
+    "offset": 0.1741496598639456,
+    "duration": 106.4,
+    "audio": "aizo.mp3",
+    "colors": [
+      [
+        18,
+        14,
+        40
+      ],
+      [
+        25,
+        38,
+        66
+      ],
+      [
+        6,
+        10,
+        23
+      ]
+    ],
+    "accent": [
+      98,
+      223,
+      255
+    ]
+  },
+  {
+    "title": "Camelia",
+    "song": "Camelia",
+    "level": 9,
+    "bpm": 125.86189594761255,
+    "offset": 0.12770975056689343,
+    "duration": 157.3,
+    "audio": "camelia.mp3",
+    "colors": [
+      [
+        18,
+        14,
+        40
+      ],
+      [
+        25,
+        38,
+        66
+      ],
+      [
+        6,
+        10,
+        23
+      ]
+    ],
+    "accent": [
+      194,
+      153,
+      255
+    ]
+  },
+  {
+    "title": "Rendezvous",
+    "song": "Rendezvous",
+    "level": 9,
+    "bpm": 66.15057162661996,
+    "offset": 0.43537414965986393,
+    "duration": 73.0,
+    "audio": "rendezvous.mp3",
+    "colors": [
+      [
+        18,
+        14,
+        40
+      ],
+      [
+        25,
+        38,
+        66
+      ],
+      [
+        6,
+        10,
+        23
+      ]
+    ],
+    "accent": [
+      255,
+      122,
+      190
+    ]
+  },
+  {
+    "title": "Salt, Pepper, Birds, and the Thought Police",
+    "song": "Salt, Pepper, Birds",
+    "level": 9,
+    "bpm": 155.62441530428512,
+    "offset": 0.08126984126984127,
+    "duration": 54.8,
+    "audio": "salt-pepper-birds.mp3",
+    "colors": [
+      [
+        18,
+        14,
+        40
+      ],
+      [
+        25,
+        38,
+        66
+      ],
+      [
+        6,
+        10,
+        23
+      ]
+    ],
+    "accent": [
+      98,
+      223,
+      255
+    ]
+  },
+  {
+    "title": "String Theocracy",
+    "song": "String Theocracy",
+    "level": 9,
+    "bpm": 116.35752404951887,
+    "offset": 0.2786394557823129,
+    "duration": 58.6,
+    "audio": "string-theocracy.mp3",
+    "colors": [
+      [
+        18,
+        14,
+        40
+      ],
+      [
+        25,
+        38,
+        66
+      ],
+      [
+        6,
+        10,
+        23
+      ]
+    ],
+    "accent": [
+      194,
+      153,
+      255
+    ]
+  },
+  {
+    "title": "Nightmare",
+    "song": "Nightmare",
+    "level": 9,
+    "bpm": 188.16044928489654,
+    "offset": 0.06965986394557823,
+    "duration": 69.6,
+    "audio": "nightmare.mp3",
+    "colors": [
+      [
+        18,
+        14,
+        40
+      ],
+      [
+        25,
+        38,
+        66
+      ],
+      [
+        6,
+        10,
+        23
+      ]
+    ],
+    "accent": [
+      255,
+      122,
+      190
+    ]
+  }
+]

@@ -1,4 +1,5 @@
 webapp/build/
+stable/package/
 __pycache__/
 records_v2.json
 settings.json

@@ -112,6 +112,18 @@ when all four lanes are occupied.
 
 ## Rebuild the web archive
 
+The stable root website uses `stable/main.py`, recovered from the deployed
+pre-Glass archive. New tracks live in `stable/additional_songs.json`; shared
+charts remain in `auto_charts.json`. Build the original design with:
+
+```powershell
+.\tools\build_stable.ps1 -Version '20261011-new-songs-v1'
+```
+
+This uses an isolated ignored `stable/package/` directory and never copies the
+Glass `main.py` into the root website. See [October song additions](stable/SONG_ADDITIONS.md)
+for cut points and source-file limitations.
+
 The current source includes the **Glass** note skin. It is published separately
 at https://haepul.github.io/rythem_game/glass/. To update that version, run:
 

@@ -251,7 +251,7 @@ def _find_onsets(flux, hop_seconds, melody_pitch=None, melody_salience=None):
                       if abs(item[0] - frame) <= max(2, round(0.09 / hop_seconds))]
             if nearby:
                 j = min(nearby, key=lambda index: abs(selected[index][0] - frame))
-                old_frame, strength, peak = selected[j]
+                old_frame, strength, peak = selected[j][:3]
                 selected[j] = (old_frame, strength, peak, max(score, selected[j][3] if len(selected[j]) > 3 else 0.0))
             else:
                 selected.append((frame, 0.35 + min(2.0, score), flux[frame], score))
