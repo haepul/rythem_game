@@ -16,7 +16,7 @@ from flick_judgement import KeyboardFlickInput, TouchFlickInput, match_flick_int
 from sustain_judgement import SustainJudge, TouchContact, HEAD_WINDOW, MIN_CONTINUOUS_HOLD, TAIL_EARLY_WINDOW
 from chart_layout import resolve_note_overlaps
 from note_renderer import NoteRenderer
-from stage_renderer import draw_stage
+from stage_renderer import draw_stage, composed_stage
 
 
 # ---------------------------------------------------------
@@ -254,6 +254,13 @@ WEB_AUDIO_FILES = (
     "i-wanna-be.mp3",
     "splash-free.mp3",
 )
+
+# Share the published catalog while preserving original song IDs and charts.
+with open(os.path.join(GAME_DIR, "additional_songs.json"), encoding="utf-8") as catalog_file:
+    additional_songs = json.load(catalog_file)
+MAP_LIST.extend(additional_songs)
+WEB_AUDIO_FILES += tuple(song["audio"] + ("?v=" + song["audio_version"] if song.get("audio_version") else "")
+                         for song in additional_songs)
 
 SONGS_PER_PAGE = 12
 FADE_OUT_SECONDS = 1.35
@@ -800,12 +807,13 @@ def draw_button(surface, rect, label, accent=(112, 139, 255), active=False):
 
 def draw_album_art(surface, rect, accent, index):
     pygame.draw.rect(surface, (18, 22, 39), rect, border_radius=14)
-    art = pygame.Rect(rect.x + 8, rect.y + 8, rect.width - 16, max(50, int(rect.height * 0.48)))
+    art_height = max(20, rect.height - 58) if rect.height < 100 else max(50, int(rect.height * .48))
+    art = pygame.Rect(rect.x + 8, rect.y + 8, rect.width - 16, art_height)
     pygame.draw.rect(surface, (13, 17, 32), art, border_radius=10)
     cx, cy = art.center
     pulse = (index % 5) * 5
-    pygame.draw.circle(surface, tuple(min(255, c + pulse) for c in accent), (cx, cy), max(14, art.height // 3), 2)
-    pygame.draw.circle(surface, tuple(int(c * 0.55) for c in accent), (cx, cy), max(7, art.height // 5), 5)
+    pygame.draw.circle(surface, tuple(min(255, c + pulse) for c in accent), (cx, cy), max(8, art.height // 3), 2)
+    pygame.draw.circle(surface, tuple(int(c * 0.55) for c in accent), (cx, cy), max(4, art.height // 5), 3)
     bars = [0.25, 0.48, 0.78, 0.56, 0.34, 0.68, 0.42]
     for j, ratio in enumerate(bars):
         x = art.x + 12 + j * ((art.width - 24) // len(bars))
@@ -819,6 +827,45 @@ def song_duration(song, mode, entry=None):
     entry = entry or get_auto_chart_entry(song["audio"]) or {}
     duration = float(entry.get("duration", song["duration"]))
     return duration if math.isfinite(duration) and duration > 0 else song["duration"]
+
+
+@lru_cache(maxsize=128)
+def wrapped_title_image(text, font, width, height):
+    """Keep the complete title readable inside the existing panel bounds."""
+    line_height = font.get_linesize()
+    # Try wider unscaled layouts before shrinking: wrapping at the final width
+    # first made a long title six tiny lines instead of three readable lines.
+    best_scale, lines = -1.0, [""]
+    for step in range(31):
+        wrap_width = width / (1.0 - step * .025)
+        candidate_lines, line = [], ""
+        for word in text.split():
+            candidate = (line + " " + word).strip()
+            if line and font.size(candidate)[0] > wrap_width:
+                candidate_lines.append(line)
+                line = word
+            else:
+                line = candidate
+        candidate_lines.append(line)
+        natural_width = max(1, max(font.size(value)[0] for value in candidate_lines))
+        fit = min(1.0, width/natural_width, height/(line_height*len(candidate_lines)))
+        if fit > best_scale:
+            best_scale, lines = fit, candidate_lines
+    images = [cached_text(font, value, (248, 249, 255)) for value in lines]
+    canvas = pygame.Surface((max(1, max(img.get_width() for img in images)),
+                             max(1, line_height * len(images))), pygame.SRCALPHA)
+    for index, img in enumerate(images):
+        canvas.blit(img, ((canvas.get_width()-img.get_width())//2, index*line_height))
+    scale = min(1.0, width/canvas.get_width(), height/canvas.get_height())
+    if scale < 1:
+        canvas = pygame.transform.smoothscale(canvas, (max(1, round(canvas.get_width()*scale)),
+                                                      max(1, round(canvas.get_height()*scale))))
+    return canvas
+
+
+def draw_song_title(surface, song, font, rect):
+    image = wrapped_title_image(song.get("title", song["song"]), font, rect.width, rect.height)
+    surface.blit(image, image.get_rect(center=rect.center))
 
 
 def draw_home(mouse_pos, mouse_click):
@@ -863,9 +910,9 @@ def draw_home(mouse_pos, mouse_click):
     draw_album_art(screen, art_rect, selected["accent"], selected_map_idx)
     draw_styled_text(screen, "FEATURED CHART", font_small, hero.centerx, hero.y + 139, (142, 156, 194))
     title_font = font_med if len(selected["song"]) < 17 else font_small
-    draw_styled_text(screen, selected["song"], title_font, hero.centerx, hero.y + 164, (248, 249, 255))
+    draw_song_title(screen, selected, title_font, pygame.Rect(hero.x+10, hero.y+149, hero.width-20, 36))
     selected_bpm = get_saved_bpm(selected["audio"], selected["bpm"])
-    draw_styled_text(screen, f"{DIFFICULTIES[selected_difficulty]}   ·   {selected_bpm:g} BPM", font_small, hero.centerx, hero.y + 194, selected["accent"])
+    draw_styled_text(screen, f"{DIFFICULTIES[selected_difficulty]}   ·   {selected_bpm:.1f} BPM", font_small, hero.centerx, hero.y + 194, selected["accent"])
     draw_styled_text(screen, f"{format_time(song_duration(selected, selected_length))}   ·   4 LANES", font_small, hero.centerx, hero.y + 218, (171, 181, 209))
     draw_styled_text(screen, "SELECT CHART LEVEL", font_small, hero.centerx, hero.y + 238, (142, 156, 194))
     difficulty_buttons = {}
@@ -916,13 +963,9 @@ def draw_home(mouse_pos, mouse_click):
             selected_map_idx = i
             selected = song
         draw_album_art(screen, rect, song["accent"], i)
-        pygame.draw.rect(screen, (22, 27, 46), (rect.x + 5, rect.bottom - 32, rect.width - 10, 24), border_radius=6)
-        compact_title = song["song"]
-        if font_small.size(compact_title)[0] > rect.width - 20:
-            while compact_title and font_small.size(compact_title + "…")[0] > rect.width - 20:
-                compact_title = compact_title[:-1]
-            compact_title += "…"
-        draw_styled_text(screen, compact_title, font_small, rect.centerx, rect.bottom - 20, (245, 247, 255))
+        title_rect = pygame.Rect(rect.x+5, rect.bottom-49, rect.width-10, 44)
+        pygame.draw.rect(screen, (22, 27, 46), title_rect, border_radius=6)
+        draw_song_title(screen, song, font_small, title_rect.inflate(-8, -4))
         if i == selected_map_idx:
             pygame.draw.rect(screen, (241, 244, 255), rect, width=2, border_radius=14)
 
@@ -1042,7 +1085,7 @@ def draw_analysis_screen():
     pygame.draw.arc(screen, song["accent"], pygame.Rect(center[0] - 56, center[1] - 56, 112, 112),
                     time.perf_counter() % (math.pi * 2), time.perf_counter() % (math.pi * 2) + 2.2 + pulse, 5)
     draw_styled_text(screen, "AUDIO → MELODY DETECTION → AUTO CHART", font_small, CENTER_X, 90, (177, 191, 223))
-    draw_styled_text(screen, song["song"], font_large, CENTER_X, 142, (248, 249, 255))
+    draw_song_title(screen, song, font_large, pygame.Rect(40, 117, 720, 50))
     draw_styled_text(screen, "음의 시작과 높낮이를 읽어 3단계 차트를 만들고 있어요", font_med, CENTER_X, 284, (214, 222, 245))
     draw_styled_text(screen, "첫 분석은 잠시 걸릴 수 있습니다 · ESC를 누르면 취소됩니다", font_small, CENTER_X, 323, (137, 151, 184))
     draw_styled_text(screen, f"선택 난이도  {DIFFICULTIES.get(auto_analysis_job.get('difficulty', 'hard'), 'HARD')}  ·  BPM도 함께 분석합니다", font_small, CENTER_X, 350, song["accent"])
@@ -1088,6 +1131,7 @@ def start_game(m_idx, practice=False, chart_entry=None, chart_source="SAVED CHAR
     hp = 100.0
     particles.clear()
     current_bg_surface = generate_bg_surface(current_map["colors"], current_map["accent"])
+    composed_stage(current_bg_surface, tuple(current_map["accent"]), get_perspective_pos)
     stop_music()
     ready_start_time = time.perf_counter()
     ready_count_in_duration = min(4.5, max(1.0, 240.0 / max(40.0, current_bpm)))
@@ -1111,7 +1155,7 @@ def draw_ready_screen():
     overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
     overlay.fill((3, 6, 18, 148))
     screen.blit(overlay, (0, 0))
-    draw_styled_text(screen, current_map["song"], font_large, CENTER_X, 112, (246, 248, 255))
+    draw_song_title(screen, current_map, font_large, pygame.Rect(40, 87, 720, 50))
     draw_styled_text(screen, f"{DIFFICULTIES[current_difficulty]}  ·  {LENGTH_LABELS[current_length]}  ·  {current_bpm:.1f} BPM", font_small, CENTER_X, 150, current_map["accent"])
     ring = pygame.Rect(CENTER_X - 74, 188, 148, 148)
     pygame.draw.circle(screen, (31, 40, 67), ring.center, 70, 2)
@@ -1219,7 +1263,7 @@ def draw_loading_screen(mouse_pos, mouse_click):
         unlocked = bool(audio_element.unlocked)
     elif music_load_job and not error:
         ready = music_load_job["done"]
-    draw_styled_text(screen, current_map["song"], font_large, CENTER_X, 125, (248, 249, 255))
+    draw_song_title(screen, current_map, font_large, pygame.Rect(40, 100, 720, 50))
     label = "곡을 준비하는 중" if not error else "곡을 불러오지 못했습니다"
     if ready and not unlocked:
         label = "화면을 눌러 음악을 시작해 주세요"
@@ -1364,7 +1408,7 @@ def draw_result_summary(surface):
     surface.blit(current_bg_surface, (0, 0))
     accuracy = hit_score / total_notes if total_notes > 0 else 0
     grade_str, grade_color = get_grade(accuracy)
-    draw_styled_text(surface, current_map["song"], font_large, CENTER_X, 38, (255, 255, 255))
+    draw_song_title(surface, current_map, font_large, pygame.Rect(40, 13, 720, 50))
     draw_styled_text(surface, f"STAGE CLEAR!  ·  {LENGTH_LABELS[current_length]}  ·  {DIFFICULTIES[current_difficulty]}",
                      font_med, CENTER_X, 75, current_map["accent"])
 
@@ -1723,7 +1767,7 @@ async def main():
 
             for lane in range(4):
                 cx, cy, cw = get_perspective_pos(lane, 1.0)
-                pad_w, pad_h = int(cw * 0.42), 28
+                pad_w, pad_h = int(cw * 0.46), 12
                 pad_rect = pygame.Rect(int(cx - pad_w), int(cy - pad_h / 2), pad_w * 2, pad_h)
                 pygame.draw.rect(screen, (8, 10, 25), pad_rect.move(0, 4), border_radius=10)
                 pad_fill = current_map["accent"] if lane in pressed_lanes else (31, 29, 62)
@@ -1731,7 +1775,7 @@ async def main():
                 pygame.draw.rect(screen, (250, 247, 255) if lane in pressed_lanes else (139, 126, 190), pad_rect, 2, border_radius=9)
                 pygame.draw.line(screen, (255, 255, 255), (pad_rect.x + 12, pad_rect.y + 3), (pad_rect.right - 12, pad_rect.y + 3), 1)
                 key_color = (14, 20, 36) if lane in pressed_lanes else (198, 213, 242)
-                draw_styled_text(screen, ("D", "F", "J", "K")[lane], font_small, cx, cy, key_color)
+                draw_styled_text(screen, ("D", "F", "J", "K")[lane], font_small, cx, cy + 24, key_color)
 
             combo_top, combo_bottom = combo_gradient_colors(combo)
             combo_mix = min(1.0, combo / 12.0)
@@ -1838,7 +1882,8 @@ async def main():
             title_str = f"{current_map['song']}  /  {DIFFICULTIES[current_difficulty]}  ·  {current_chart_source}"
             
             pygame.draw.rect(screen, (10, 14, 32), (0, 0, SCREEN_WIDTH, 58))
-            draw_styled_text(screen, title_str, font_small, CENTER_X, 15, (200, 240, 255))
+            title_image = wrapped_title_image(title_str, font_small, 680, 23)
+            screen.blit(title_image, title_image.get_rect(center=(CENTER_X, 15)))
             draw_styled_text(screen, "LIFE", font_small, 30, 43, (211, 220, 242))
             pygame.draw.rect(screen, (39, 28, 44), (55, 37, 113, 12), border_radius=5)
             hp_ratio = max(0.0, min(1.0, hp / 100.0))
@@ -1869,11 +1914,11 @@ async def main():
 
             if combo >= 3:
                 combo_color = interpolate_color(combo_top, combo_bottom, 0.48)
-                draw_styled_text(screen, f"{combo}", font_combo_num, CENTER_X, 150, combo_color, scale=combo_scale)
-                draw_styled_text(screen, "COMBO", font_combo_sub, CENTER_X, 190, (255, 255, 255))
+                draw_styled_text(screen, f"{combo}", font_combo_num, 710, 137, combo_color, scale=min(1.05, combo_scale) * .65)
+                draw_styled_text(screen, "COMBO", font_combo_sub, 710, 166, (255, 255, 255))
 
             if time.time() - feedback_time < 0.45:
-                draw_styled_text(screen, last_feedback, font_large, CENTER_X, 270, last_feedback_color, scale=feedback_scale)
+                draw_styled_text(screen, last_feedback, font_med, 690, 220, last_feedback_color, scale=min(1.1, feedback_scale))
 
             if play_time > current_map["duration"] + 0.35:
                 finish_song()

@@ -17,13 +17,15 @@ def color_key(color):
 
 @lru_cache(maxsize=96)
 def ribbon_palette(start, end):
-    return tuple(mix(start, end, i / 32) for i in range(33))
+    colors = (mix(start, end, i / 32) for i in range(33))
+    return tuple((c, mix(c, (230, 255, 250), .20), mix(c, (255, 255, 255), .15),
+                  mix(c, (255, 255, 255), .62)) for c in colors)
 
 
 @lru_cache(maxsize=128)
-def glass_body(height, top, bottom, tail=False):
+def glass_material(top, bottom, tail=False):
     """Share a canonical gradient across every perspective width."""
-    width = 160
+    width, height = 160, 34
     scale, pad = 2, 5
     size = (width + pad * 2, height + pad * 2)
     image = pygame.Surface((size[0] * scale, size[1] * scale), pygame.SRCALPHA)
@@ -43,16 +45,11 @@ def glass_body(height, top, bottom, tail=False):
         else:
             base = mix(bottom, (255, 255, 255), .34 * (1-v) / .30)
         inset = 3 + max(0, radius - min(row, h - 1 - row))
-        band = max(4, math.ceil((w - inset * 2) / 16))
-        for col in range(inset, w - inset, band):
-            central = max(0, 1 - abs(col / w - .5) * 2)
-            tint = mix(top, base, .88 + central * .12)
-            alpha = round(170 + 50 * central)
-            pygame.draw.rect(image, (*tint, alpha), (x + col, y + row, min(band, w - inset - col), 1))
-    # Diagonal reflection is translucent; it never erases the coloured bevel.
-    pygame.draw.polygon(image, (255, 255, 255, 224),
-                        [(x+w*.20,y+4), (x+w*.28,y+4),
-                         (x+w*.23,y+h*.64), (x+w*.15,y+h*.64)])
+        pygame.draw.line(image, (*base, 208), (x + inset, y + row), (x + w - inset - 1, y + row))
+    # Subtle reflection; avoid broad white stripes that look like extra notes.
+    pygame.draw.polygon(image, (255, 255, 255, 216),
+                        [(x+w*.20,y+4), (x+w*.24,y+4),
+                         (x+w*.20,y+h*.62), (x+w*.16,y+h*.62)])
     pygame.draw.rect(image, (*mix(top, (255, 255, 255), .60), 235),
                      rect.inflate(-2, -2), 1, border_radius=radius)
     pygame.draw.line(image, (255, 255, 255, 245), (x + radius, y + 3), (x + w - radius, y + 3), 2)
@@ -71,6 +68,12 @@ def glass_body(height, top, bottom, tail=False):
         pygame.draw.polygon(image, (33, 30, 65, 220), [(cx, cy-r), (cx+r, cy), (cx, cy+r), (cx-r, cy)])
         pygame.draw.polygon(image, (255, 255, 255, 250), [(cx, cy-r), (cx+r, cy), (cx, cy+r), (cx-r, cy)], 2)
     return pygame.transform.smoothscale(image, size)
+
+
+@lru_cache(maxsize=128)
+def glass_body(height, top, bottom, tail=False):
+    # Rasterize one material per palette, not again for each perspective height.
+    return pygame.transform.smoothscale(glass_material(top, bottom, tail), (170, height + 10))
 
 
 @lru_cache(maxsize=384)
@@ -111,10 +114,10 @@ class NoteRenderer:
         if not 0 <= progress <= 1.15:
             return
         x, y, lane_width = self.project(lane, progress)
-        width = max(18, round(lane_width * width_scale) * 2)
+        width = max(20, round(lane_width * width_scale / 2) * 4)
         # 14px at the horizon and 34px at the line. This is purely a visual size;
         # the head centre stays on the exact musical time and perspective point.
-        height = max(14, round(lane_width * .19))
+        height = max(14, round(lane_width * .19 / 2) * 2)
         if flick:
             top, bottom = (255, 206, 234), (249, 65, 143)
         sprite = glass_sprite(width, height, color_key(top), color_key(bottom), flick, tail)
@@ -139,7 +142,7 @@ class NoteRenderer:
         # it into a smooth screen-space curve without inventing a lane easing.
         y_first = self.project(0, p_first)[1]
         y_last = self.project(0, p_last)[1]
-        segments = min(64, max(2, math.ceil(abs(y_first - y_last) / 7)))
+        segments = min(64, max(2, math.ceil(abs(y_first - y_last) / 10)))
         points = []
         for i in range(segments + 1):
             when = first + (last - first) * i / segments
@@ -153,6 +156,14 @@ class NoteRenderer:
         if not points:
             return
         layer = self.ribbon_layer
+        left = math.floor(min(x-half for _, x, y, half in points))-3
+        right = math.ceil(max(x+half for _, x, y, half in points))+3
+        top_y = math.floor(min(y for _, x, y, half in points))-3
+        bottom_y = math.ceil(max(y for _, x, y, half in points))+3
+        bounds = pygame.Rect(left, top_y, right-left+1, bottom_y-top_y+1).clip(layer.get_rect())
+        if not bounds:
+            return None
+        layer.fill((0, 0, 0, 0), bounds)
         palette = ribbon_palette(color_key(colors[0]), color_key(colors[1]))
         duration = max(1e-9, note["end_time"] - note["time"])
         active = bool(note.get("active"))
@@ -160,12 +171,11 @@ class NoteRenderer:
             when, x, y, half = first
             end, nx, ny, nhalf = last
             ratio = ((when + end) / 2 - note["time"]) / duration
-            tint = palette[max(0, min(32, round(ratio * 32)))]
+            tint, outer, inner_color, edge = palette[max(0, min(32, round(ratio * 32)))]
             quad = [(x-half, y), (x+half, y), (nx+nhalf, ny), (nx-nhalf, ny)]
-            pygame.draw.polygon(layer, (*mix(tint, (230, 255, 250), .20), 160 if active else 125), quad)
+            pygame.draw.polygon(layer, (*outer, 160 if active else 125), quad)
             inner = [(x-half*.76, y), (x+half*.76, y), (nx+nhalf*.76, ny), (nx-nhalf*.76, ny)]
-            pygame.draw.polygon(layer, (*mix(tint, (255, 255, 255), .15), 132 if active else 94), inner)
-            edge = mix(tint, (255, 255, 255), .62)
+            pygame.draw.polygon(layer, (*inner_color, 132 if active else 94), inner)
             for side in (-1, 1):
                 a, b = (x+side*half, y), (nx+side*nhalf, ny)
                 pygame.draw.line(layer, (*tint, 150), a, b, 3)
@@ -184,6 +194,7 @@ class NoteRenderer:
                 pygame.draw.aalines(layer, (255, 255, 255, 135 if active else 65), False,
                                    [(x-half, y-2), (x, y+1), (x+half, y-2)])
                 marker += spacing
+        return bounds
 
     def draw(self, surface, notes, now, approach, palettes):
         """Paint every ribbon first, then caps from far to near; never mutate notes."""
@@ -194,9 +205,9 @@ class NoteRenderer:
             if kind in ("HOLD", "SLIDE"):
                 # Composite each ribbon separately: pygame.draw replaces alpha
                 # on a Surface, so a shared layer would erase crossing ribbons.
-                self.ribbon_layer.fill((0, 0, 0, 0))
-                self.ribbon(note, now, approach, palettes[kind])
-                surface.blit(self.ribbon_layer, (0, 0))
+                bounds = self.ribbon(note, now, approach, palettes[kind])
+                if bounds:
+                    surface.blit(self.ribbon_layer, bounds, bounds)
                 if now <= note["end_time"]:
                     head_time = max(note["time"], now)
                     caps.append((1-(head_time-now)/approach, self.lane_at(note, head_time), kind, False))

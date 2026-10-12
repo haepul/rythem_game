@@ -1,0 +1,29 @@
+{
+  "previous": {
+    "frames": 600,
+    "median_ms": 8.247,
+    "p95_ms": 70.437,
+    "max_ms": 242.544,
+    "over_16ms": 174,
+    "cache": {
+      "hits": 15573,
+      "misses": 5975,
+      "maxsize": 384,
+      "currsize": 384
+    }
+  },
+  "current": {
+    "frames": 600,
+    "median_ms": 5.286,
+    "p95_ms": 11.147,
+    "max_ms": 25.053,
+    "over_16ms": 3,
+    "cache": {
+      "hits": 18196,
+      "misses": 3352,
+      "maxsize": 384,
+      "currsize": 384
+    }
+  },
+  "scope": "Desktop renderer only, 36 notes, 600 frames, changing combo 0-299"
+}
