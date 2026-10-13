@@ -16,7 +16,7 @@ from flick_judgement import KeyboardFlickInput, TouchFlickInput, match_flick_int
 from sustain_judgement import SustainJudge, TouchContact, HEAD_WINDOW, MIN_CONTINUOUS_HOLD, TAIL_EARLY_WINDOW
 from chart_layout import resolve_note_overlaps
 from note_renderer import NoteRenderer
-from stage_renderer import draw_stage, composed_stage
+from stage_renderer import draw_stage, composed_stage, background_texture, draw_track_feedback, STAGE_EFFECTS
 
 
 # ---------------------------------------------------------
@@ -73,36 +73,9 @@ def get_perspective_pos(lane, progress):
 note_renderer = NoteRenderer(get_perspective_pos, (SCREEN_WIDTH, SCREEN_HEIGHT))
 
 def generate_bg_surface(colors, accent):
-    surf = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
-    c_top, c_mid, c_bot = colors
-    base_rows = []
-    for y in range(0, SCREEN_HEIGHT, 4):
-        ratio = y / max(1, SCREEN_HEIGHT - 1)
-        if ratio < 0.5:
-            r1 = ratio * 2
-            base = tuple(int(c_top[i] * (1 - r1) + c_mid[i] * r1) for i in range(3))
-        else:
-            r2 = (ratio - 0.5) * 2
-            base = tuple(int(c_mid[i] * (1 - r2) + c_bot[i] * r2) for i in range(3))
-        base_rows.append(base)
+    return background_texture((SCREEN_WIDTH, SCREEN_HEIGHT),
+                              tuple(tuple(c) for c in colors), tuple(accent), STAGE_EFFECTS).copy()
 
-    # Blend two broad accent glows into the dark base for a layered 2D gradient.
-    for y_index, y in enumerate(range(0, SCREEN_HEIGHT, 4)):
-        base = base_rows[y_index]
-        for x in range(0, SCREEN_WIDTH, 4):
-            glow_right = max(0.0, 1.0 - math.hypot((x - SCREEN_WIDTH * 0.78) / 430.0,
-                                                  (y - SCREEN_HEIGHT * 0.20) / 300.0))
-            glow_left = max(0.0, 1.0 - math.hypot((x - SCREEN_WIDTH * 0.16) / 360.0,
-                                                 (y - SCREEN_HEIGHT * 0.82) / 280.0))
-            blend = min(0.30, glow_right * 0.21 + glow_left * 0.12)
-            color = tuple(int(base[i] * (1.0 - blend) + accent[i] * blend) for i in range(3))
-            pygame.draw.rect(surf, color, (x, y, 4, 4))
-        
-    for _ in range(20):
-        rx = random.randint(0, SCREEN_WIDTH)
-        ry = random.randint(0, SCREEN_HEIGHT)
-        pygame.draw.circle(surf, accent, (rx, ry), random.randint(1, 2))
-    return surf
 
 default_bg_surface = generate_bg_surface(((18, 10, 40), (10, 20, 50), (5, 5, 15)), (0, 180, 255))
 current_bg_surface = default_bg_surface
@@ -1131,7 +1104,7 @@ def start_game(m_idx, practice=False, chart_entry=None, chart_source="SAVED CHAR
     hp = 100.0
     particles.clear()
     current_bg_surface = generate_bg_surface(current_map["colors"], current_map["accent"])
-    composed_stage(current_bg_surface, tuple(current_map["accent"]), get_perspective_pos)
+    composed_stage(current_bg_surface, tuple(current_map["accent"]), get_perspective_pos, STAGE_EFFECTS)
     stop_music()
     ready_start_time = time.perf_counter()
     ready_count_in_duration = min(4.5, max(1.0, 240.0 / max(40.0, current_bpm)))
@@ -1736,45 +1709,12 @@ async def main():
                            for when, lane, direct in raw_tap_presses]
             flick_intents = collect_flick_intents(raw_flick_events, play_time, sample_wall_time)
             draw_stage(screen, current_bg_surface, current_map["accent"], get_perspective_pos, play_time)
-            top_l, top_r = CENTER_X - TRACK_TOP_W / 2, CENTER_X + TRACK_TOP_W / 2
-            bot_l, bot_r = CENTER_X - TRACK_BOTTOM_W / 2, CENTER_X + TRACK_BOTTOM_W / 2
-            beat_phase = ((play_time - current_offset) * current_bpm / 60.0) % 1.0
-            beat_seconds = 60.0 / max(1.0, current_bpm)
-            for beat_ahead in range(1, 6):
-                seconds_to_beat = (beat_ahead - beat_phase) * beat_seconds
-                grid_progress = 1.0 - seconds_to_beat / APPROACH_TIME
-                if 0.04 < grid_progress < 0.98:
-                    left_x, grid_y, _ = get_perspective_pos(-0.5, grid_progress)
-                    right_x, _, _ = get_perspective_pos(3.5, grid_progress)
-                    grid_color = (75, 72, 111) if beat_ahead > 1 else (109, 94, 152)
-                    pygame.draw.line(screen, grid_color, (left_x, grid_y), (right_x, grid_y), 1 if beat_ahead > 1 else 2)
-            
-            pressed_glow = pressed_glow_surface
-            pressed_glow.fill((0, 0, 0, 0))
-            for lane in set(pressed_lanes):
-                x1_l, y1, _ = get_perspective_pos(lane - 0.5, 0.0)
-                x1_r, y1, _ = get_perspective_pos(lane + 0.5, 0.0)
-                x2_l, y2, _ = get_perspective_pos(lane - 0.5, 1.0)
-                x2_r, y2, _ = get_perspective_pos(lane + 0.5, 1.0)
-                pygame.draw.polygon(pressed_glow, (*current_map["accent"], 26), [(x1_l, y1), (x1_r, y1), (x2_r, y2), (x2_l, y2)])
-            screen.blit(pressed_glow, (0, 0))
-
-            beat_glow = 0.35 + 0.65 * (1.0 - beat_phase) ** 4
-            judge_color = tuple(int(c * beat_glow) for c in current_map["accent"])
-            pygame.draw.line(screen, tuple(int(c * 0.35) for c in judge_color), (bot_l - 12, JUDGE_Y), (bot_r + 12, JUDGE_Y), 14)
-            pygame.draw.line(screen, judge_color, (bot_l - 12, JUDGE_Y), (bot_r + 12, JUDGE_Y), 5)
-            pygame.draw.line(screen, (245, 248, 255), (bot_l - 8, JUDGE_Y), (bot_r + 8, JUDGE_Y), 1)
-
+            draw_track_feedback(screen, pressed_glow_surface, current_map["accent"],
+                                get_perspective_pos, play_time, current_bpm, current_offset,
+                                APPROACH_TIME, pressed_lanes)
             for lane in range(4):
-                cx, cy, cw = get_perspective_pos(lane, 1.0)
-                pad_w, pad_h = int(cw * 0.46), 12
-                pad_rect = pygame.Rect(int(cx - pad_w), int(cy - pad_h / 2), pad_w * 2, pad_h)
-                pygame.draw.rect(screen, (8, 10, 25), pad_rect.move(0, 4), border_radius=10)
-                pad_fill = current_map["accent"] if lane in pressed_lanes else (31, 29, 62)
-                pygame.draw.rect(screen, pad_fill, pad_rect, border_radius=9)
-                pygame.draw.rect(screen, (250, 247, 255) if lane in pressed_lanes else (139, 126, 190), pad_rect, 2, border_radius=9)
-                pygame.draw.line(screen, (255, 255, 255), (pad_rect.x + 12, pad_rect.y + 3), (pad_rect.right - 12, pad_rect.y + 3), 1)
-                key_color = (14, 20, 36) if lane in pressed_lanes else (198, 213, 242)
+                cx, cy, _ = get_perspective_pos(lane, 1.0)
+                key_color = (218, 231, 246) if lane in pressed_lanes else (108, 120, 150)
                 draw_styled_text(screen, ("D", "F", "J", "K")[lane], font_small, cx, cy + 24, key_color)
 
             combo_top, combo_bottom = combo_gradient_colors(combo)
