@@ -15,6 +15,7 @@ from tap_judgement import match_tap_presses
 from flick_judgement import KeyboardFlickInput, TouchFlickInput, match_flick_intents
 from sustain_judgement import SustainJudge, TouchContact, HEAD_WINDOW, MIN_CONTINUOUS_HOLD, TAIL_EARLY_WINDOW
 from chart_layout import resolve_note_overlaps
+import ui_renderer as ui
 from note_renderer import NoteRenderer
 from stage_renderer import draw_stage, composed_stage, background_texture, draw_track_feedback, STAGE_EFFECTS
 
@@ -36,10 +37,7 @@ pressed_glow_surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCA
 GAME_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def load_korean_font(size, bold=False):
-    # Use a clean native UI font on Windows; retain the bundled font in the web build.
-    if sys.platform == "emscripten":
-        return pygame.font.Font(os.path.join(GAME_DIR, "font.ttf"), size)
-    return pygame.font.SysFont("Malgun Gothic", size, bold=bold)
+    return pygame.font.Font(os.path.join(GAME_DIR, "ui-font.ttf"), size)
 
 # 폰트 사이즈 전체적으로 축소 (UI 잘림 방지)
 font_combo_num = load_korean_font(58, bold=True)
@@ -235,7 +233,7 @@ MAP_LIST.extend(additional_songs)
 WEB_AUDIO_FILES += tuple(song["audio"] + ("?v=" + song["audio_version"] if song.get("audio_version") else "")
                          for song in additional_songs)
 
-SONGS_PER_PAGE = 12
+SONGS_PER_PAGE = 6
 FADE_OUT_SECONDS = 1.35
 
 DIFFICULTIES = {"easy": "EASY", "hard": "HARD", "master": "MASTER"}
@@ -738,17 +736,8 @@ def set_music_volume(value):
     apply_music_volume()
 
 def draw_volume_control(surface, slider_rect, mouse_pos, mouse_click, label="VOL"):
-    if mouse_click and slider_rect.inflate(0, 14).collidepoint(mouse_pos):
-        set_music_volume((mouse_pos[0] - slider_rect.x) / max(1, slider_rect.width))
-    draw_styled_text(surface, label, font_small, slider_rect.x - 22, slider_rect.centery, (155, 172, 212))
-    pygame.draw.rect(surface, (38, 47, 72), slider_rect, border_radius=5)
-    fill_width = int(slider_rect.width * music_volume)
-    if fill_width > 0:
-        pygame.draw.rect(surface, (112, 196, 255), (slider_rect.x, slider_rect.y, fill_width, slider_rect.height), border_radius=5)
-    pygame.draw.rect(surface, (220, 233, 255), slider_rect, width=1, border_radius=5)
-    knob_x = slider_rect.x + fill_width
-    pygame.draw.circle(surface, (250, 252, 255), (knob_x, slider_rect.centery), 6)
-    draw_styled_text(surface, f"{round(music_volume * 100):d}%", font_small, slider_rect.right + 23, slider_rect.centery, (218, 228, 248))
+    ui.volume(sys.modules[__name__], surface, slider_rect, mouse_pos, mouse_click)
+
 
 def volume_slider_for_state(scene):
     if scene == "HOME":
@@ -773,10 +762,8 @@ def adjust_note_speed(direction):
     set_home_notice(f"노트 낙하 속도: {speed:.2f}×")
 
 def draw_button(surface, rect, label, accent=(112, 139, 255), active=False):
-    fill = tuple(min(255, int(c * 1.22)) for c in accent) if active else (28, 34, 56)
-    pygame.draw.rect(surface, fill, rect, border_radius=11)
-    pygame.draw.rect(surface, accent, rect, width=2 if active else 1, border_radius=11)
-    draw_styled_text(surface, label, font_small, rect.centerx, rect.centery, (245, 247, 255))
+    ui.button(surface, rect, label, accent, active)
+
 
 def draw_album_art(surface, rect, accent, index):
     pygame.draw.rect(surface, (18, 22, 39), rect, border_radius=14)
@@ -803,7 +790,7 @@ def song_duration(song, mode, entry=None):
 
 
 @lru_cache(maxsize=128)
-def wrapped_title_image(text, font, width, height):
+def wrapped_title_image(text, font, width, height, color=(248, 249, 255)):
     """Keep the complete title readable inside the existing panel bounds."""
     line_height = font.get_linesize()
     # Try wider unscaled layouts before shrinking: wrapping at the final width
@@ -824,7 +811,7 @@ def wrapped_title_image(text, font, width, height):
         fit = min(1.0, width/natural_width, height/(line_height*len(candidate_lines)))
         if fit > best_scale:
             best_scale, lines = fit, candidate_lines
-    images = [cached_text(font, value, (248, 249, 255)) for value in lines]
+    images = [cached_text(font, value, color) for value in lines]
     canvas = pygame.Surface((max(1, max(img.get_width() for img in images)),
                              max(1, line_height * len(images))), pygame.SRCALPHA)
     for index, img in enumerate(images):
@@ -842,162 +829,8 @@ def draw_song_title(surface, song, font, rect):
 
 
 def draw_home(mouse_pos, mouse_click):
-    global selected_map_idx, selected_difficulty, selected_length, song_page
-    screen.blit(default_bg_surface, (0, 0))
-    overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
-    pygame.draw.circle(overlay, (64, 77, 174, 32), (680, 80), 260)
-    pygame.draw.circle(overlay, (34, 170, 181, 18), (50, 440), 220)
-    screen.blit(overlay, (0, 0))
+    return ui.draw_home(sys.modules[__name__], mouse_pos, mouse_click)
 
-    pygame.draw.rect(screen, (12, 16, 31), (0, 0, SCREEN_WIDTH, 82))
-    pygame.draw.line(screen, (63, 72, 105), (24, 81), (SCREEN_WIDTH - 24, 81), 1)
-    draw_styled_text(screen, "RHYTHM", font_large, 105, 29, (240, 244, 255))
-    draw_styled_text(screen, "STAGE", font_small, 47, 57, (121, 152, 255))
-    draw_styled_text(screen, "SONG LIBRARY", font_small, 524, 31, (155, 172, 212))
-    draw_styled_text(screen, f"{len(MAP_LIST):02d} TRACKS", font_small, 733, 31, (113, 220, 207))
-    draw_volume_control(screen, volume_slider_for_state("HOME"), mouse_pos, mouse_click)
-    speed_left = pygame.Rect(310, 46, 38, 30)
-    speed_value = pygame.Rect(352, 46, 76, 30)
-    speed_right = pygame.Rect(432, 46, 38, 30)
-    draw_styled_text(screen, "NOTE SPEED", font_small, 260, 60, (155, 172, 212))
-    for rect, label in ((speed_left, "-"), (speed_right, "+")):
-        hovered = rect.collidepoint(mouse_pos)
-        pygame.draw.rect(screen, (47, 57, 86) if hovered else (25, 31, 52), rect, border_radius=7)
-        pygame.draw.rect(screen, (102, 119, 166), rect, 1, border_radius=7)
-        draw_styled_text(screen, label, font_med, rect.centerx, rect.centery - 1, (237, 242, 255))
-    pygame.draw.rect(screen, (19, 25, 44), speed_value, border_radius=7)
-    pygame.draw.rect(screen, (86, 103, 150), speed_value, 1, border_radius=7)
-    speed = NOTE_SPEED_LEVELS[note_speed_index]
-    draw_styled_text(screen, f"{speed:.2f}×", font_small, speed_value.centerx, speed_value.centery, (121, 220, 207))
-    flick_button = pygame.Rect(480, 46, 138, 30)
-    pygame.draw.rect(screen, (74, 31, 66) if flick_enabled else (25, 31, 52), flick_button, border_radius=7)
-    pygame.draw.rect(screen, (244, 124, 188) if flick_enabled else (102, 119, 166), flick_button, 1, border_radius=7)
-    draw_styled_text(screen, "플릭  ON" if flick_enabled else "플릭  OFF", font_small,
-                     flick_button.centerx, flick_button.centery, (255, 185, 220) if flick_enabled else (171, 181, 209))
-
-    hero = pygame.Rect(24, 101, 212, 286)
-    pygame.draw.rect(screen, (17, 22, 41), hero, border_radius=18)
-    pygame.draw.rect(screen, (45, 54, 83), hero, width=1, border_radius=18)
-    selected = MAP_LIST[selected_map_idx]
-    art_rect = pygame.Rect(hero.x + 13, hero.y + 13, hero.width - 26, 106)
-    draw_album_art(screen, art_rect, selected["accent"], selected_map_idx)
-    draw_styled_text(screen, "FEATURED CHART", font_small, hero.centerx, hero.y + 139, (142, 156, 194))
-    title_font = font_med if len(selected["song"]) < 17 else font_small
-    draw_song_title(screen, selected, title_font, pygame.Rect(hero.x+10, hero.y+149, hero.width-20, 36))
-    selected_bpm = get_saved_bpm(selected["audio"], selected["bpm"])
-    draw_styled_text(screen, f"{DIFFICULTIES[selected_difficulty]}   ·   {selected_bpm:.1f} BPM", font_small, hero.centerx, hero.y + 194, selected["accent"])
-    draw_styled_text(screen, f"{format_time(song_duration(selected, selected_length))}   ·   4 LANES", font_small, hero.centerx, hero.y + 218, (171, 181, 209))
-    draw_styled_text(screen, "SELECT CHART LEVEL", font_small, hero.centerx, hero.y + 238, (142, 156, 194))
-    difficulty_buttons = {}
-    button_y = hero.y + 250
-    button_x = hero.x + 13
-    for index, difficulty in enumerate(("easy", "hard", "master")):
-        rect = pygame.Rect(button_x + index * 62, button_y, 58, 25)
-        difficulty_buttons[difficulty] = rect
-        active = difficulty == selected_difficulty
-        fill = selected["accent"] if active else (25, 31, 52)
-        ink = (14, 18, 33) if active else (184, 195, 222)
-        pygame.draw.rect(screen, fill, rect, border_radius=8)
-        pygame.draw.rect(screen, (235, 240, 255) if active else (61, 72, 104), rect, 1, border_radius=8)
-        draw_styled_text(screen, DIFFICULTIES[difficulty], font_small, rect.centerx, rect.centery, ink)
-
-    length_buttons = {}
-    for index, mode in enumerate(("verse", "full")):
-        rect = pygame.Rect(24 + index * 99, 409, 94, 38)
-        length_buttons[mode] = rect
-        active = mode == selected_length
-        pygame.draw.rect(screen, (53, 73, 105) if active else (22, 28, 47), rect, border_radius=9)
-        pygame.draw.rect(screen, selected["accent"] if active else (60, 72, 99), rect, 2 if active else 1, border_radius=9)
-        draw_styled_text(screen, LENGTH_LABELS[mode], font_small, rect.centerx, rect.centery,
-                         (241, 247, 255) if active else (158, 173, 201))
-
-    grid_x, grid_y = 252, 102
-    card_w, card_h, gap_x, gap_y = 126, 87, 7, 8
-    page_count = max(1, (len(MAP_LIST) + SONGS_PER_PAGE - 1) // SONGS_PER_PAGE)
-    previous_page_button = pygame.Rect(650, 386, 39, 18)
-    next_page_button = pygame.Rect(739, 386, 39, 18)
-    if mouse_click and previous_page_button.collidepoint(mouse_pos) and song_page > 0:
-        song_page -= 1
-        selected_map_idx = song_page * SONGS_PER_PAGE
-        return None
-    if mouse_click and next_page_button.collidepoint(mouse_pos) and song_page + 1 < page_count:
-        song_page += 1
-        selected_map_idx = song_page * SONGS_PER_PAGE
-        return None
-
-    first_song = song_page * SONGS_PER_PAGE
-    for i in range(first_song, min(first_song + SONGS_PER_PAGE, len(MAP_LIST))):
-        song = MAP_LIST[i]
-        local_index = i - first_song
-        col, row = local_index % 4, local_index // 4
-        rect = pygame.Rect(grid_x + col * (card_w + gap_x), grid_y + row * (card_h + gap_y), card_w, card_h)
-        hovered = rect.collidepoint(mouse_pos)
-        if mouse_click and hovered:
-            selected_map_idx = i
-            selected = song
-        draw_album_art(screen, rect, song["accent"], i)
-        title_rect = pygame.Rect(rect.x+5, rect.bottom-49, rect.width-10, 44)
-        pygame.draw.rect(screen, (22, 27, 46), title_rect, border_radius=6)
-        draw_song_title(screen, song, font_small, title_rect.inflate(-8, -4))
-        if i == selected_map_idx:
-            pygame.draw.rect(screen, (241, 244, 255), rect, width=2, border_radius=14)
-
-    if page_count > 1:
-        for rect, label, enabled in (
-            (previous_page_button, -1, song_page > 0),
-            (next_page_button, 1, song_page + 1 < page_count),
-        ):
-            pygame.draw.rect(screen, (33, 43, 69) if enabled else (23, 28, 44), rect, border_radius=6)
-            pygame.draw.rect(screen, (87, 109, 158) if enabled else (48, 55, 77), rect, 1, border_radius=6)
-            # Draw chevrons directly: independent of bundled font glyph coverage.
-            cx, cy = rect.center
-            pygame.draw.lines(screen, (236, 242, 255) if enabled else (98, 105, 126), False,
-                              [(cx - label * 3, cy - 5), (cx + label * 3, cy),
-                               (cx - label * 3, cy + 5)], 2)
-        draw_styled_text(screen, f"{song_page + 1} / {page_count}", font_small, 714, 395, (171, 181, 209))
-
-    # Controls are deliberately separated from song cards, like a web player action bar.
-    if sys.platform == "emscripten":
-        play_button = pygame.Rect(255, 406, 128, 44)
-        practice_button = pygame.Rect(394, 406, 150, 44)
-        editor_button = None
-    else:
-        play_button = pygame.Rect(226, 406, 128, 44)
-        practice_button = pygame.Rect(365, 406, 150, 44)
-        editor_button = pygame.Rect(526, 406, 166, 44)
-    draw_button(screen, play_button, "PLAY CHART", selected["accent"], True)
-    draw_button(screen, practice_button, "PRACTICE", (69, 197, 161))
-    if editor_button is not None:
-        draw_button(screen, editor_button, "CHART STUDIO", (154, 135, 255))
-    draw_styled_text(screen, "D F J K  ·  플릭: 레인 키 + SPACE / 위로 스와이프  ·  볼륨 - / +", font_small, SCREEN_WIDTH // 2, 466, (174, 180, 205))
-    if home_notice and time.time() < home_notice_until:
-        notice_box = pygame.Rect(253, 386, 390, 18)
-        pygame.draw.rect(screen, (25, 39, 58), notice_box, border_radius=8)
-        pygame.draw.rect(screen, (91, 129, 184), notice_box, 1, border_radius=8)
-        draw_styled_text(screen, home_notice, font_small, notice_box.centerx, notice_box.centery, (218, 235, 255))
-
-    if mouse_click:
-        if flick_button.collidepoint(mouse_pos):
-            set_flick_enabled(not flick_enabled)
-            return None
-        if speed_left.collidepoint(mouse_pos):
-            adjust_note_speed(-1)
-            return None
-        if speed_right.collidepoint(mouse_pos):
-            adjust_note_speed(1)
-            return None
-        for mode, rect in length_buttons.items():
-            if rect.collidepoint(mouse_pos):
-                selected_length = mode
-                return None
-        for difficulty, rect in difficulty_buttons.items():
-            if rect.collidepoint(mouse_pos):
-                selected_difficulty = difficulty
-                return None
-        if play_button.collidepoint(mouse_pos): return "play"
-        if practice_button.collidepoint(mouse_pos): return "practice"
-        if editor_button is not None and editor_button.collidepoint(mouse_pos): return "editor"
-    return None
 
 def _analyze_for_game(job, audio_path, difficulty):
     try:
@@ -1050,22 +883,9 @@ def request_game_start(m_idx, practice=False, difficulty=None):
     threading.Thread(target=_analyze_for_game, args=(auto_analysis_job, audio_path, difficulty), daemon=True).start()
 
 def draw_analysis_screen():
-    screen.blit(default_bg_surface, (0, 0))
     song = MAP_LIST[auto_analysis_job["map_idx"]] if auto_analysis_job else MAP_LIST[selected_map_idx]
-    center = (CENTER_X, 206)
-    pulse = 0.5 + 0.5 * math.sin(time.perf_counter() * 3.4)
-    pygame.draw.circle(screen, (34, 42, 76), center, 56, 2)
-    pygame.draw.arc(screen, song["accent"], pygame.Rect(center[0] - 56, center[1] - 56, 112, 112),
-                    time.perf_counter() % (math.pi * 2), time.perf_counter() % (math.pi * 2) + 2.2 + pulse, 5)
-    draw_styled_text(screen, "AUDIO → MELODY DETECTION → AUTO CHART", font_small, CENTER_X, 90, (177, 191, 223))
-    draw_song_title(screen, song, font_large, pygame.Rect(40, 117, 720, 50))
-    draw_styled_text(screen, "음의 시작과 높낮이를 읽어 3단계 차트를 만들고 있어요", font_med, CENTER_X, 284, (214, 222, 245))
-    draw_styled_text(screen, "첫 분석은 잠시 걸릴 수 있습니다 · ESC를 누르면 취소됩니다", font_small, CENTER_X, 323, (137, 151, 184))
-    draw_styled_text(screen, f"선택 난이도  {DIFFICULTIES.get(auto_analysis_job.get('difficulty', 'hard'), 'HARD')}  ·  BPM도 함께 분석합니다", font_small, CENTER_X, 350, song["accent"])
-    progress_w = 300
-    pygame.draw.rect(screen, (22, 28, 49), (CENTER_X - progress_w // 2, 390, progress_w, 7), border_radius=4)
-    sweep = int(progress_w * (0.25 + pulse * 0.3))
-    pygame.draw.rect(screen, song["accent"], (CENTER_X - progress_w // 2, 390, sweep, 7), border_radius=4)
+    ui.draw_loading(sys.modules[__name__], "음악을 분석하고 있어요", "음의 시작과 높낮이로 차트를 만듭니다 · ESC로 취소", 0, song=song)
+
 
 def start_game(m_idx, practice=False, chart_entry=None, chart_source="SAVED CHART", difficulty=None):
     global current_map, current_map_idx, chart, total_notes, score, combo, max_combo, hit_score, hp
@@ -1118,30 +938,8 @@ def start_game(m_idx, practice=False, chart_entry=None, chart_source="SAVED CHAR
     key_lanes_down.clear()
 
 def draw_ready_screen():
-    """Show a beat-paced count-in without drawing or advancing chart notes."""
-    screen.blit(current_bg_surface, (0, 0))
-    elapsed = max(0.0, time.perf_counter() - ready_start_time)
-    beat_length = ready_count_in_duration / 4.0
-    count = max(1, 4 - min(3, int(elapsed / beat_length)))
-    beat_phase = (elapsed % beat_length) / beat_length
-    pulse = 0.5 + 0.5 * math.sin(beat_phase * math.pi)
-    overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
-    overlay.fill((3, 6, 18, 148))
-    screen.blit(overlay, (0, 0))
-    draw_song_title(screen, current_map, font_large, pygame.Rect(40, 87, 720, 50))
-    draw_styled_text(screen, f"{DIFFICULTIES[current_difficulty]}  ·  {LENGTH_LABELS[current_length]}  ·  {current_bpm:.1f} BPM", font_small, CENTER_X, 150, current_map["accent"])
-    ring = pygame.Rect(CENTER_X - 74, 188, 148, 148)
-    pygame.draw.circle(screen, (31, 40, 67), ring.center, 70, 2)
-    pygame.draw.arc(screen, current_map["accent"], ring,
-                    -math.pi / 2, -math.pi / 2 + max(0.1, pulse * math.pi * 1.7), 5)
-    draw_styled_text(screen, str(count), font_combo_num, CENTER_X, ring.centery, (249, 250, 255), scale=1.0 + pulse * 0.06)
-    draw_styled_text(screen, "GET READY", font_med, CENTER_X, 365, (220, 229, 248))
-    ready_tip = ("분홍 화살표: 레인 키를 누른 채 SPACE / 터치는 위로" if current_flick_enabled
-                 else "플릭 OFF · 모든 플릭을 같은 박자의 일반 탭으로 연주합니다") if current_difficulty == "master" else "음악 준비 완료 · 판정선에 맞춰 연주하세요"
-    draw_styled_text(screen, ready_tip, font_small, CENTER_X, 396, (231, 163, 204) if current_difficulty == "master" else (151, 166, 199))
-    if practice_mode:
-        draw_styled_text(screen, "PRACTICE · NO FAIL", font_small, CENTER_X, 431, (120, 228, 195))
-    draw_styled_text(screen, "ESC  ·  취소", font_small, CENTER_X, 462, (112, 126, 158))
+    ui.draw_ready(sys.modules[__name__])
+
 
 def begin_play():
     global game_start_time, audio_ended_at, state, music_scheduled_start
@@ -1236,19 +1034,11 @@ def draw_loading_screen(mouse_pos, mouse_click):
         unlocked = bool(audio_element.unlocked)
     elif music_load_job and not error:
         ready = music_load_job["done"]
-    draw_song_title(screen, current_map, font_large, pygame.Rect(40, 100, 720, 50))
     label = "곡을 준비하는 중" if not error else "곡을 불러오지 못했습니다"
     if ready and not unlocked:
         label = "화면을 눌러 음악을 시작해 주세요"
-    draw_styled_text(screen, label, font_med, CENTER_X, 210, (224, 234, 252))
-    detail = "다운로드와 오디오 준비가 끝나면 카운트다운을 시작합니다"
-    if error:
-        detail = error[:65]
-    draw_styled_text(screen, detail, font_small, CENTER_X, 250, (154, 177, 212))
-    pygame.draw.rect(screen, (24, 31, 53), (240, 292, 320, 8), border_radius=4)
-    if not error:
-        width = int(320 * progress) if progress else int(60 + 30 * math.sin(time.perf_counter() * 3))
-        pygame.draw.rect(screen, current_map["accent"], (240, 292, width, 8), border_radius=4)
+    detail = error[:65] if error else "오디오 준비가 끝나면 카운트다운을 시작합니다"
+    ui.draw_loading(sys.modules[__name__], label, detail, progress, bool(error))
     back = pygame.Rect(245, 345, 145, 45)
     retry = pygame.Rect(410, 345, 145, 45)
     draw_button(screen, back, "메뉴로", (85, 105, 150))
@@ -1378,28 +1168,13 @@ def draw_clear_celebration(surface):
 
 
 def draw_result_summary(surface):
-    surface.blit(current_bg_surface, (0, 0))
-    accuracy = hit_score / total_notes if total_notes > 0 else 0
-    grade_str, grade_color = get_grade(accuracy)
-    draw_song_title(surface, current_map, font_large, pygame.Rect(40, 13, 720, 50))
-    draw_styled_text(surface, f"STAGE CLEAR!  ·  {LENGTH_LABELS[current_length]}  ·  {DIFFICULTIES[current_difficulty]}",
-                     font_med, CENTER_X, 75, current_map["accent"])
-
+    ui.draw_result(sys.modules[__name__], surface)
     if is_all_perfect(total_notes, perfect_count, great_count, miss_count):
-        draw_prismatic_text(surface, "ALL PERFECT", font_large, CENTER_X, 122)
+        pygame.draw.rect(surface, ui.WHITE, (180, 101, 440, 43), border_radius=8)
+        draw_prismatic_text(surface, "ALL PERFECT", font_large, CENTER_X, 123)
     elif total_notes > 0 and miss_count == 0 and perfect_count + great_count == total_notes:
-        draw_styled_text(surface, "FULL COMBO!", font_large, CENTER_X, 122,
-                         (255, 215, 0), (120, 65, 20))
-    if practice_mode:
-        draw_styled_text(surface, "PRACTICE · RECORD NOT SAVED", font_small, CENTER_X, 159, (120, 228, 195))
-    draw_styled_text(surface, f"GRADE: {grade_str}", font_large, CENTER_X, 198, grade_color)
-    draw_styled_text(surface, f"최종 점수: {score:,}", font_med, CENTER_X, 238, (220, 220, 220))
-    for label, count, y, color in (("PERFECT", perfect_count, 283, (255, 215, 0)),
-                                   ("GREAT", great_count, 313, (0, 255, 255)),
-                                   ("MISS", miss_count, 343, (255, 60, 60))):
-        draw_styled_text(surface, f"{label} : {count}", font_med, CENTER_X - 105, y, color)
-    draw_styled_text(surface, f"최대 콤보: {max_combo}", font_med, CENTER_X + 110, 298, (220, 220, 220))
-    draw_styled_text(surface, f"정확도: {accuracy:.1f}%", font_med, CENTER_X + 110, 328, (220, 220, 220))
+        pygame.draw.rect(surface, ui.WHITE, (180, 101, 440, 43), border_radius=8)
+        ui.text(surface, "FULL COMBO!", (CENTER_X, 123), 26, (160, 100, 185), True)
 
 # ---------------------------------------------------------
 # 6. 비동기 메인 루프 (Web/pygbag 전용)
@@ -1610,6 +1385,8 @@ async def main():
         combo_scale = max(1.0, combo_scale - dt * 2.5)
         feedback_scale = max(1.0, feedback_scale - dt * 3.0)
 
+        ui.begin_frame(screen, state)
+
         # ==========================================
         # SCENE: HOME
         # ==========================================
@@ -1812,40 +1589,7 @@ async def main():
                 else: particles.remove(p)
 
             max_combo = max(max_combo, combo)
-            draw_styled_text(screen, f"점수: {score:,}", font_med, 90, 20, (255, 255, 255))
-            
-            display_play_time = max(0.0, play_time)
-            prog_ratio = min(1.0, max(0.0, display_play_time / current_map["duration"]))
-            bar_w, bar_h = 240, 8
-            bar_x, bar_y = CENTER_X - bar_w // 2, 35
-            time_str = f"{format_time(display_play_time)} / {format_time(current_map['duration'])}"
-            title_str = f"{current_map['song']}  /  {DIFFICULTIES[current_difficulty]}  ·  {current_chart_source}"
-            
-            pygame.draw.rect(screen, (10, 14, 32), (0, 0, SCREEN_WIDTH, 58))
-            title_image = wrapped_title_image(title_str, font_small, 680, 23)
-            screen.blit(title_image, title_image.get_rect(center=(CENTER_X, 15)))
-            draw_styled_text(screen, "LIFE", font_small, 30, 43, (211, 220, 242))
-            pygame.draw.rect(screen, (39, 28, 44), (55, 37, 113, 12), border_radius=5)
-            hp_ratio = max(0.0, min(1.0, hp / 100.0))
-            hp_color = (70, 232, 166) if hp > 50 else (255, 195, 77) if hp > 25 else (255, 82, 110)
-            if hp_ratio > 0:
-                pygame.draw.rect(screen, hp_color, (55, 37, int(113 * hp_ratio), 12), border_radius=5)
-            pygame.draw.rect(screen, (226, 234, 252), (55, 37, 113, 12), width=1, border_radius=5)
-            pygame.draw.rect(screen, (20, 25, 45), (bar_x, bar_y, bar_w, bar_h), border_radius=4)
-            if prog_ratio > 0:
-                pygame.draw.rect(screen, (0, 230, 255), (bar_x, bar_y, int(bar_w * prog_ratio), bar_h), border_radius=4)
-            pygame.draw.rect(screen, (255, 255, 255), (bar_x, bar_y, bar_w, bar_h), width=1, border_radius=4)
-            draw_styled_text(screen, time_str, font_small, CENTER_X + 165, 38, (200, 200, 200))
-            draw_styled_text(screen, f"{current_bpm:.2f} BPM", font_small, CENTER_X - 185, 38, current_map["accent"])
-            if practice_mode:
-                draw_styled_text(screen, "PRACTICE", font_small, 674, 43, (120, 228, 195))
-            if current_difficulty == "master" and current_flick_enabled:
-                draw_styled_text(screen, "FLICK  ·  레인 키 + SPACE  /  위로 스와이프", font_small, CENTER_X, 459, (244, 161, 202))
-
-            pygame.draw.rect(screen, (30, 40, 70), btn_pause, border_radius=8)
-            pygame.draw.rect(screen, (0, 220, 255), btn_pause, width=2, border_radius=8)
-            pygame.draw.rect(screen, (255, 255, 255), (btn_pause.x + 14, btn_pause.y + 9, 5, 17))
-            pygame.draw.rect(screen, (255, 255, 255), (btn_pause.x + 26, btn_pause.y + 9, 5, 17))
+            ui.draw_hud(sys.modules[__name__], screen, play_time, btn_pause)
 
             if mouse_click and btn_pause.collidepoint(mouse_pos):
                 state = "PAUSED"
@@ -1867,40 +1611,8 @@ async def main():
         # SCENE: PAUSED
         # ==========================================
         elif state == "PAUSED":
-            dim_surf = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
-            dim_surf.set_alpha(150)
-            dim_surf.fill((0, 0, 0))
-            screen.blit(dim_surf, (0, 0))
-            
-            box = pygame.Rect(CENTER_X - 180, 25, 360, 435)
-            pygame.draw.rect(screen, (20, 25, 45), box, border_radius=16)
-            pygame.draw.rect(screen, (0, 200, 255), box, width=2, border_radius=16)
-            
-            draw_styled_text(screen, "PAUSED", font_large, CENTER_X, 60, (255, 255, 255))
-            if practice_mode:
-                draw_styled_text(screen, "PRACTICE · NO LIFE LOSS", font_small, CENTER_X, 91, (120, 228, 195))
-            
-            btn_resume, btn_retry, btn_home = pygame.Rect(CENTER_X - 145, 112, 290, 38), pygame.Rect(CENTER_X - 145, 158, 140, 38), pygame.Rect(CENTER_X + 5, 158, 140, 38)
-            
-            pygame.draw.rect(screen, (0, 180, 220), btn_resume, border_radius=8)
-            pygame.draw.rect(screen, (100, 100, 150), btn_retry, border_radius=8)
-            pygame.draw.rect(screen, (220, 60, 80), btn_home, border_radius=8)
-            
-            draw_styled_text(screen, "계속하기", font_med, btn_resume.centerx, btn_resume.centery, (255, 255, 255))
-            draw_styled_text(screen, "다시하기", font_med, btn_retry.centerx, btn_retry.centery, (255, 255, 255))
-            draw_styled_text(screen, "메뉴로", font_med, btn_home.centerx, btn_home.centery, (255, 255, 255))
-            draw_volume_control(screen, volume_slider_for_state("PAUSED"), mouse_pos, mouse_click)
-            flick_button = pygame.Rect(CENTER_X - 145, 210, 290, 36)
-            draw_button(screen, flick_button, "플릭 ON" if current_flick_enabled else "플릭 OFF", (235, 102, 173) if current_flick_enabled else (101, 119, 159))
-            speed_minus = pygame.Rect(CENTER_X + 28, 333, 31, 32)
-            speed_plus = pygame.Rect(CENTER_X + 114, 333, 31, 32)
-            draw_styled_text(screen, "노트 낙하 속도", font_small, CENTER_X - 64, 349, (196, 210, 239))
-            draw_button(screen, speed_minus, "-", (93, 138, 183))
-            draw_button(screen, speed_plus, "+", (93, 138, 183))
-            draw_styled_text(screen, f"{NOTE_SPEED_LEVELS[note_speed_index]:g}×", font_small, CENTER_X + 86, 349, (137, 233, 219))
-            draw_styled_text(screen, "노트가 내려오는 속도만 조절합니다", font_small, CENTER_X, 398, (153, 171, 204))
-            draw_styled_text(screen, "음악 속도 · 박자 · 판정 타이밍 유지", font_small, CENTER_X, 423, (153, 171, 204))
-            
+            btn_resume, btn_retry, btn_home, flick_button, speed_minus, speed_plus = ui.draw_pause(sys.modules[__name__], mouse_pos, mouse_click)
+
             if mouse_click:
                 if flick_button.collidepoint(mouse_pos):
                     change_pause_flick()
@@ -1926,24 +1638,8 @@ async def main():
         # SCENE: GAME OVER
         # ==========================================
         elif state == "GAME_OVER":
-            screen.blit(current_bg_surface, (0, 0))
-            dim_surf = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
-            dim_surf.set_alpha(200)
-            dim_surf.fill((20, 0, 0))
-            screen.blit(dim_surf, (0, 0))
-            
-            draw_styled_text(screen, "GAME OVER", font_large, CENTER_X, 120, (255, 50, 50))
-            draw_styled_text(screen, "체력이 모두 소진되었습니다!", font_med, CENTER_X, 180, (220, 220, 220))
-            draw_styled_text(screen, f"진행 점수: {score:,}", font_med, CENTER_X, 230, (255, 255, 255))
-            
-            btn_retry, btn_home = pygame.Rect(CENTER_X - 160, 310, 140, 50), pygame.Rect(CENTER_X + 20, 310, 140, 50)
-            
-            pygame.draw.rect(screen, (0, 180, 220), btn_retry, border_radius=10)
-            pygame.draw.rect(screen, (220, 60, 80), btn_home, border_radius=10)
-            
-            draw_styled_text(screen, "다시하기", font_med, btn_retry.centerx, btn_retry.centery, (255, 255, 255))
-            draw_styled_text(screen, "메뉴로", font_med, btn_home.centerx, btn_home.centery, (255, 255, 255))
-            
+            btn_retry, btn_home = ui.draw_failure(sys.modules[__name__], screen, mouse_pos)
+
             if mouse_click:
                 if btn_retry.collidepoint(mouse_pos): request_game_start(current_map_idx, difficulty=current_difficulty)
                 elif btn_home.collidepoint(mouse_pos):
@@ -1962,12 +1658,9 @@ async def main():
             btn_home = pygame.Rect(CENTER_X - 170, 391, 150, 55)
             btn_retry = pygame.Rect(CENTER_X + 20, 391, 150, 55)
             
-            pygame.draw.rect(screen, (0, 180, 220), btn_home, border_radius=12)
-            pygame.draw.rect(screen, (255, 0, 100), btn_retry, border_radius=12)
-            
-            draw_styled_text(screen, "메뉴로", font_med, btn_home.centerx, btn_home.centery, (255, 255, 255))
-            draw_styled_text(screen, "다시하기", font_med, btn_retry.centerx, btn_retry.centery, (255, 255, 255))
-            
+            ui.button(screen, btn_home, "곡 선택으로", mouse=mouse_pos, size=17)
+            ui.button(screen, btn_retry, "다시하기", ui.CYAN, True, mouse_pos, 17)
+
             if mouse_click:
                 if btn_home.collidepoint(mouse_pos):
                     state = "HOME"
@@ -1980,6 +1673,7 @@ async def main():
         if state != "PLAY":
             flick_keyboard.reset()
             flick_touch.reset()
+        ui.end_frame(screen, state)
         pygame.display.flip()
         
         # [핵심] 웹 브라우저 상의 비동기 양보
