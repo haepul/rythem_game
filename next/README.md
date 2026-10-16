@@ -21,7 +21,7 @@ Pygame-free browser implementation: semantic HTML/CSS menus, PixiJS 8.17.1 WebGL
 
 - 34,985 frame/event samples agree with the Python reference judges across 464 generated scenarios. Includes HOLD/SLIDE at 15/30/60/120 Hz, continuous touch slides, key chord ordering and upward swipe rearming.
 - Node checks cover nearest TAP, flick reservation, consumed gestures, score/combo, invincible practice, flick-off conversion, perspective endpoints and all 180 chart variants.
-- Local browser: 30-song catalog, long-title search/selection, favorite persistence/filter, actual music loading and running play, normal failure/result, pause/settings and home return.
+- Local browser: 30-song catalog, long-title search/selection, favorite persistence/filter, actual music loading and running play, normal failure/result, pause/settings and home return. Gone Angels MASTER practice completed naturally in 73 seconds and resolved all 278 expected judgments. A restart and actual D/F/J/K input produced a score of 105, confirming the DOM input path reaches scoring.
 - 390×844 and 1280×720 DOM geometry checked; narrow-screen horizontal overflow repaired. Capture service returned `Unable to capture screenshot`, so image-based visual verification is not claimed.
 
 Reproduce data/tests from the source workspace:
