@@ -16,3 +16,20 @@ dialog{border:1px solid #fff;border-radius:24px;padding:32px;width:min(92vw,480p
 .workspace,.library,.detail-body{min-width:0}
 @media(max-width:760px){.shell{grid-template-columns:minmax(0,1fr)}.rail{gap:8px}.detail{grid-template-columns:110px minmax(0,1fr)}.featured-art{height:110px}.nav{gap:4px}.song-grid{min-width:0}.song-card{min-width:0}}
 #count-in.celebration{font-size:clamp(28px,6vw,76px);letter-spacing:3px;color:#d8c1ff;background:#10182d88;text-shadow:0 0 40px #9af6df77}
+/* Live pause: a quiet white stage card over the frozen performance. */
+#settings.live-pause{width:min(92vw,600px);max-height:92dvh;padding:0;border:2px solid #fff;border-radius:10px;overflow:auto;box-shadow:0 8px 0 #18243a30,0 28px 90px #10152b66;background:linear-gradient(135deg,#fff,#f4f9fc)}
+#settings.live-pause::backdrop{background:#1c203eaa;backdrop-filter:blur(4px)}
+.live-pause form{padding:0 30px 25px}
+.live-pause .modal-heading{margin:0 -30px 0;padding:19px 26px 17px;border-bottom:4px solid #22cfbe;background:linear-gradient(110deg,#effcfa,#fff 68%);align-items:center}
+.live-pause .modal-heading h2{font-size:24px;letter-spacing:.12em;margin-top:4px}
+.live-pause .eyebrow{font-size:9px;letter-spacing:.22em;color:#35a99f}
+.live-pause .close{border:1px solid #cbd9e2;border-radius:5px;width:32px;height:32px;font-size:24px;color:#677087;background:#fff}
+#pause-song{font-size:12px;color:#73758d;padding:15px 0 13px;line-height:1.6;text-align:center;overflow-wrap:anywhere}
+.live-pause .setting-row{padding:11px 4px;font-size:12px}
+.live-pause .setting-row label small{font-size:9px;margin-top:4px}
+.live-pause #pause-actions{margin-top:14px;padding-top:12px;border-top:1px solid #dfe5eb}
+.live-pause #resume{margin:0;padding:15px;font-size:18px;font-weight:bold;letter-spacing:.08em;border:1px solid #0ebdaf;border-radius:6px;background:linear-gradient(#64ead7,#23d0bf);box-shadow:0 4px 0 #139d99,inset 0 1px #fff9;color:#285354}
+.live-pause .two-actions{margin-top:16px;gap:16px}
+.live-pause .two-actions button{border:1px solid #bfc8d7;border-radius:6px;box-shadow:0 3px 0 #c9d0df;background:linear-gradient(#fff,#f0f3f9);font-size:13px}
+.live-pause #pause-home{color:#7d668f}
+@media(max-height:540px){.live-pause form{padding-bottom:15px}.live-pause .modal-heading{padding-top:10px;padding-bottom:10px}.live-pause .modal-heading h2{font-size:20px}.live-pause .setting-row{padding:7px 4px}.live-pause .setting-row label small{display:none}.live-pause #pause-song{padding:8px 0}.live-pause #pause-actions{margin-top:7px;padding-top:8px}.live-pause #resume{padding:11px}.live-pause .two-actions{margin-top:10px}}
