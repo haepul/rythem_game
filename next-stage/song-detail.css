@@ -1,0 +1,36 @@
+/* Detail/launch region only; selection and gameplay logic remain unchanged. */
+#home .detail{background:linear-gradient(145deg,#fff,#f8faffee);border:2px solid white;box-shadow:var(--ui-highlight),0 14px 38px #48447124;overflow:hidden}
+#home .detail-top{height:40px;background:linear-gradient(90deg,#f5edff,#e4faf5);color:#64617e;font-size:9px;letter-spacing:1.6px;border-bottom:1px solid #fff;padding-inline:20px}
+#home .detail .heart{color:#887caa;min-width:36px;min-height:36px}
+#home .detail .heart.on{color:#d44088}
+#home .featured-art{height:220px;background:radial-gradient(ellipse at 25% 20%,#f0e9ff,transparent 60%),linear-gradient(135deg,#effbf7,#e7e4f4);border-bottom:1px solid #e1e7ee}
+#home .featured-art:before{width:260px;height:260px;border-color:#a798c735}
+#home .featured-art:after{content:'';position:absolute;width:130px;height:130px;border:1px solid #a0cfc959;transform:rotate(45deg);right:-55px;bottom:-70px;pointer-events:none}
+#home .featured-art>.cover{width:184px;border:5px solid white;border-radius:4px;transform:none;box-shadow:0 9px 22px #41445c28;animation:none}
+#home .detail-body{padding:18px 20px 20px}
+#home .detail-body>.eyebrow{display:block;color:#79748f;letter-spacing:1.6px;margin-bottom:6px}
+#home #song-title{font-size:21px;color:var(--ui-text);line-height:1.4;letter-spacing:-.3px}
+#home .song-meta{font-size:11px;gap:8px;color:#636c82;flex-wrap:wrap;margin-top:12px}
+#home .best-line{display:flex;padding:12px 0;font-size:10px;color:#687087;letter-spacing:.5px;gap:10px}
+#home .best-line strong{color:#7758aa;text-align:right}
+#home .field-label{margin:15px 0 10px;color:#62677d;font-size:10px;letter-spacing:.8px}
+#home .field-label>span{font-size:9px;color:#767c91}
+#home .difficulties{gap:8px}
+#home .difficulties [data-level=easy]{--difficulty:#3cb886;--difficulty-dark:#22684f;--difficulty-soft:#e2f9ed}
+#home .difficulties [data-level=hard]{--difficulty:#ee729e;--difficulty-dark:#872e51;--difficulty-soft:#ffedf3}
+#home .difficulties [data-level=master]{--difficulty:#ac8ae7;--difficulty-dark:#594080;--difficulty-soft:#f0eaff}
+#home .difficulties button{position:relative;min-height:48px;padding:12px 3px;border:1px solid var(--difficulty);border-radius:9px;background:linear-gradient(#fff,var(--difficulty-soft));color:var(--difficulty-dark);font-size:10px;letter-spacing:.6px;box-shadow:inset 0 1px white;transition:transform var(--ui-fast),box-shadow var(--ui-normal),background var(--ui-normal)}
+#home .difficulties button.selected{background:linear-gradient(135deg,var(--difficulty-soft),var(--difficulty));color:var(--difficulty-dark);border:2px solid var(--difficulty-dark);box-shadow:0 0 0 2px white,0 3px 0 var(--difficulty-dark);font-weight:bold;transform:translateY(-2px)}
+#home .difficulties button.selected:after{content:'';position:absolute;bottom:4px;left:calc(50% - 8px);width:16px;height:2px;background:var(--difficulty-dark);border-radius:2px}
+#home .lengths{margin:17px 0 14px;border:1px solid #e0e4ef}
+#home .lengths button{min-height:38px;font-size:11px;color:#626c82}
+#home .lengths button.selected{color:#087b73}
+#home #start{position:relative;min-height:58px;padding:16px 18px;border:1px solid #17b8ab;border-radius:10px;background:linear-gradient(120deg,#81f1dc,#22d4c5);color:#17494d;box-shadow:inset 0 1px #fff,0 4px 0 #119b963b,0 7px 20px #19d4c52b;font-size:17px;font-weight:bold;transition:transform var(--ui-fast) var(--ui-ease),box-shadow var(--ui-fast),filter var(--ui-fast);touch-action:manipulation}
+#home #start:active{transform:scale(.975);box-shadow:inset 0 2px 5px #117d7c24,0 1px 0 #119b9655;filter:brightness(.98)}
+#home #practice{min-height:44px;padding:10px;border:1px solid #ddd9ed;border-radius:9px;background:#f6f3fc;color:#65557c;font-size:12px;margin-top:13px}
+#home #practice span{font-size:9px;color:#7d738d;margin-top:4px}
+@media(hover:hover) and (pointer:fine){#home #start:hover{filter:brightness(1.035);box-shadow:inset 0 1px white,0 4px 0 #119b963b,0 9px 24px #19d4c548}#home .difficulties button:hover{filter:brightness(1.03)}#home #practice:hover{background:#eee8fa}}
+@media(max-width:760px){#home .detail{grid-template-columns:120px minmax(0,1fr);padding:14px;gap:14px}#home .detail-top{height:34px;padding-inline:14px}#home .featured-art{height:145px;margin-top:30px;border:0;border-radius:8px}#home .featured-art>.cover{width:108px;border-width:3px}#home .detail-body{padding:30px 0 0}#home #song-title{font-size:18px}#home .song-meta{font-size:10px;gap:5px}#home .best-line{font-size:9px;padding:10px 0}#home .difficulties{gap:5px}#home .difficulties button{font-size:9px;letter-spacing:0;min-height:44px}#home #start{font-size:15px!important;min-height:54px}#home #practice{font-size:11px}}
+@media(max-width:440px){#home .detail{display:block;padding:0}#home .detail-top{position:relative;height:36px}#home .featured-art{height:180px;margin:0;border-radius:0}#home .featured-art>.cover{width:154px}#home .detail-body{padding:16px 18px 20px}#home .difficulties button{font-size:11px}#home #song-title{font-size:20px}}
+@media(prefers-reduced-motion:reduce){#home #start:active{transform:none}}
+body.reduced #home #start:active{transform:none}

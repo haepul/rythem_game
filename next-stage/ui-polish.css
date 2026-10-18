@@ -1,0 +1,77 @@
+/* Final presentation layer. No canvas geometry or game timing rules. */
+:root{--ui-fast:120ms;--ui-normal:200ms;--ui-slow:280ms;--ui-ease:cubic-bezier(.22,.75,.25,1)}
+button{overflow-wrap:anywhere;transition:transform var(--ui-fast) var(--ui-ease),opacity var(--ui-fast) var(--ui-ease)}
+button:disabled{cursor:not-allowed}
+:is(.primary,.secondary,.ui-button){box-shadow:inset 0 1px #fff, inset 0 0 0 1px #ffffff60,0 3px 0 #a8b8cc30,0 6px 16px #3434540e}
+#home .library:before{opacity:.45}
+#home .song-card{transition:transform var(--ui-normal) var(--ui-ease),opacity var(--ui-normal) var(--ui-ease)}
+#home .song-card[aria-pressed=true]{box-shadow:0 0 0 1px white,0 0 0 3px var(--ui-cyan),0 6px 16px #19d4c51f}
+#home .song-card .card-title{font-size:13px;letter-spacing:0}
+#home .song-card .card-meta{font-size:10px;letter-spacing:0;color:#59677e}
+#home .detail{box-shadow:inset 0 1px white,0 10px 28px #34345419}
+#home :is(#start,.difficulties button){filter:none;transition:transform var(--ui-fast) var(--ui-ease),opacity var(--ui-fast) var(--ui-ease)}
+#home .difficulties button{border-width:2px;font-weight:700}
+#home .difficulties button.selected{transform:none;box-shadow:inset 0 1px #fff,0 0 0 2px #fff,0 2px 0 var(--difficulty-dark)}
+#home .difficulties button:active{transform:scale(.97)}
+#home #start:active{transform:scale(.98);filter:none}
+#home .lengths button{transition:transform var(--ui-fast) var(--ui-ease)}
+#home .song-card:active{transform:scale(.985)}
+.ui-modal .close{min-width:44px;min-height:44px}
+dialog.ui-modal::backdrop,#settings::backdrop,#settings.live-pause::backdrop{backdrop-filter:none;background:#18223bb3}
+#play #count-in{backdrop-filter:none}
+#settings[open],dialog.ui-modal[open]{animation:polish-modal var(--ui-normal) var(--ui-ease)}
+#home:not([hidden]){animation:polish-fade var(--ui-normal) var(--ui-ease)}
+#result:not([hidden]){animation:polish-fade var(--ui-normal) var(--ui-ease)}
+#result:not([hidden]) .result-layout{animation:polish-rise var(--ui-slow) var(--ui-ease)}
+#result:not([hidden]) .result-actions{animation:polish-rise var(--ui-slow) var(--ui-ease)}
+#result :is(.stats b,.result-bottom b){font-variant-numeric:tabular-nums}
+#result .result-actions button{min-width:0;flex:0 1 210px;line-height:1.5}
+#result #result-mode{max-width:48%;overflow-wrap:anywhere}
+#settings .setting-row label{min-width:0;line-height:1.5}
+#settings .setting-row label small{font-size:11px;color:#626f85}
+#home .ui-icon{width:22px;height:22px}
+@keyframes polish-fade{from{opacity:0}to{opacity:1}}
+@keyframes polish-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes polish-modal{from{opacity:0;transform:scale(.98) translateY(4px)}to{opacity:1;transform:none}}
+@media(hover:hover) and (pointer:fine){#home #start:hover,#home .difficulties button:hover{filter:none;transform:translateY(-1px)}#home .song-card:hover{transform:translateY(-2px)}}
+@media(hover:none){button:hover,#home .song-card:hover{transform:none}}
+@media(min-width:761px) and (max-height:800px){
+ #home .topbar{height:60px}#home .selection{padding-top:14px}
+ #home .featured-art{height:150px}#home .featured-art>.cover{width:128px}
+ #home .detail-body{padding:12px 16px}#home .detail-top{height:34px}
+ #home #song-title{font-size:19px}#home .song-meta{margin-top:8px}
+ #home .best-line{padding:9px 0}#home .field-label{margin:10px 0 8px}
+ #home .difficulties button{min-height:44px;padding:10px 2px}
+ #home .lengths{margin:12px 0}#home #start{min-height:48px;padding:12px 16px}
+ #home #practice{margin-top:10px}#home .song-grid{max-height:calc(100dvh - 350px)}
+}
+@media(prefers-reduced-motion:reduce){#home *,#result *,dialog *,#home,#result,dialog{animation:none!important;transition:none!important}#home button:hover,#home button:active{transform:none!important}}
+body.reduced #home button:hover,body.reduced #home button:active{transform:none!important}
+/* Short landscape displays keep both columns independently reachable. */
+@media(min-width:761px) and (max-height:500px){
+ #home .workspace{padding-inline:16px}#home .topbar{height:46px}
+ #home .selection{padding-top:8px;gap:14px}
+ #home .library{padding:12px}#home .section-heading{margin-bottom:10px}
+ #home .section-heading h1{font-size:23px}#home .subheading{display:none}
+ #home .filter-row{padding:10px 2px 6px}
+ #home .song-grid{min-height:100px;max-height:calc(100dvh - 235px);gap:10px}
+ #home .song-pagination{margin-top:10px;padding-top:8px;gap:8px}
+ #home .detail{top:8px;max-height:calc(100dvh - 16px);overflow-y:auto;scrollbar-width:thin;scrollbar-color:#b6bdcf transparent}
+ #home .featured-art{height:90px}#home .featured-art>.cover{width:76px}
+ #home .rail{overflow-y:auto}#home .rail-bottom{position:static;margin-top:20px}
+}
+@media(max-width:760px){#home .song-card .card-title{font-size:12px}#home .song-card .card-meta{font-size:9px}#home .selection>*{min-width:0}#home footer{flex-wrap:wrap;gap:10px}}
+#home .rail .nav{max-width:100%;flex-shrink:0;color:#65728b}
+#home .rail .nav.active{color:#087d76}
+#home .rail .nav .ui-icon{display:block;width:24px;height:24px;stroke-width:1.7}
+#home .rail{overflow-x:hidden}
+#home .search>.ui-icon{width:18px;height:18px;color:#74829a}
+@media(max-height:500px){
+ #settings.ui-modal{max-height:calc(100dvh - 24px)}
+ #settings form{padding-bottom:14px}
+ #settings .modal-heading{padding-top:10px;padding-bottom:10px}
+ #settings .setting-row{padding-top:10px;padding-bottom:10px}
+ #settings .close{width:44px;height:44px}
+ #settings :is(#resume,#settings-done){min-height:44px;padding:10px}
+ #help.ui-modal{padding:20px;max-height:calc(100dvh - 24px)}
+}

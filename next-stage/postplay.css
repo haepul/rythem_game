@@ -1,0 +1,53 @@
+#result{background:radial-gradient(ellipse at 90% 10%,#cdbef5a8,transparent 55%),radial-gradient(ellipse at 5% 85%,#b8f3e88f,transparent 55%),#ececf8;padding:28px max(5vw,20px);color:var(--ui-text)}
+#result>header{max-width:960px;margin:auto;align-items:center;gap:16px;border-bottom:1px solid #bcb7d655;padding-bottom:14px}
+#result #result-mode{background:#fff9;border:1px solid white;border-radius:7px;padding:8px 12px;color:#6c568e;line-height:1.5;text-align:right}
+#result .result-heading{margin:25px auto 22px}
+#result .result-heading>.eyebrow{color:#766693;letter-spacing:3px}
+#result .result-heading h1{font-size:clamp(30px,4vw,48px);letter-spacing:-1px;color:#484564}
+#result #result-song{font-size:clamp(17px,2.1vw,24px);color:#616079;overflow-wrap:anywhere;line-height:1.5;margin-top:10px}
+#result .result-layout{gap:0;background:linear-gradient(130deg,#ffffffed,#f8faff);border:2px solid white;border-radius:18px;overflow:hidden;box-shadow:0 18px 50px #51477520;grid-template-columns:minmax(0,1.6fr) minmax(220px,1fr)}
+#result .result-summary{background:none;box-shadow:none;border:0;border-radius:0;padding:28px 32px}
+#result .result-summary>small{color:#736987;font-size:11px}
+#result #result-score{color:#cd4d91;font-size:clamp(36px,5vw,64px);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#result .stats{gap:10px;padding-top:18px}
+#result .stats>div{background:#efebf8;border:1px solid #e3ddef;border-radius:9px;padding:14px 10px}
+#result .stats>div:nth-child(2){background:#e9f8f4;border-color:#cfece4}
+#result .stats>div:nth-child(3){background:#f8edf2;border-color:#eddde5}
+#result .stats label{font-size:10px;color:#786096}
+#result .stats>div:nth-child(2) label{color:#287e73}
+#result .stats>div:nth-child(3) label{color:#a35c7a}
+#result .stats b,#result .result-bottom b{font:700 28px Arial,sans-serif;font-variant-numeric:tabular-nums}
+#result .result-bottom label{color:#71778b;font-size:10px}
+#result .rank-panel{min-height:300px;border-radius:0;background:radial-gradient(ellipse at 60% 25%,#8877ad,#444565);gap:24px;padding:24px;text-align:center}
+#result .rank-diamond b{font-size:110px;text-shadow:0 3px 0 #268779,0 0 30px #afffe52b}
+#result .rank-panel p{line-height:1.6;color:#e5e0f2}
+#result .result-actions{margin:24px auto;gap:16px}
+#result .result-actions button{min-height:48px}
+#result #award{font:800 clamp(17px,2.6vw,28px) Arial,sans-serif;letter-spacing:1.5px;min-height:0}
+#result #award:empty{display:none}
+#result[data-award=fc] #award{display:inline-block;padding:10px 18px;border-radius:6px;border:1px solid #c6b16b;background:linear-gradient(110deg,#fff8d5,#dbfff4);color:#6b642d;position:relative;box-shadow:0 3px 10px #dfc76722}
+#result[data-award=fc] #award:after{content:'✧';position:absolute;right:-10px;top:-14px;color:#a98c2c;font-size:27px;animation:award-spark 1.5s ease-in-out 3}
+#result[data-award=ap] #award{padding:10px 0;background:linear-gradient(110deg,#287f9b,#8453b3,#c34d87,#887122,#287f9b);background-size:200% 100%;background-clip:text;color:transparent;filter:drop-shadow(0 2px 5px #bba3e52a);animation:award-prism 2.4s ease-in-out 2}
+#result[data-outcome=failed]{background:radial-gradient(ellipse at 90% 10%,#d7cbe7,transparent 55%),#e9edf4}
+#result[data-outcome=failed] #result-score{color:#65728b}
+#result[data-outcome=failed] .rank-panel{background:linear-gradient(140deg,#77758e,#484c65)}
+#result[data-outcome=failed] .rank-diamond b{color:#dedbea;text-shadow:none}
+#loading.ui-modal{width:min(90vw,500px);border:2px solid white;border-radius:14px;background:radial-gradient(ellipse at 20% 0,#d8faf0,transparent 70%),#f8faff;padding:28px;box-shadow:var(--ui-shadow-modal)}
+#loading .loading-art{width:62px;height:62px;margin:8px auto 20px;font-size:0;border:2px solid #a99bc94d;border-top-color:#18beaf;border-right-color:#7ce7d3;border-radius:50%;position:relative;animation:spin 1.5s linear infinite}
+#loading .loading-art:after{content:'';position:absolute;inset:14px;border:2px solid #a68ae8;border-radius:4px;transform:rotate(45deg)}
+#loading #loading-title{font-size:21px;overflow-wrap:anywhere;line-height:1.5}
+#loading-mode{font-size:11px;letter-spacing:1px;color:#7c639a;margin:10px 0}
+#loading #loading-message{color:#65718a;min-height:2.5em}
+#loading #load-progress{height:8px;background:#e0e5f1;border:1px solid #c8d9df}
+#loading #load-progress::-webkit-progress-value{background:linear-gradient(90deg,#73e6ce,#25c7b8)}
+#loading[data-status=error] .loading-art{animation:none;border-color:#c17d9d}
+#loading[data-status=error] .loading-art:after{border-color:#c17d9d}
+#play #count-in:not(.celebration){background:#11193270;font:800 clamp(48px,12cqw,130px) Arial,sans-serif;text-shadow:0 3px 0 #2d8c87,0 8px 24px #060d29;color:#f1fffb}
+#play #count-in:not(.celebration):before{content:'';position:absolute;width:clamp(120px,24cqw,250px);aspect-ratio:1;border:2px solid #a0f7e48c;border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 10px #b5efdf0d,inset 0 0 28px #67e9d216;pointer-events:none}
+#play #count-in:not(.celebration):after{content:'READY';position:absolute;left:0;right:0;top:72%;font:700 clamp(9px,1.5cqw,16px) Arial,sans-serif;letter-spacing:5px;color:#b8ebdf;text-shadow:none}
+@keyframes award-spark{50%{opacity:.4;transform:scale(.8)}}
+@keyframes award-prism{to{background-position:200% 50%}}
+@media(max-width:760px){#result .result-layout{grid-template-columns:1fr}#result .result-summary{padding:22px}#result .rank-panel{min-height:230px;gap:16px}#result .rank-diamond{width:110px;height:110px}#result .rank-diamond b{font-size:85px}#result .result-heading{margin:20px auto}#result .result-actions{gap:10px}#result .result-actions button{padding:12px;font-size:13px}#result .stats{gap:7px}#result .stats>div{padding:12px 8px}}
+body.reduced #award,body.reduced #award:after,body.reduced #loading .loading-art{animation:none!important}
+@media(prefers-reduced-motion:reduce){#award,#award:after,#loading .loading-art{animation:none!important}}
+@media(min-width:761px) and (max-height:800px){#result{padding-top:18px;padding-bottom:14px}#result .result-heading{margin:16px auto}#result .result-heading h1{font-size:34px}#result .result-summary{padding:20px 26px}#result #result-score{font-size:48px;margin:8px 0}#result .stats{padding-top:12px;margin-top:10px}#result .stats>div{padding:10px}#result .result-bottom{margin-top:15px;padding-top:14px}#result .result-actions{margin:16px auto}#result #award{font-size:23px}}
