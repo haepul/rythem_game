@@ -84,7 +84,7 @@ body.reduced #home button:hover,body.reduced #home button:active{transform:none!
  #result #award:empty{display:none}#result #award{font-size:16px;min-height:0}
  #result .stats{padding-top:8px;margin-top:6px}#result .stats>div{padding:7px;gap:4px}
  #result :is(.stats b,.result-bottom b){font-size:18px}#result .result-bottom{margin-top:8px;padding-top:8px}
- #result .result-bottom>div{gap:4px}#result .rank-panel{gap:10px}
+ #result .result-bottom>div{gap:4px}#result .rank-panel{gap:10px;min-height:0;padding:12px}
  #result .rank-diamond{width:76px;height:76px}#result .rank-diamond b{font-size:64px}
  #result .result-actions{margin:10px auto}#result .result-actions button{padding:8px 16px;min-height:44px;font-size:13px}
 }
