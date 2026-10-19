@@ -75,3 +75,16 @@ body.reduced #home button:hover,body.reduced #home button:active{transform:none!
  #settings :is(#resume,#settings-done){min-height:44px;padding:10px}
  #help.ui-modal{padding:20px;max-height:calc(100dvh - 24px)}
 }
+@media(min-width:761px) and (max-height:500px){
+ #result{padding:10px 4vw}#result>header{padding-bottom:6px;font-size:9px}
+ #result #result-mode{padding:4px 8px}#result .result-heading{margin:8px auto}
+ #result .result-heading h1{font-size:24px}#result .result-heading>.eyebrow{font-size:8px;letter-spacing:1.5px}
+ #result #result-song{font-size:15px;margin-top:3px}
+ #result .result-summary{padding:10px 18px}#result #result-score{font-size:30px;margin:4px 0}
+ #result #award:empty{display:none}#result #award{font-size:16px;min-height:0}
+ #result .stats{padding-top:8px;margin-top:6px}#result .stats>div{padding:7px;gap:4px}
+ #result :is(.stats b,.result-bottom b){font-size:18px}#result .result-bottom{margin-top:8px;padding-top:8px}
+ #result .result-bottom>div{gap:4px}#result .rank-panel{gap:10px}
+ #result .rank-diamond{width:76px;height:76px}#result .rank-diamond b{font-size:64px}
+ #result .result-actions{margin:10px auto}#result .result-actions button{padding:8px 16px;min-height:44px;font-size:13px}
+}
