@@ -106,9 +106,23 @@ export class Stage{
   }
   return P.Texture.from(canvas);
  }
+ // Independent geometric light, drawn once; the hollow center preserves note visibility.
+ haloTexture(){
+  const canvas=document.createElement('canvas');canvas.width=384;canvas.height=256;
+  const c=canvas.getContext('2d');c.scale(2,2);
+  const ring=(w,h,stroke,width)=>{c.beginPath();c.moveTo(96,64-h);c.lineTo(96+w,64);c.lineTo(96,64+h);c.lineTo(96-w,64);c.closePath();c.strokeStyle=stroke;c.lineWidth=width;c.stroke();};
+  ring(87,54,'#c5b6ff12',5);ring(87,54,'#c5b6ff55',1.3);
+  ring(72,44,'#a9ffe0b0',1.2);ring(57,34,'#edfff9dc',1);
+  const g=c.createRadialGradient(96,64,0,96,64,29);
+  g.addColorStop(0,'#ffffffef');g.addColorStop(.18,'#efffffbb');g.addColorStop(.48,'#8effe655');g.addColorStop(1,'#98ffe000');
+  c.fillStyle=g;c.fillRect(66,34,60,60);
+  return P.Texture.from(canvas);
+ }
  initDiamonds(){
   this.diamondTextures={Diamond:this.crystalTexture('Diamond'),Shard:this.crystalTexture('Shard'),Sparkle:this.crystalTexture('Sparkle')};
-  this.diamondBurst=new P.Container();this.lineDiamonds=[];this.burstPool=[];
+  this.diamondBurst=new P.Container();this.lineDiamonds=[];this.burstPool=[];this.haloPool=[];
+  this.haloTextureCached=this.haloTexture();
+  for(let i=0;i<4;i++){const sprite=new P.Sprite(this.haloTextureCached);sprite.anchor.set(.5,.5);sprite.visible=false;this.diamondBurst.addChild(sprite);this.haloPool.push(sprite);}
   for(let i=0;i<8;i++){const sprite=new P.Sprite(this.diamondTextures.Sparkle);sprite.anchor.set(.5,.5);this.judgeGlow.addChild(sprite);this.lineDiamonds.push(sprite);}
   for(let i=0;i<32;i++){const sprite=new P.Sprite(this.diamondTextures.Diamond);sprite.anchor.set(.5,.5);sprite.visible=false;this.diamondBurst.addChild(sprite);this.burstPool.push(sprite);}
  }
@@ -132,6 +146,11 @@ export class Stage{
  drawDiamondBurst(spark,now,grade,index){
   const a=clamp((now-spark.t)/.24,0,1),[x,y]=project(spark.lane,1);
   const perfect=grade==='PERFECT',gain=perfect?1:grade==='GREAT'?.48:.62,count=perfect?8:6;
+  const halo=this.haloPool[clamp(Math.round(spark.lane),0,3)];
+  halo.visible=a<1;halo.position.set(x,y);halo.rotation=0;
+  const expansion=1-Math.pow(1-a,3);
+  halo.width=project(spark.lane,1)[2]*(.57+.43*expansion);halo.height=halo.width*2/3;
+  halo.alpha=gain*Math.min(1,(now-spark.t)/.025)*Math.pow(1-a,1.35)*.82;
   for(let i=0;i<count&&index<this.burstPool.length;i++){
    const s=this.burstPool[index++],side=i%2?1:-1,spread=16+Math.floor(i/2)*10;
    s.visible=a<1;s.position.set(x+side*spread*(1-Math.pow(1-a,2)),y-(10+i%4*6)*Math.sin(a*Math.PI*.75));
@@ -165,10 +184,10 @@ export class Stage{
   }
   this.resetJudgment();
  }
- resetJudgment(){this.wasHeld.fill(0);this.releasedAt.fill(-Infinity);this.sparkGrades=new WeakMap();for(const sprite of this.burstPool)sprite.visible=false;}
+ resetJudgment(){this.wasHeld.fill(0);this.releasedAt.fill(-Infinity);this.sparkGrades=new WeakMap();for(const sprite of this.burstPool)sprite.visible=false;for(const sprite of this.haloPool)sprite.visible=false;}
  drawJudgment(engine,now,effects){
   if(this.judgeEngine!==engine||now<this.judgeNow){this.resetJudgment();this.judgeEngine=engine;}
-  this.judgeNow=now;this.lineGlow.visible=effects;this.drawDiamondLine(now,effects);this.diamondBurst.visible=effects;for(const sprite of this.burstPool)sprite.visible=false;
+  this.judgeNow=now;this.lineGlow.visible=effects;this.drawDiamondLine(now,effects);this.diamondBurst.visible=effects;for(const sprite of this.burstPool)sprite.visible=false;for(const sprite of this.haloPool)sprite.visible=false;
   const h=this.inputHighlight;h.clear();this.held.fill(0);
   for(const contact of engine.contacts()){
    const lane=typeof contact==='number'?contact:contact.lane;
