@@ -149,7 +149,7 @@ export class Stage{
   const halo=this.haloPool[clamp(Math.round(spark.lane),0,3)];
   halo.visible=a<1;halo.position.set(x,y);halo.rotation=0;
   const expansion=1-Math.pow(1-a,3);
-  halo.width=project(spark.lane,1)[2]*(.57+.43*expansion);halo.height=halo.width*2/3;
+  halo.width=project(spark.lane,1)[2]*(1.65+.65*expansion);halo.height=halo.width*2/3;
   halo.alpha=gain*Math.min(1,(now-spark.t)/.025)*Math.pow(1-a,1.35)*.82;
   for(let i=0;i<count&&index<this.burstPool.length;i++){
    const s=this.burstPool[index++],side=i%2?1:-1,spread=16+Math.floor(i/2)*10;
