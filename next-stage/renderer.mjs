@@ -56,7 +56,45 @@ export class Stage{
  r.moveTo(x-w*.3,y).lineTo(x+w*.3,y).stroke({color:0xffffff,alpha:.28,width:1.5});
  }
  }
- theme(accent){this.accent=color(accent);const g=this.track;g.clear();g.poly([257,110,543,110,776,427,24,427]).fill({color:0x000007,alpha:.5});for(let i=0;i<64;i++){let a=i/64,b=(i+1)/64,[x,y,w]=project(-.5,a),[xx,yy,ww]=project(-.5,b);g.poly([x,y,x+w*4,y,xx+ww*4,yy,xx,yy]).fill({color:0x151c39,alpha:.55+.35*b});}for(let lane=0;lane<4;lane++){let [x,y,w]=project(lane,0),[xx,yy,ww]=project(lane,1);if(lane%2)g.poly([x-w/2,y,x+w/2,y,xx+ww/2,yy,xx-ww/2,yy]).fill({color:0x9982e9,alpha:.035});}for(let i=0;i<=4;i++){let [x,y]=project(i-.5,0),[xx,yy]=project(i-.5,1);g.moveTo(x,y).lineTo(xx,yy).stroke({color:i===0||i===4?this.accent:0xa2a8c9,width:i===0||i===4?1.6:.7,alpha:i===0||i===4?.7:.23});}this.themeJudgment(accent);}
+ theme(accent){
+  this.accent=color(accent);const g=this.track;g.clear();
+  // Static glass surface: equal screen-height strips avoid a dense horizon mesh.
+  // Alpha stays below one so the existing stage background remains visible.
+  const point=(lane,q)=>project(lane,Math.pow(q,1/1.55));
+  g.poly([38,410,762,410,775,427,25,427]).fill({color:0x080c20,alpha:.32});
+  for(let i=0;i<32;i++){
+   const q=i/32,z=(i+1)/32,[x,y,w]=point(-.5,q),[xx,yy,ww]=point(-.5,z);
+   const tint=color([Math.round(12+13*z),Math.round(16+12*z),Math.round(35+19*z)]);
+   g.poly([x,y,x+w*4,y,xx+ww*4,yy,xx,yy]).fill({color:tint,alpha:.78-.15*z});
+   // Broad, low-opacity side reflections; the central note field stays quiet.
+   for(const side of [0,1]){
+    const l=side?3.04:-.5,r=side?3.5:-.04;
+    const [lx,ly]=point(l,q),[rx]=point(r,q),[ll,by]=point(l,z),[rr]=point(r,z);
+    g.poly([lx,ly,rx,ly,rr,by,ll,by]).fill({color:side?0xb3a0ef:this.accent,alpha:.012+.028*z*z});
+   }
+  }
+  // Gentle lane shading reads as one surface, never alternating opaque stripes.
+  for(let lane=0;lane<4;lane++){
+   const [x,y,w]=project(lane,0),[xx,yy,ww]=project(lane,1);
+   g.poly([x-w/2,y,x+w/2,y,xx+ww/2,yy,xx-ww/2,yy]).fill({color:lane<2?0x9bc9d9:0xbaa4eb,alpha:lane===0||lane===3?.018:.009});
+  }
+  // Shared projection puts all three dividers on the exact note-lane boundaries.
+  for(let edge=0;edge<=4;edge++)for(let i=0;i<12;i++){
+   const q=i/12,z=(i+1)/12,[x,y]=point(edge-.5,q),[xx,yy]=point(edge-.5,z),outer=edge===0||edge===4;
+   if(outer){
+    g.moveTo(x,y).lineTo(xx,yy).stroke({color:0xaaa0ef,width:5,alpha:.014+.023*z});
+    g.moveTo(x,y).lineTo(xx,yy).stroke({color:0xd6e4ff,width:.65+.55*z,alpha:.12+.36*z});
+    const inward=edge===0?1:-1;
+    g.moveTo(x+inward*2,y).lineTo(xx+inward*2,yy).stroke({color:this.accent,width:1.8,alpha:.014+.045*z});
+   }else g.moveTo(x,y).lineTo(xx,yy).stroke({color:0xaeb7d7,width:.6+.35*z,alpha:.055+.15*z});
+  }
+  // Sparse near-floor etching, stationary and much dimmer than beat guides.
+  for(const q of [.48,.66,.84])for(const lane of [0,3]){
+   const [x,y,w]=point(lane,q),r=1.2+q;
+   g.poly([x,y-r,x+r,y,x,y+r,x-r,y]).stroke({color:0xc4b6ed,width:.6,alpha:.045});
+  }
+  this.themeJudgment(accent);
+ }
 
 
  // All judgment geometry derives from the same projection as note arrival.
@@ -229,7 +267,7 @@ export class Stage{
   }
  }
  head(kind,lane,time,now,approach,index){const p=1-(time-now)/approach;if(p<0||p>1.08)return index;let s=this.pool[index];if(!s){s=new P.Sprite(this.textures[kind]);s.anchor.set(.5,82/96);this.heads.addChild(s);this.pool.push(s);}s.texture=this.textures[kind];let [x,y,w]=project(lane,p);s.position.set(x,y);s.width=w*.89;s.height=36+26*Math.pow(clamp(p,0,1),1.55);s.visible=true;return index+1;}
- draw(engine,now,approach,bpm,offset,effects=true){const grid=this.grid,r=this.ribbon,fx=this.fx;grid.clear();r.clear();fx.clear();const beat=60/bpm,start=Math.ceil((now-offset)/beat);for(let k=start;k<start+Math.ceil(approach/beat)+1;k++){let p=1-(offset+k*beat-now)/approach;if(p<0||p>1)continue;let [x,y,w]=project(-.5,p);grid.moveTo(x,y).lineTo(x+w*4,y).stroke({color:0xe2ecff,alpha:.04+p*.12,width:.6+p*.5});}this.drawJudgment(engine,now,effects);
+ draw(engine,now,approach,bpm,offset,effects=true){const grid=this.grid,r=this.ribbon,fx=this.fx;grid.clear();r.clear();fx.clear();const beat=60/bpm,start=Math.ceil((now-offset)/beat);for(let k=start;k<start+Math.ceil(approach/beat)+1;k++){let p=1-(offset+k*beat-now)/approach;if(p<0||p>1)continue;let [x,y,w]=project(-.5,p);grid.moveTo(x,y).lineTo(x+w*4,y).stroke({color:0xaabbd8,alpha:.025+p*.085,width:.55+p*.3});}this.drawJudgment(engine,now,effects);
 
  const visible=this.visible??=[];visible.length=0;
  for(const n of engine.active)if(!n.hit)visible.push(n);
