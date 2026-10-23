@@ -3,11 +3,12 @@ import {SettingsMotion} from './settings-motion.mjs';
 import {PlayHUD} from './play-hud.mjs';
 import {albumArt} from './covers.mjs';
 import {Engine,rank,clamp} from './core.mjs';
-import {Stage} from './renderer.mjs?v=20261022-track';
+import {Stage} from './renderer.mjs?v=20261023-note-skin';
 const $=id=>document.getElementById(id),audio=window.rhythmAudio;
 const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback;}catch{return fallback;}};
 const save=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value));}catch{toast('이 브라우저에서는 기록을 저장할 수 없습니다.');}};
-let settings={volume:.8,speed:1,flick:true,effects:!matchMedia('(prefers-reduced-motion: reduce)').matches,...read('rhythm-next-settings',{})};
+let settings={longOpacity:.7,volume:.8,speed:1,flick:true,effects:!matchMedia('(prefers-reduced-motion: reduce)').matches,...read('rhythm-next-settings',{})};
+settings.longOpacity=clamp(Number.isFinite(Number(settings.longOpacity))?Number(settings.longOpacity):.7,.1,1);
 settings.volume=clamp(Number(settings.volume)||0,0,1);if(![.75,.9,1,1.15,1.3,1.5,1.75,2].includes(settings.speed))settings.speed=1;
 let favorites=new Set(read('rhythm-next-favorites',[])),records=read('rhythm-next-records',{}),songs=[],selected=0,level='hard',length='verse',view='all',state='HOME',engine=null,data=null,stage=null,stagePromise=null,practice=false,generation=0,lastHud=0,lastGrade='',lastCombo=0;
 const motionPreference=matchMedia('(prefers-reduced-motion: reduce)');
@@ -33,8 +34,9 @@ for(const [id,delta] of [['songs-prev',-1],['songs-next',1]])$(id).onclick=()=>{
 $('search').addEventListener('input',renderLibrary);$('sort').addEventListener('change',renderLibrary);document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{view=b.dataset.view;renderLibrary();});
 document.querySelectorAll('[data-level]').forEach(b=>b.onclick=()=>{level=b.dataset.level;renderDetail(false);});document.querySelectorAll('[data-length]').forEach(b=>b.onclick=()=>{length=b.dataset.length;renderDetail(false);});
 $('favorite').onclick=()=>{favorites.has(selected)?favorites.delete(selected):favorites.add(selected);save('rhythm-next-favorites',[...favorites]);renderDetail(false);renderLibrary();};
-function applySettings(){audio.volume=settings.volume;$('volume').value=settings.volume*100;$('volume-value').textContent=Math.round(settings.volume*100)+'%';$('speed').value=settings.speed;$('flick').checked=settings.flick;$('effects').checked=settings.effects;document.body.classList.toggle('reduced',!visualEffects());}
+function applySettings(){$('long-opacity').value=settings.longOpacity*100;$('long-opacity-value').textContent=Math.round(settings.longOpacity*100)+'%';audio.volume=settings.volume;$('volume').value=settings.volume*100;$('volume-value').textContent=Math.round(settings.volume*100)+'%';$('speed').value=settings.speed;$('flick').checked=settings.flick;$('effects').checked=settings.effects;document.body.classList.toggle('reduced',!visualEffects());}
 for(const key of ['volume','speed','flick','effects'])$(key).addEventListener('input',()=>{settings[key]=key==='volume'?Number($(key).value)/100:key==='speed'?Number($(key).value):$(key).checked;if(key==='flick'&&state==='PAUSED'){engine.setFlick(settings.flick);audio.clearInput();}applySettings();save('rhythm-next-settings',settings);});
+$('long-opacity').addEventListener('input',()=>{settings.longOpacity=clamp(Number($('long-opacity').value)/100,.1,1);applySettings();save('rhythm-next-settings',settings);});
 const settingsMotion=new SettingsMotion($('settings'),()=>!settings.effects||matchMedia('(prefers-reduced-motion: reduce)').matches);
 const exitSettings=()=>settingsMotion.exit(()=>state==='PAUSED'?resume():$('settings').close());
 $('settings').addEventListener('cancel',e=>{e.preventDefault();exitSettings();});
@@ -59,7 +61,7 @@ function finish(failed=false){state='RESULT';audio.setInputEnabled(false);audio.
 let mouseHeld=false;function mouseEvent(e,action){if(e.pointerType!=='mouse'||state!=='PLAY')return;const rect=$('canvas').getBoundingClientRect(),x=(e.clientX-rect.left)*800/rect.width,y=(e.clientY-rect.top)*480/rect.height;if(action==='down'){mouseHeld=true;try{$('canvas').setPointerCapture(e.pointerId);}catch{}}if(mouseHeld)audio.queueInput(['pointer',action,'mouse',x,y,audio.eventTime(e)]);if(action==='up'||action==='cancel')mouseHeld=false;}
 $('stage-host').addEventListener('pointerdown',e=>mouseEvent(e,'down'));window.addEventListener('pointermove',e=>mouseEvent(e,'move'));window.addEventListener('pointerup',e=>mouseEvent(e,'up'));window.addEventListener('pointercancel',e=>mouseEvent(e,'cancel'));
 function frame(stamp){frameRequest=0;if(['HOME','RESULT','PAUSED'].includes(state))return;scheduleFrame();if(state==='CLEAR'){const elapsed=(stamp-clearStarted)/1000;audio.volume=settings.volume*(1-clamp((elapsed-1.25)/.85,0,1));if(elapsed>=2.1){$('count-in').classList.remove('celebration');finish();}return;}if(state==='LOADING'){if($('retry-load').hidden)transitions.load(audio.status,audio.progress);return;}if(state!=='PLAY'&&state!=='COUNTDOWN')return;let now=audio.currentTime;if(state==='COUNTDOWN'){let until=-now-data.lead;transitions.countdown(until>0?Math.max(1,Math.ceil(until/(data.countdown/4))):'GO',visualEffects());if(until<=0){state='PLAY';$('count-in').hidden=true;audio.setInputEnabled(true);}}
- const approach=.55/settings.speed;engine.step(now,state==='PLAY'?JSON.parse(audio.drainInput()):[],approach);stage.draw(engine,now,approach,data.bpm,data.offset,visualEffects());if(stamp-lastHud>33){lastHud=stamp;hud.update(engine,now,data.duration,visualEffects());}
+ const approach=.55/settings.speed;engine.step(now,state==='PLAY'?JSON.parse(audio.drainInput()):[],approach);stage.longOpacity=settings.longOpacity;stage.draw(engine,now,approach,data.bpm,data.offset,visualEffects());if(stamp-lastHud>33){lastHud=stamp;hud.update(engine,now,data.duration,visualEffects());}
  if(engine.hp<=0&&!practice)finish(true);else if(now>data.duration+.35){if(engine.total>0&&engine.counts.PERFECT===engine.total){state='CLEAR';clearStarted=stamp;audio.setInputEnabled(false);$('count-in').textContent='ALL PERFECT';$('count-in').classList.add('celebration');$('count-in').hidden=false;}else finish();}}
 motionPreference.addEventListener('change',applySettings);
 applySettings();$('start').disabled=true;$('practice').disabled=true;

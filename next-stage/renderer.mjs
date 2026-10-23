@@ -1,39 +1,14 @@
+import {noteTexture} from './note-skin.mjs';
+import {NOTE_PALETTE} from './note-palette.mjs';
 import {project,clamp} from './core.mjs';
 const P=globalThis.PIXI;
 const color=c=>(c[0]<<16)+(c[1]<<8)+c[2];
 export class Stage{
- async init(host){this.app=new P.Application();await this.app.init({width:800,height:480,resolution:Math.min(devicePixelRatio||1,2),autoDensity:true,antialias:true,backgroundAlpha:0,autoStart:false,preference:'webgl'});this.app.canvas.id='canvas';this.app.canvas.setAttribute('aria-label','4레인 리듬게임 플레이 영역');host.append(this.app.canvas);this.track=new P.Graphics();this.grid=new P.Graphics();this.ribbon=new P.Graphics();this.heads=new P.Container();this.fx=new P.Graphics();this.initJudgment();this.app.stage.addChild(this.track,this.grid,this.judgeGlow,this.ribbon,this.heads,this.judgeHighlight,this.inputHighlight,this.fx,this.diamondBurst);this.pool=[];this.textures={};for(const [name,c]of Object.entries({TAP:'#66e9d2',FLICK:'#ff69b5',HOLD:'#a5efb0',SLIDE:'#b596ff'}))this.textures[name]=this.texture(c,name==='FLICK');this.theme([102,233,210]);}
- // Four immutable, double-density textures; no filters or per-frame canvases.
- texture(tint,flick){
- const c=document.createElement('canvas');c.width=512;c.height=192;
- const x=c.getContext('2d');x.scale(2,2);
- x.shadowColor=tint;x.shadowBlur=4;
- x.fillStyle=flick?'#893057':'#244f60';
- x.beginPath();x.roundRect(6,42,244,40,4);x.fill();x.shadowBlur=0;
- const g=x.createLinearGradient(0,44,0,81);
- g.addColorStop(0,'#f8ffff');g.addColorStop(.14,tint);
- g.addColorStop(.43,tint);g.addColorStop(.5,'#f5ffff');
- g.addColorStop(.65,tint);g.addColorStop(1,'#557c91');
- x.fillStyle=g;x.beginPath();x.roundRect(8,44,240,36,3);x.fill();
- x.strokeStyle=tint;x.lineWidth=1;x.stroke();
- const band=x.createLinearGradient(12,0,244,0);
- band.addColorStop(0,'#ffffff88');band.addColorStop(.2,'#ffffff');
- band.addColorStop(.8,'#ffffff');band.addColorStop(1,'#ffffff88');
- x.fillStyle=band;x.fillRect(13,57,230,7);
- x.fillStyle='#ffffffeb';x.fillRect(13,45,230,2);
- x.fillStyle='#10233770';x.fillRect(13,77,230,2);
- x.fillStyle='#ffffffb0';x.fillRect(12,48,3,22);x.fillRect(241,48,3,22);
- if(flick){
- x.lineJoin='round';x.lineWidth=5;x.strokeStyle='#79264f';x.fillStyle='#fffafd';
- x.beginPath();x.moveTo(82,33);x.lineTo(128,5);x.lineTo(174,33);
- x.lineTo(158,38);x.lineTo(128,21);x.lineTo(98,38);x.closePath();x.stroke();x.fill();
- }
- return P.Texture.from(c);
- }
+ async init(host){this.app=new P.Application();await this.app.init({width:800,height:480,resolution:Math.min(devicePixelRatio||1,2),autoDensity:true,antialias:true,backgroundAlpha:0,autoStart:false,preference:'webgl'});this.app.canvas.id='canvas';this.app.canvas.setAttribute('aria-label','4레인 리듬게임 플레이 영역');host.append(this.app.canvas);this.track=new P.Graphics();this.grid=new P.Graphics();this.ribbon=new P.Graphics();this.heads=new P.Container();this.fx=new P.Graphics();this.initJudgment();this.app.stage.addChild(this.track,this.grid,this.judgeGlow,this.ribbon,this.heads,this.judgeHighlight,this.inputHighlight,this.fx,this.diamondBurst);this.pool=[];this.textures={};for(const name of ['TAP','FLICK','HOLD','SLIDE'])this.textures[name]=noteTexture(P,name);this.previewTextures={CRITICAL:noteTexture(P,'TAP',true),CRITICAL_FLICK:noteTexture(P,'FLICK',true),TRACE:noteTexture(P,'TRACE')};this.longOpacity=.7;this.theme([102,233,210]);}
  // Sample the judge's exact path. One continuous fill avoids segment seams.
  drawRibbon(n,a,b,now,approach,effects){
  const r=this.ribbon,pts=this.ribbonPoints??=(new Float64Array(75));
- const c=n.type==='HOLD'?0xa5efb0:0xb596ff;
+ const c=Number(NOTE_PALETTE[n.type].body.replace('#','0x')),opacity=this.longOpacity??.7;
  for(let i=0;i<=24;i++){
  const t=a+(b-a)*i/24,l=n.type==='SLIDE'?n.judge.position(t):n.lane;
  const [x,y,w]=project(l,1-(t-now)/approach);
@@ -43,13 +18,13 @@ export class Stage{
  r.moveTo(pts[0]-pts[2]*fraction,pts[1]);
  for(let i=1;i<=24;i++)r.lineTo(pts[i*3]-pts[i*3+2]*fraction,pts[i*3+1]);
  for(let i=24;i>=0;i--)r.lineTo(pts[i*3]+pts[i*3+2]*fraction,pts[i*3+1]);
- r.closePath().fill({color:c,alpha});
+ r.closePath().fill({color:c,alpha:alpha*opacity});
  };
- strip(.38,n.active?.24:.16);strip(.22,n.active?.09:.055);
+ if(effects)strip(.41,.045);strip(.38,n.active?.34:.23);strip(.24,n.active?.16:.10);strip(.025,n.active?.13:.07);
  for(const side of [-1,1]){
  r.moveTo(pts[0]+side*pts[2]*.38,pts[1]);
  for(let i=1;i<=24;i++)r.lineTo(pts[i*3]+side*pts[i*3+2]*.38,pts[i*3+1]);
- r.stroke({color:c,width:1.25,alpha:n.active?.9:.72});
+ r.stroke({color:c,width:1.25,alpha:(n.active?.9:.72)*opacity});
  }
  if(effects&&n.active){
  const t=a+((now*.45)%1)*(b-a),[x,y,w]=project(n.judge.position(t),1-(t-now)/approach);
@@ -194,6 +169,7 @@ export class Stage{
    s.visible=a<1;s.position.set(x+side*spread*(1-Math.pow(1-a,2)),y-(10+i%4*6)*Math.sin(a*Math.PI*.75));
    s.texture=i%3===1?this.diamondTextures.Shard:this.diamondTextures.Diamond;
    const size=(8+(i%3)*1.6)*(1-a*.35);s.width=size;s.height=size*1.5;
+   s.tint=spark.color===0xff69b5?0xffb3d1:0xd9fff7;
    s.rotation=side*(.12+a*(i%3===1?1.2:.7));s.alpha=gain*this.diamondPulse(now-spark.t)*.9;
   }
   return index;
@@ -206,7 +182,7 @@ export class Stage{
   for(const [width,alpha] of [[28,.025],[22,.03],[16,.065],[13,.08]])
    g.moveTo(left,y).lineTo(right,y).stroke({color:this.judgeColor,width,alpha});
   const body=this.lineBody;body.clear();
-  body.moveTo(left,y).lineTo(right,y).stroke({color:0xc1b3f5,width:9,alpha:.72});
+  body.moveTo(left,y).lineTo(right,y).stroke({color:0xd6c6ff,width:9,alpha:.72});
   body.moveTo(left,y+2).lineTo(right,y+2).stroke({color:this.judgeColor,width:4,alpha:.42});
   for(let i=0;i<16;i++){
    const x=left+(right-left)*i/16,step=(right-left)/16;
