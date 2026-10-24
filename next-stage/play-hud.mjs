@@ -1,14 +1,34 @@
 // Read-only presentation adapter. No input listeners or simulation mutations.
 export class PlayHUD {
- constructor(root=document){this.el={};for(const id of ['score','life','life-fill','life-number','song-progress','play-time','combo','judgment'])this.el[id]=root.getElementById(id);this.number=this.el.combo.querySelector('b');this.keys=[...root.querySelectorAll('.lane-keys span')];this.cache={};this.animations={};}
+ constructor(root=document){this.el={};for(const id of ['score','life','life-fill','life-number','life-flash','song-progress','play-time','combo','judgment'])this.el[id]=root.getElementById(id);this.number=this.el.combo.querySelector('b');this.keys=[...root.querySelectorAll('.lane-keys span')];this.cache={};this.animations={};}
  write(key,value,fn){if(this.cache[key]!==value){this.cache[key]=value;fn(value);}}
  pulse(key,el,frames,duration,effects){this.animations[key]?.cancel();if(effects)this.animations[key]=el.animate(frames,{duration,easing:'cubic-bezier(.2,.8,.2,1)'});}
  reset(){for(const a of Object.values(this.animations))a.cancel();this.cache={};this.el.judgment.textContent='';this.el.combo.hidden=true;}
  update(engine,now,duration,effects){
  const e=this.el;
- this.write('score',engine.score,v=>e.score.textContent=String(v).padStart(6,'0').replace(/\B(?=(\d{3})+(?!\d))/g,','));
+ const previousScore=this.cache.score;
+ this.write('score-effects',Boolean(effects),v=>{if(!v)this.animations.score?.cancel();});
+ this.write('score',engine.score,v=>{
+  e.score.textContent=String(v).padStart(6,'0').replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  if(previousScore!==undefined&&v>previousScore)this.pulse('score',e.score,[{transform:'scale(1.025)',opacity:.92},{transform:'scale(1)',opacity:1}],100,effects);
+  else this.animations.score?.cancel();
+ });
  const hp=Math.max(0,Math.min(100,engine.hp));
- this.write('hp',hp,v=>{e.life.value=v;e['life-fill'].style.transform=`scaleX(${v/100})`;e['life-number'].textContent=Math.ceil(v);});
+ const block=e.life.closest('.life-block'),previous=this.cache.hp;
+ this.write('life-effects',Boolean(effects),v=>{block.dataset.motion=v?'on':'off';if(!v)this.animations.life?.cancel();});
+ this.write('hp',hp,v=>{
+  e.life.value=v;e['life-number'].textContent=Math.ceil(v);
+  const rising=previous!==undefined&&v>previous;
+  block.dataset.change=rising?'recover':'damage';
+  e['life-fill'].style.transform=`scaleX(${v/100})`;
+  this.animations.life?.cancel();
+  const flash=e['life-flash'];
+  if(flash&&effects&&previous!==undefined&&v>0&&v!==previous){
+   flash.style.transform=`translateX(${Math.min(previous,v)}%) scaleX(${Math.abs(v-previous)/100})`;
+   this.animations.life=flash.animate([{opacity:rising?.65:.45},{opacity:0}],{duration:rising?200:160,easing:'ease-out'});
+  }
+ });
+ this.write('caution',hp>25&&hp<=50,v=>block.classList.toggle('caution',v));
  this.write('danger',hp<=25,v=>e.life.closest('.life-block').classList.toggle('danger',v));
  this.write('progress',Math.round(Math.max(0,Math.min(1,now/duration))*1000),v=>e['song-progress'].value=v/1000);
  const format=t=>`${Math.floor(t/60).toString().padStart(2,'0')}:${(t%60).toString().padStart(2,'0')}`;

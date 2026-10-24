@@ -1,6 +1,6 @@
 import {TransitionUI,resultTheme} from './transitions-ui.mjs';
 import {SettingsMotion} from './settings-motion.mjs';
-import {PlayHUD} from './play-hud.mjs';
+import {PlayHUD} from './play-hud.mjs?v=20261024-score';
 import {albumArt} from './covers.mjs';
 import {Engine,rank,clamp} from './core.mjs';
 import {Stage} from './renderer.mjs?v=20261023-note-skin';
