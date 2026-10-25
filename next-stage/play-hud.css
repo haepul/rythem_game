@@ -98,3 +98,6 @@ body.reduced #play #score{transform:none!important;opacity:1!important}
 @media(prefers-reduced-motion:reduce){#play #combo b{transform:none!important;opacity:1!important}}
 body.reduced #play #combo b{transform:none!important;opacity:1!important}
 @media(forced-colors:active){#play #combo b,#play #combo small{background:none;color:CanvasText;-webkit-text-fill-color:CanvasText;-webkit-text-stroke:0;filter:none;text-shadow:none}}
+
+#play #score-rank-summary{display:block;font:700 clamp(6px,.75cqw,10px)/1.2 Arial,sans-serif;letter-spacing:0;color:#cce9ed;margin-top:2px;white-space:nowrap;text-shadow:0 1px 2px #15152c}
+@media(forced-colors:active){#play #score-rank-summary{color:CanvasText;text-shadow:none}}

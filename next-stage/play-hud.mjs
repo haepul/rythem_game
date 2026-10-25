@@ -1,9 +1,14 @@
 // Read-only presentation adapter. No input listeners or simulation mutations.
 // Maximum is the sum of PERFECT awards (200 + combo * 10), including sustain ticks.
+export const SCORE_RANK_STEPS=Object.freeze({C:.45,B:.60,A:.75,S:.90});
 export function scoreRank(score,total){
- const maximum=total>0?200*total+5*total*(total+1):0;
- const ratio=maximum?Math.max(0,Math.min(1,score/maximum)):0;
- return {ratio,maximum,rank:ratio>=.9?'S':ratio>=.75?'A':ratio>=.6?'B':ratio>=.45?'C':'D'};
+ const candidate=Number.isSafeInteger(total)&&total>0?200*total+5*total*(total+1):0;
+ const valid=Number.isSafeInteger(candidate)&&candidate>0;
+ const maximum=valid?candidate:0;
+ const current=Number.isFinite(score)?Math.max(0,score):0;
+ const ratio=maximum?Math.min(1,current/maximum):0;
+ const targets=Object.fromEntries(Object.entries(SCORE_RANK_STEPS).map(([rank,fraction])=>[rank,Math.ceil(maximum*fraction)]));
+ return {ratio,maximum,valid,targets,percent:ratio===1?'100%':`${Math.floor(ratio*1000)/10}%`,rank:!valid?'D':ratio>=SCORE_RANK_STEPS.S?'S':ratio>=SCORE_RANK_STEPS.A?'A':ratio>=SCORE_RANK_STEPS.B?'B':ratio>=SCORE_RANK_STEPS.C?'C':'D'};
 }
 export class PlayHUD {
  constructor(root=document){this.el={};for(const id of ['score','life','life-fill','life-number','life-flash','song-progress','play-time','combo','judgment'])this.el[id]=root.getElementById(id);this.number=this.el.combo.querySelector('b');this.keys=[...root.querySelectorAll('.lane-keys span')];this.cache={};this.animations={};}
@@ -12,8 +17,16 @@ export class PlayHUD {
  reset(){for(const a of Object.values(this.animations))a.cancel();this.cache={};this.el.judgment.textContent='';this.el.combo.hidden=true;}
  update(engine,now,duration,effects){
  const e=this.el;
- if(this.rankRoot===undefined){this.rankRoot=e.score.closest?.('.score-block');this.rankLetter=this.rankRoot?.querySelector('#score-rank');this.rankFill=this.rankRoot?.querySelector('#score-rank-fill');this.rankProgress=this.rankRoot?.querySelector('#score-rank-progress');}
- if(this.rankLetter){const r=scoreRank(engine.score,engine.total);this.write('score-rank',r.rank,v=>{this.rankLetter.textContent=v;this.rankRoot.dataset.rank=v;});this.write('score-ratio',r.ratio,v=>{this.rankFill.style.transform=`scaleX(${v})`;this.rankProgress.value=v;});}
+ if(this.rankRoot===undefined){this.rankRoot=e.score.closest?.('.score-block');this.rankLetter=this.rankRoot?.querySelector('#score-rank');this.rankFill=this.rankRoot?.querySelector('#score-rank-fill');this.rankProgress=this.rankRoot?.querySelector('#score-rank-progress');this.rankSummary=this.rankRoot?.querySelector('#score-rank-summary');if(this.rankRoot)for(const marker of this.rankRoot.querySelectorAll('.score-rank-track i'))marker.style.setProperty('--step',`${SCORE_RANK_STEPS[marker.textContent]*100}%`);}
+ if(this.rankLetter){
+  this.write('score-rank-state',`${engine.score}/${engine.total}`,()=>{
+   const r=scoreRank(engine.score,engine.total);this.rankLetter.textContent=r.rank;this.rankRoot.dataset.rank=r.rank;this.rankFill.style.transform=`scaleX(${r.ratio})`;this.rankProgress.value=r.ratio;
+   const summary=r.valid?`MAX ${r.maximum.toLocaleString('en-US')} · ${r.percent}`:'MAX — · 계산 불가';
+   if(this.rankSummary)this.rankSummary.textContent=summary;
+   this.rankProgress.setAttribute('aria-valuetext',r.valid?`${r.percent}, 최대 점수 ${r.maximum}`:'유효한 총 판정 수 없음');
+   this.rankRoot.title=r.valid?`전체 채보 최대 점수 ${r.maximum.toLocaleString('en-US')} 대비 ${r.percent}. 콤보 보너스로 후반 점수 비중이 높습니다.\n${Object.entries(r.targets).map(([rank,score])=>`${rank}: ${score.toLocaleString('en-US')}`).join(' / ')}`:'총 판정 수가 없거나 유효하지 않아 점수 달성률을 계산할 수 없습니다.';
+  });
+ }
  const previousScore=this.cache.score;
  this.write('score-effects',Boolean(effects),v=>{if(!v)this.animations.score?.cancel();});
  this.write('score',engine.score,v=>{
