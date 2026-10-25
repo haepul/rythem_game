@@ -1,4 +1,10 @@
 // Read-only presentation adapter. No input listeners or simulation mutations.
+// Maximum is the sum of PERFECT awards (200 + combo * 10), including sustain ticks.
+export function scoreRank(score,total){
+ const maximum=total>0?200*total+5*total*(total+1):0;
+ const ratio=maximum?Math.max(0,Math.min(1,score/maximum)):0;
+ return {ratio,maximum,rank:ratio>=.9?'S':ratio>=.75?'A':ratio>=.6?'B':ratio>=.45?'C':'D'};
+}
 export class PlayHUD {
  constructor(root=document){this.el={};for(const id of ['score','life','life-fill','life-number','life-flash','song-progress','play-time','combo','judgment'])this.el[id]=root.getElementById(id);this.number=this.el.combo.querySelector('b');this.keys=[...root.querySelectorAll('.lane-keys span')];this.cache={};this.animations={};}
  write(key,value,fn){if(this.cache[key]!==value){this.cache[key]=value;fn(value);}}
@@ -6,6 +12,8 @@ export class PlayHUD {
  reset(){for(const a of Object.values(this.animations))a.cancel();this.cache={};this.el.judgment.textContent='';this.el.combo.hidden=true;}
  update(engine,now,duration,effects){
  const e=this.el;
+ if(this.rankRoot===undefined){this.rankRoot=e.score.closest?.('.score-block');this.rankLetter=this.rankRoot?.querySelector('#score-rank');this.rankFill=this.rankRoot?.querySelector('#score-rank-fill');this.rankProgress=this.rankRoot?.querySelector('#score-rank-progress');}
+ if(this.rankLetter){const r=scoreRank(engine.score,engine.total);this.write('score-rank',r.rank,v=>{this.rankLetter.textContent=v;this.rankRoot.dataset.rank=v;});this.write('score-ratio',r.ratio,v=>{this.rankFill.style.transform=`scaleX(${v})`;this.rankProgress.value=v;});}
  const previousScore=this.cache.score;
  this.write('score-effects',Boolean(effects),v=>{if(!v)this.animations.score?.cancel();});
  this.write('score',engine.score,v=>{
@@ -33,7 +41,13 @@ export class PlayHUD {
  this.write('progress',Math.round(Math.max(0,Math.min(1,now/duration))*1000),v=>e['song-progress'].value=v/1000);
  const format=t=>`${Math.floor(t/60).toString().padStart(2,'0')}:${(t%60).toString().padStart(2,'0')}`;
  this.write('time',`${Math.floor(Math.max(0,now))}/${Math.floor(duration)}`,()=>e['play-time'].textContent=`${format(Math.floor(Math.max(0,now)))} / ${format(Math.floor(duration))}`);
- this.write('combo',engine.combo,v=>{e.combo.hidden=v<3;this.number.textContent=v;if(v>=3)this.pulse('combo',this.number,[{transform:'scale(1.14)'},{transform:'scale(1)'}],130,effects);});
+ this.write('combo-effects',Boolean(effects),v=>{if(!v)this.animations.combo?.cancel();});
+ this.write('combo',engine.combo,v=>{
+  e.combo.hidden=v<3;this.number.textContent=v;
+  this.write('combo-digits',Math.max(5,String(v).length),digits=>{this.number.style.setProperty('--combo-digits',String(digits));});
+  if(v>=3)this.pulse('combo',this.number,[{transform:'scale(1.08)',opacity:.94},{transform:'scale(1.015)',opacity:1,offset:.65},{transform:'scale(1)',opacity:1}],130,effects);
+  else this.animations.combo?.cancel();
+ });
  const visible=now-engine.feedbackAt>=0&&now-engine.feedbackAt<.42;
  this.write('feedback',visible?`${engine.feedbackAt}/${engine.feedback}`:'',()=>{e.judgment.textContent=visible?engine.feedback:'';e.judgment.dataset.grade=engine.feedback;if(visible)this.pulse('judgment',e.judgment,[{opacity:0,transform:'translateY(4px) scale(.95)'},{opacity:1,transform:'none',offset:.18},{opacity:1,offset:.65},{opacity:0,transform:'translateY(-3px)'}],420,effects);});
  let mask=0;for(const contact of engine.contacts()){const lane=typeof contact==='number'?contact:contact.lane;if(lane!==null)mask|=1<<Math.max(0,Math.min(3,Math.round(lane)));}

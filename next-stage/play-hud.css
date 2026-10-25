@@ -72,3 +72,29 @@ body.reduced #play #life-fill{transition:none}
 @media(forced-colors:active){#play .score-block{background:Canvas;border:1px solid CanvasText;box-shadow:none}#play #score,#play .score-block small{color:CanvasText;-webkit-text-stroke:0;text-shadow:none}}
 @media(prefers-reduced-motion:reduce){#play #score{transform:none!important;opacity:1!important}}
 body.reduced #play #score{transform:none!important;opacity:1!important}
+/* Horizontal score cluster: separate rank tile, milestone rail, outlined number. */
+#play .score-block{width:36%;padding:0;display:flex;flex-direction:row;align-items:stretch;gap:clamp(5px,.7cqw,10px);border:0;border-radius:0;background:none;box-shadow:none;flex-shrink:0}
+#play .score-rank-badge{width:17%;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(160deg,#44466cba,#24263a90);border-left:1px solid #b9c1ed55;color:#90a9ec}
+#play #score-rank{font:900 clamp(26px,4.7cqw,62px)/.95 Arial,sans-serif;text-shadow:0 2px 2px #13172a}
+#play .score-rank-badge small{font:800 clamp(4px,.48cqw,7px)/1.5 Arial,sans-serif;letter-spacing:0;white-space:nowrap;color:#c6d7ff}
+#play .score-readout{flex:1;min-width:0;position:relative;padding-top:clamp(2px,.3cqw,5px)}
+#play .score-caption{display:block;width:max-content;padding:0 5px;background:#40415c99;border-radius:3px 3px 0 0;font-size:clamp(8px,1.2cqw,15px);line-height:1;letter-spacing:.3px}
+#play .score-rank-track{height:clamp(9px,1.65cqw,22px);position:relative;border:clamp(2px,.35cqw,5px) solid #9495b477;border-radius:20px;background:#24273ac9;box-sizing:border-box;margin:1px 0 3px}
+#play #score-rank-fill{display:block;width:100%;height:100%;border-radius:10px;background:linear-gradient(90deg,#90ffd1 0%,#6ee9e2 62%,#ada5ff 100%);transform-origin:left;transform:scaleX(0)}
+#play .score-rank-track i{position:absolute;left:var(--step);top:0;height:100%;border-left:1px solid #fff;font:900 clamp(8px,1.35cqw,17px)/1 Arial,sans-serif;font-style:normal;color:white;text-shadow:0 1px 2px #24243d;display:flex;align-items:flex-end;padding-bottom:clamp(10px,1.65cqw,22px);box-sizing:content-box;transform:translateY(-1px)}
+#play .score-rank-track i:after{content:'';position:absolute;top:-3px;left:-3px;border:3px solid transparent;border-top-color:white}
+#play #score{font-size:clamp(16px,2.65cqw,35px);line-height:1;letter-spacing:.3px}
+#play #score-rank-progress{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+#play .score-block[data-rank=S] #score-rank{color:#ddc8ff}
+#play .score-block[data-rank=A] #score-rank{color:#96f0e0}
+@media(forced-colors:active){#play .score-rank-track{display:none}#play #score-rank-progress{position:static;width:100%;height:10px;opacity:1}#play .score-rank-badge{background:Canvas;color:CanvasText}#play #score-rank{color:CanvasText;text-shadow:none}}
+#play .score-rank-track i{top:calc(-1 * clamp(10px,1.5cqw,20px));height:auto;display:block;border:0;padding:0;transform:translateX(-50%);text-align:center;line-height:1}
+#play .score-rank-track i:after{top:100%;left:50%;width:1px;height:clamp(8px,1.3cqw,18px);background:#fff;border:0}
+/* COMBO: restrained lavender prism, stable five-digit footprint. */
+#play #combo{top:27%;right:1%;width:20%;align-items:center;gap:clamp(2px,.4cqw,5px);text-shadow:none;pointer-events:none}
+#play #combo b{display:block;width:100%;font:900 clamp(14px,calc(25cqw / var(--combo-digits,5)),62px)/1.06 Arial,sans-serif;font-variant-numeric:tabular-nums;font-feature-settings:'tnum';letter-spacing:-.5px;white-space:nowrap;transform-origin:center;color:#efdcff;-webkit-text-fill-color:#efdcff;-webkit-text-stroke:.7px #eadbfa;text-shadow:none;filter:drop-shadow(0 2px 1px #342448)}
+#play #combo small{margin:0;font:800 clamp(7px,1.1cqw,13px)/1.2 Arial,sans-serif;letter-spacing:1.5px;background:none;color:#c1f5ed;-webkit-text-fill-color:#c1f5ed;-webkit-text-stroke:0;filter:none;text-shadow:0 1px 2px #302440}
+@supports ((background-clip:text) or (-webkit-background-clip:text)){#play #combo b{background:linear-gradient(180deg,#ffffff 4%,#ffe5fa 24%,#e6c6ff 50%,#c9b5ff 72%,#b8f4f1 96%);background-clip:text;-webkit-background-clip:text;color:transparent;-webkit-text-fill-color:transparent}}
+@media(prefers-reduced-motion:reduce){#play #combo b{transform:none!important;opacity:1!important}}
+body.reduced #play #combo b{transform:none!important;opacity:1!important}
+@media(forced-colors:active){#play #combo b,#play #combo small{background:none;color:CanvasText;-webkit-text-fill-color:CanvasText;-webkit-text-stroke:0;filter:none;text-shadow:none}}
