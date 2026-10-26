@@ -1,0 +1,30 @@
+<!doctype html><meta charset="utf-8"><title>Judgment platform visual regression</title>
+<style>body{margin:0;background:#11182b;color:white;font:14px system-ui}nav{display:flex;gap:8px;flex-wrap:wrap;padding:8px}button,select{font:inherit}#host{width:min(100vw,calc((100dvh - 90px)*5/3));aspect-ratio:5/3;margin:auto;background:radial-gradient(at 80% 30%,#51306a,#15213d)}canvas{width:100%!important;height:100%!important;display:block}body.bright #host{background:linear-gradient(130deg,#faf0ff,#afd9e2)}output{display:block;text-align:center}</style>
+<nav><label>Scene <select id="scene"><option>notes</option><option>tap</option><option>flick</option><option>hold</option><option>slide</option><option>perfect</option><option>great</option><option>four</option><option>dense</option></select></label><label><input id="effects" type="checkbox" checked>Effects</label><label><input id="bright" type="checkbox">Bright backdrop (not MV)</label><button id="bench">Measure 240 frames</button></nav>
+<div id="host"></div><output id="status">Loading</output>
+<script src="../next-stage/vendor/pixi.min.js"></script>
+<script type="module">
+import {Stage} from '../next-stage/renderer.mjs?v=20261026-wide-deck';
+import {Engine} from '../next-stage/core.mjs';
+const stage=new Stage();await stage.init(document.querySelector('#host'));
+const $=id=>document.getElementById(id);let engine,now;
+const master=await (await fetch('../next-stage/data/21-master-full.json')).json();
+$('scene').add(new Option('master','master'));
+function scene(){
+ const name=$('scene').value;now=1;
+ if(name==='master'){now=183.00872050058055;engine=new Engine(master,true);engine.step(now);render();$('status').textContent='푸르름이 사는 곳 MASTER · 183.009s · actual chart, silent snapshot';return;}
+ let notes=[{type:'TAP',lane:0,time:1},{type:'FLICK',lane:1,time:1},{type:'HOLD',lane:2,time:1,end_time:1.45,tick_times:[1,1.3,1.45]},{type:'SLIDE',lane:3,end_lane:2,time:1,end_time:1.5,tick_times:[1,1.3,1.5]}];
+ if(['tap','flick','hold','slide'].includes(name))notes=notes.filter(n=>n.type===name.toUpperCase());
+ if(['perfect','great','four'].includes(name))notes=Array.from({length:name==='four'?4:1},(_,lane)=>({type:'TAP',lane:lane+ (name==='four'?0:1),time:1}));
+ if(name==='dense')notes=Array.from({length:48},(_,i)=>({type:i%5===0?'FLICK':'TAP',lane:i%4,time:1+i*.012}));
+ engine=new Engine({notes,total:notes.length},true);engine.step(.9);
+ if(['hold','slide'].includes(name)){const n=notes[0];engine.step(1,[['key','down',n.lane===2?'KeyJ':'KeyK',1]]);now=1.05;engine.step(now);}
+ else if(['perfect','great','four'].includes(name)){const t=name==='great'?1.1:1;engine.step(t,notes.map(n=>['key','down',['KeyD','KeyF','KeyJ','KeyK'][n.lane],t]));now=t+.055;}
+ else engine.step(now);
+ render();$('status').textContent=`${name} · ${engine.feedback||'arrival'} · score ${engine.score} · DPR ${devicePixelRatio}`;
+}
+function render(){stage.draw(engine,now,.55,165,0,$('effects').checked);}
+$('scene').onchange=scene;$('effects').onchange=render;$('bright').onchange=()=>{document.body.classList.toggle('bright',$('bright').checked);render();};
+$('bench').onclick=async()=>{const times=[],frames=[];let last;for(let i=0;i<260;i++){const stamp=await new Promise(requestAnimationFrame);const start=performance.now();render();if(i>=20){times.push(performance.now()-start);frames.push(stamp-last);}last=stamp;}times.sort((a,b)=>a-b);frames.sort((a,b)=>a-b);$('status').textContent=JSON.stringify({frames:240,renderP50:times[120],renderP95:times[228],frameP50:frames[120],frameP95:frames[228],dpr:devicePixelRatio});};
+scene();
+</script>

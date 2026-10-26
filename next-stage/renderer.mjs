@@ -76,7 +76,8 @@ export class Stage{
  initJudgment(){
   this.judgeGlow=new P.Container();this.lineGlow=new P.Graphics();
   this.judgeHighlight=new P.Graphics();this.inputHighlight=new P.Graphics();
-  this.lineBody=new P.Graphics();this.judgeGlow.addChild(this.lineGlow,this.lineBody);this.initDiamonds();
+  this.lineBody=new P.Graphics();this.faceReflection=new P.Graphics();
+  this.judgeGlow.addChild(this.lineGlow,this.lineBody,this.faceReflection);this.initDiamonds();
   const canvas=document.createElement('canvas');canvas.width=256;canvas.height=128;
   const ctx=canvas.getContext('2d');ctx.scale(1,.5);
   const glow=ctx.createRadialGradient(128,112,0,128,112,110);
@@ -91,7 +92,7 @@ export class Stage{
    this.judgeLanes.push(project(lane,1));
   }
   this.held=new Uint8Array(4);this.wasHeld=new Uint8Array(4);
-  this.releasedAt=new Float64Array(4);this.impactSlots=new Array(4).fill(null);
+  this.releasedAt=new Float64Array(4);this.pressedAt=new Float64Array(4);this.impactSlots=new Array(4).fill(null);
  }
 
  // Three immutable crystal textures, native 1:1.5 canvas aspect ratio.
@@ -182,11 +183,33 @@ export class Stage{
   for(const [width,alpha] of [[28,.025],[22,.03],[16,.065],[13,.08]])
    g.moveTo(left,y).lineTo(right,y).stroke({color:this.judgeColor,width,alpha});
   const body=this.lineBody;body.clear();
-  body.moveTo(left,y).lineTo(right,y).stroke({color:0xd6c6ff,width:9,alpha:.72});
-  body.moveTo(left,y+2).lineTo(right,y+2).stroke({color:this.judgeColor,width:4,alpha:.42});
-  for(let i=0;i<16;i++){
-   const x=left+(right-left)*i/16,step=(right-left)/16;
-   body.poly([x,y-4.5,x+step,y-4.5,x+step*.5,y+4.5]).fill({color:i%2?0xb8fff0:0xffffff,alpha:.15});
+  // The arrival edge stays at Y410. A broad dark receiving deck extends
+  // toward the player; its front border is decorative, never a second judge.
+  const depth=34,height=5,cap=5;
+  const atY=(lane,yy)=>project(lane,Math.pow((yy-110)/300,1/1.55));
+  const mix=(a,b,t)=>color([16,8,0].map(s=>Math.round(((a>>s)&255)*(1-t)+((b>>s)&255)*t)));
+  const frontY=y+depth,[frontLeft]=atY(-.5,frontY),[frontRight]=atY(3.5,frontY);
+  for(let i=0;i<depth;i++){
+   const yy=y+i,[l]=atY(-.5,yy),[r]=atY(3.5,yy),[ll]=atY(-.5,yy+1),[rr]=atY(3.5,yy+1);
+   body.poly([l,yy,r,yy,rr,yy+1,ll,yy+1]).fill({color:mix(0x101329,0x34264f,i/(depth-1)),alpha:.88});
+  }
+  // The dark front is behind ribbons and heads, not a foreground occluder.
+  for(let i=0;i<height;i++){
+   const t=i/(height-1),tint=t<.45?mix(0x8c6ae0,0x514194,t/.45):mix(0x514194,0x251e51,(t-.45)/.55);
+   body.rect(frontLeft+cap,frontY+i,frontRight-frontLeft-cap*2,1).fill({color:tint,alpha:.96});
+  }
+  body.poly([frontLeft,frontY,frontLeft+cap,frontY,frontLeft+cap,frontY+height,frontLeft,frontY+2]).fill({color:0x7464b4,alpha:.95});
+  body.poly([frontRight-cap,frontY,frontRight,frontY,frontRight,frontY+2,frontRight-cap,frontY+height]).fill({color:0x392c6e,alpha:.98});
+  body.poly([left,y,right,y,frontRight,frontY,frontLeft,frontY]).stroke({color:0xc892ef,width:2.8,alpha:.94});
+  body.moveTo(frontLeft+cap,frontY+height).lineTo(frontRight-cap,frontY+height).stroke({color:0x8fe9dc,width:.8,alpha:.32});
+  for(let lane=0;lane<3;lane++){
+   const [back]=project(lane+.5,1),[front]=atY(lane+.5,frontY);
+   body.moveTo(back,y+2).lineTo(front,frontY-2).stroke({color:0xc8b3e6,width:1,alpha:.32});
+  }
+  // Short end reflections fall off toward the caps without extra textures.
+  for(const side of [-1,1])for(let i=0;i<5;i++){
+   const x=side<0?left+cap+i*6:right-cap-i*6;
+   body.moveTo(x,y-1).lineTo(x-side*6,y-1).stroke({color:0xfaffff,width:1,alpha:.1+i*.06});
   }
   const h=this.judgeHighlight;h.clear();
   h.moveTo(left,y).lineTo(right,y).stroke({color:this.judgeColor,width:3,alpha:.65});
@@ -198,22 +221,30 @@ export class Stage{
   }
   this.resetJudgment();
  }
- resetJudgment(){this.wasHeld.fill(0);this.releasedAt.fill(-Infinity);this.sparkGrades=new WeakMap();for(const sprite of this.burstPool)sprite.visible=false;for(const sprite of this.haloPool)sprite.visible=false;}
+ resetJudgment(){this.wasHeld.fill(0);this.releasedAt.fill(-Infinity);this.pressedAt.fill(-Infinity);this.sparkGrades=new WeakMap();for(const sprite of this.burstPool)sprite.visible=false;for(const sprite of this.haloPool)sprite.visible=false;}
  drawJudgment(engine,now,effects){
   if(this.judgeEngine!==engine||now<this.judgeNow){this.resetJudgment();this.judgeEngine=engine;}
   this.judgeNow=now;this.lineGlow.visible=effects;this.drawDiamondLine(now,effects);this.diamondBurst.visible=effects;for(const sprite of this.burstPool)sprite.visible=false;for(const sprite of this.haloPool)sprite.visible=false;
-  const h=this.inputHighlight;h.clear();this.held.fill(0);
+  const h=this.inputHighlight;h.clear();this.faceReflection.clear();this.held.fill(0);
   for(const contact of engine.contacts()){
    const lane=typeof contact==='number'?contact:contact.lane;
    if(Number.isInteger(lane)&&lane>=0&&lane<4)this.held[lane]=1;
   }
   for(let lane=0;lane<4;lane++){
+   if(!this.wasHeld[lane]&&this.held[lane])this.pressedAt[lane]=now;
    if(this.wasHeld[lane]&&!this.held[lane])this.releasedAt[lane]=now;
    if(!effects)this.releasedAt[lane]=-Infinity;
    const strength=this.held[lane]?1:effects?Math.pow(clamp(1-(now-this.releasedAt[lane])/.08,0,1),2):0;
    this.wasHeld[lane]=this.held[lane];this.laneLights[lane].alpha=effects?strength*.55:0;
    if(!strength)continue;
    const [x,y,w]=this.judgeLanes[lane];
+   if(effects){
+    const pulse=Math.pow(clamp(1-(now-this.pressedAt[lane])/.08,0,1),2),f=this.faceReflection;
+    if(pulse>0){
+     f.poly([x-w*.46,y+1,x+w*.46,y+1,x+w*.48,y+32,x-w*.48,y+32]).fill({color:0xb7fff0,alpha:pulse*.18});
+     f.rect(x-w*.46,y+1,w*.92,3).fill({color:0xfaffff,alpha:pulse*.32});
+    }
+   }
    h.moveTo(x-w*.47,y).lineTo(x+w*.47,y).stroke({color:0xeaffff,width:effects?2:1.5,alpha:strength*.85});
   }
  }
@@ -242,7 +273,7 @@ export class Stage{
    for(const side of [-1,1])g.circle(x+side*radius,y-3-5*a,1.4*(1-a)).fill({color:0xf5ffff,alpha:fade*.65});
   }
  }
- head(kind,lane,time,now,approach,index){const p=1-(time-now)/approach;if(p<0||p>1.08)return index;let s=this.pool[index];if(!s){s=new P.Sprite(this.textures[kind]);s.anchor.set(.5,82/96);this.heads.addChild(s);this.pool.push(s);}s.texture=this.textures[kind];let [x,y,w]=project(lane,p);s.position.set(x,y);s.width=w*.89;s.height=36+26*Math.pow(clamp(p,0,1),1.55);s.visible=true;return index+1;}
+ head(kind,lane,time,now,approach,index){const p=1-(time-now)/approach;if(p<0||p>1.08)return index;let s=this.pool[index];if(!s){s=new P.Sprite(this.textures[kind]);s.anchor.set(.5,82/96);this.heads.addChild(s);this.pool.push(s);}s.texture=this.textures[kind];let [x,y,w]=project(lane,p);s.position.set(x,y);s.width=w*.89;s.height=36+42*Math.pow(clamp(p,0,1),1.55);s.visible=true;return index+1;}
  draw(engine,now,approach,bpm,offset,effects=true){const grid=this.grid,r=this.ribbon,fx=this.fx;grid.clear();r.clear();fx.clear();const beat=60/bpm,start=Math.ceil((now-offset)/beat);for(let k=start;k<start+Math.ceil(approach/beat)+1;k++){let p=1-(offset+k*beat-now)/approach;if(p<0||p>1)continue;let [x,y,w]=project(-.5,p);grid.moveTo(x,y).lineTo(x+w*4,y).stroke({color:0xaabbd8,alpha:.025+p*.085,width:.55+p*.3});}this.drawJudgment(engine,now,effects);
 
  const visible=this.visible??=[];visible.length=0;

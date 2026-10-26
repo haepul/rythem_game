@@ -3,7 +3,7 @@ import {SettingsMotion} from './settings-motion.mjs';
 import {PlayHUD} from './play-hud.mjs?v=20261025-rank-audit';
 import {albumArt} from './covers.mjs';
 import {Engine,rank,clamp} from './core.mjs';
-import {Stage} from './renderer.mjs?v=20261023-note-skin';
+import {Stage} from './renderer.mjs?v=20261026-wide-deck';
 const $=id=>document.getElementById(id),audio=window.rhythmAudio;
 const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback;}catch{return fallback;}};
 const save=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value));}catch{toast('이 브라우저에서는 기록을 저장할 수 없습니다.');}};
