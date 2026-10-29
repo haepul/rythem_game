@@ -1,0 +1,37 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>판정 텍스트 — 실제 Engine fixture</title>
+<link rel="stylesheet" href="../next-stage/style.css"><link rel="stylesheet" href="../next-stage/play-hud.css?v=20261027-judgment-text">
+<style>body{margin:0}#fixture-controls{position:fixed;z-index:10;bottom:0;left:0;padding:4px;background:#f8faffed;color:#24243d;font:11px Arial;display:flex;gap:8px;align-items:center;flex-wrap:wrap}#fixture-controls button,#fixture-controls select{font:inherit;color:#24243d;background:white;border:1px solid #888;padding:4px}#fixture-status{max-width:460px}body.bright #stage-wrap{background:#f4ecff}body.bright #stage-host{opacity:.35}</style>
+<nav id="fixture-controls"><label>Engine scene <select id="scene"><option value="perfect">TAP PERFECT</option><option value="great">TAP GREAT</option><option value="miss">TAP MISS</option><option value="flick">FLICK PERFECT</option><option value="hold-head">HOLD head</option><option value="hold-mid">HOLD middle</option><option value="hold-tail">HOLD tail</option><option value="slide">SLIDE</option><option value="four">4 lanes</option><option value="dense">40 rapid PERFECT</option><option value="perfect-great">PERFECT → GREAT</option><option value="great-miss">GREAT → MISS</option><option value="master">Actual MASTER</option></select></label><label><input id="effects" type="checkbox" checked>Effects</label><label><input id="bright" type="checkbox">Bright</label><button id="replay">Replay 360ms</button><button id="freeze">Freeze 120ms</button><output id="fixture-status">Loading</output></nav>
+<script src="../next-stage/vendor/pixi.min.js"></script><script type="module">
+
+import {Stage} from '../next-stage/renderer.mjs?v=20261026-wide-deck';
+import {judgmentScene} from './judgment-text-scenes.mjs';
+const $=id=>document.getElementById(id),q=new URLSearchParams(location.search);
+if(q.has('capture'))$('fixture-controls').hidden=true;
+const before=q.has('before');
+if(before)document.querySelectorAll('link')[1].href='fixtures/judgment-text-before.css';
+const {PlayHUD}=await import(before?'./fixtures/judgment-text-before.mjs':'../next-stage/play-hud.mjs?v=20261027-judgment-text');
+const markup=await (await fetch('../next-stage/index.html?v=judgment-fixture')).text();
+const play=new DOMParser().parseFromString(markup,'text/html').getElementById('play');document.body.append(play);play.hidden=false;if(before)play.querySelector('#judgment').hidden=false;
+$('count-in').hidden=true;$('pause-button').hidden=true;$('playing-title').textContent='Engine 판정 검증';$('playing-level').textContent='SILENT FIXTURE';
+const hud=new PlayHUD(),stage=new Stage();await stage.init($('stage-host'));
+const master=await (await fetch('../next-stage/data/21-master-full.json')).json();
+let scene,raf=0;
+function draw(now){stage.draw(scene.engine,now,.55,165,0,$('effects').checked);hud.update(scene.engine,now,200,$('effects').checked);}
+function freeze(){cancelAnimationFrame(raf);draw(scene.now);for(const [key,a]of Object.entries(hud.animations)){a.pause();a.currentTime=key==='judgment'?120:100;} }
+function rebuild(){cancelAnimationFrame(raf);hud.reset();document.body.classList.toggle('reduced',!$('effects').checked);document.body.classList.toggle('bright',$('bright').checked);
+ scene=judgmentScene($('scene').value,(engine,t)=>hud.update(engine,t,200,$('effects').checked),master);freeze();
+ $('fixture-status').textContent=`${scene.engine.feedback} · P/G/M ${Object.values(scene.engine.counts).join('/')} · score ${scene.engine.score} · DPR ${devicePixelRatio}`;
+}
+$('scene').value=q.get('scene')||'perfect';$('effects').checked=q.get('effects')!=='0';$('bright').checked=q.get('bright')==='1';
+for(const id of ['scene','effects','bright'])$(id).onchange=rebuild;$('freeze').onclick=freeze;
+// Local diagnostics only: unchanged-engine HUD CPU cost, not FPS or input latency.
+const bench=document.createElement('button');bench.textContent='Measure HUD';bench.id='measure-hud';$('fixture-controls').append(bench);
+bench.onclick=()=>{cancelAnimationFrame(raf);const times=[],observer=new MutationObserver(()=>{});observer.observe($('judgment'),{subtree:true,childList:true,characterData:true,attributes:true});
+ for(let i=0;i<10000;i++){const start=performance.now();hud.update(scene.engine,scene.now,200,$('effects').checked);times.push(performance.now()-start);}
+ const writes=observer.takeRecords().length;observer.disconnect();times.sort((a,b)=>a-b);
+ $('fixture-status').textContent=`HUD 10000 unchanged updates · mean ${(times.reduce((a,b)=>a+b,0)/times.length).toFixed(4)}ms · p95 ${times[9500].toFixed(4)}ms · judgment mutations ${writes}`;
+};
+$('replay').onclick=()=>{hud.reset();const start=performance.now(),eventTime=scene.engine.feedbackAt;function tick(stamp){draw(eventTime+(stamp-start)/1000);if(stamp-start<520)raf=requestAnimationFrame(tick);}raf=requestAnimationFrame(tick);};
+rebuild();
+</script></html>

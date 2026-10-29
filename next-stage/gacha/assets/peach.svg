@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540">
+ <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#ffe0cc"/><stop offset=".5" stop-color="#fff9f3"/><stop offset="1" stop-color="#f5d9eb"/></linearGradient><linearGradient id="prism" x2=".6" y2="1"><stop stop-color="#fff"/><stop offset=".6" stop-color="#ffd2ad" stop-opacity=".8"/><stop offset="1" stop-color="#efb6d8" stop-opacity=".65"/></linearGradient><pattern id="dots" width="36" height="36" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.2" fill="#bf8675" opacity=".18"/></pattern></defs>
+ <path fill="url(#bg)" d="M0 0h960v540H0z"/><path fill="url(#dots)" d="M0 0h960v540H0z"/>
+ <path d="m40 20 290 500H-250Z" fill="#fff" opacity=".35"/><path d="m880-30 330 570H550Z" fill="none" stroke="#fff" stroke-width="2"/>
+ <ellipse cx="480" cy="448" rx="225" ry="20" fill="#d8adba" opacity=".17"/>
+ <path d="m480 38 245 400H235Z" fill="none" stroke="#fff" stroke-width="3"/><path d="m480 91 191 312H289Z" fill="url(#prism)" stroke="#fff" stroke-width="5"/>
+ <path d="m480 152 140 229H340Z" fill="#fff" opacity=".5"/><path d="m480 207 91 149H389Z" fill="none" stroke="#d69aaa" stroke-width="2"/><path d="m480 249 47 77h-94Z" fill="#fff"/>
+ <g fill="#fff" stroke="#edbaaa" stroke-width="2"><path d="m191 123 27 46h-54Z"/><path d="m778 322 40 69h-80Z"/></g>
+ <path d="M757 136h28m-14-14v28M153 343h24m-12-12v24" stroke="#d8a292" stroke-width="2"/>
+</svg>

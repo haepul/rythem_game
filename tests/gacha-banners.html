@@ -1,0 +1,20 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>가챠 배너 오류·접근성 fixture</title>
+<link rel="stylesheet" href="../next-stage/style.css"><link rel="stylesheet" href="../next-stage/ui-system.css"><link rel="stylesheet" href="../next-stage/gacha.css?v=20261028-day3">
+<style>#home{display:block;padding:20px;min-height:100dvh}#controls{display:flex;flex-wrap:wrap;gap:12px;padding:12px}#controls button,#controls select{padding:12px;border:1px solid #777;background:white}html.large{font-size:200%}</style>
+<div id="controls"><label>시험 장면 <select id="case"><option value="normal">기본</option><option value="broken">이미지 실패</option><option value="missing">자산 매핑 누락</option><option value="long">긴 제목</option><option value="empty">빈 목록</option><option value="duplicate">중복 ID</option></select></label><label><input type="checkbox" id="large">텍스트 200%</label><label><input type="checkbox" id="off">효과 OFF</label><button id="show">다시 열기</button><button id="destroy">뷰 해제</button><output id="status"></output></div>
+<div id="home" class="menu-shell"><main class="gacha-screen" id="gacha-screen"></main></div>
+<script type="module">
+import {mountGachaView} from '../next-stage/gacha/view.mjs?v=20261028-day3-final';
+import {BANNERS,BANNER_ART} from '../next-stage/gacha/banners.mjs';
+const $=id=>document.getElementById(id),root=$('gacha-screen');let view;
+function mount(){view?.destroy();let banners=BANNERS,assets=BANNER_ART;const kind=$('case').value;
+ if(kind==='empty')banners=[];
+ if(kind==='duplicate')banners=[BANNERS[0],BANNERS[0]];
+ if(kind==='missing')assets={};
+ if(kind==='broken')assets=Object.fromEntries(BANNERS.map(b=>[b.artKey,{heroSrc:'./missing-preview.svg',thumbnailSrc:'./missing-thumb.svg'}]));
+ if(kind==='long')banners=BANNERS.map(b=>({...b,title:b.title+' — 길고 긴 한국어 제목도 끝까지 읽을 수 있는 기하학 디자인 미리보기',subtitle:b.subtitle.repeat(3)}));
+ root.hidden=false;view=mountGachaView(root,()=>{view.setVisible(false);root.hidden=true;$('status').textContent='복귀: 숨김 완료';},{banners,assets});view.setVisible(true);$('status').textContent=view.errors.join(' / ')||'검증 오류 없음';}
+ $('case').onchange=mount;$('large').onchange=()=>document.documentElement.classList.toggle('large',$('large').checked);
+ $('off').onchange=()=>{document.body.classList.toggle('reduced',$('off').checked);view?.syncMotion();};
+ $('show').onclick=()=>{root.hidden=false;view?.setVisible(true);};$('destroy').onclick=()=>{view?.destroy();$('status').textContent='해제 완료';};mount();
+</script></html>

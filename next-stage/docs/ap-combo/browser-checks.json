@@ -1,0 +1,188 @@
+[
+  {
+    "scene": "ap100",
+    "combo": 100,
+    "counts": {
+      "PERFECT": 100,
+      "GREAT": 0,
+      "MISS": 0
+    },
+    "last": "PERFECT",
+    "ap": "maintaining",
+    "motion": "on",
+    "resolution": 1,
+    "browserDPR": 1.25
+  },
+  {
+    "scene": "break99",
+    "combo": 100,
+    "counts": {
+      "PERFECT": 99,
+      "GREAT": 1,
+      "MISS": 0
+    },
+    "last": "GREAT",
+    "ap": "normal",
+    "motion": "on",
+    "resolution": 1,
+    "browserDPR": 1.25
+  },
+  {
+    "scene": "aftergreat",
+    "combo": 200,
+    "counts": {
+      "PERFECT": 199,
+      "GREAT": 1,
+      "MISS": 0
+    },
+    "last": "PERFECT",
+    "ap": "normal",
+    "motion": "on",
+    "resolution": 1,
+    "browserDPR": 1.25
+  },
+  {
+    "scene": "aftermiss",
+    "combo": 100,
+    "counts": {
+      "PERFECT": 103,
+      "GREAT": 0,
+      "MISS": 1
+    },
+    "last": "PERFECT",
+    "ap": "normal",
+    "motion": "on",
+    "resolution": 1,
+    "browserDPR": 1.25
+  },
+  {
+    "scene": "four",
+    "combo": 4,
+    "counts": {
+      "PERFECT": 4,
+      "GREAT": 0,
+      "MISS": 0
+    },
+    "last": "PERFECT",
+    "ap": "maintaining",
+    "motion": "on",
+    "resolution": 1,
+    "browserDPR": 1.25
+  },
+  {
+    "scene": "mixed",
+    "combo": 2,
+    "counts": {
+      "PERFECT": 1,
+      "GREAT": 1,
+      "MISS": 0
+    },
+    "last": "PERFECT",
+    "ap": "normal",
+    "motion": "on",
+    "resolution": 1,
+    "browserDPR": 1.25
+  },
+  {
+    "scene": "hold-mid",
+    "combo": 2,
+    "counts": {
+      "PERFECT": 2,
+      "GREAT": 0,
+      "MISS": 0
+    },
+    "last": "PERFECT",
+    "ap": "maintaining",
+    "motion": "on",
+    "resolution": 1,
+    "browserDPR": 1.25
+  },
+  {
+    "scene": "slide",
+    "combo": 2,
+    "counts": {
+      "PERFECT": 2,
+      "GREAT": 0,
+      "MISS": 0
+    },
+    "last": "PERFECT",
+    "ap": "maintaining",
+    "motion": "on",
+    "resolution": 1,
+    "browserDPR": 1.25
+  },
+  {
+    "scene": "holdmiss",
+    "combo": 1,
+    "counts": {
+      "PERFECT": 2,
+      "GREAT": 0,
+      "MISS": 1
+    },
+    "last": "PERFECT",
+    "ap": "normal",
+    "motion": "on",
+    "resolution": 1,
+    "browserDPR": 1.25
+  },
+  {
+    "scene": "slidemiss",
+    "combo": 1,
+    "counts": {
+      "PERFECT": 2,
+      "GREAT": 0,
+      "MISS": 1
+    },
+    "last": "PERFECT",
+    "ap": "normal",
+    "motion": "on",
+    "resolution": 1,
+    "browserDPR": 1.25
+  },
+  {
+    "scene": "master",
+    "combo": 0,
+    "counts": {
+      "PERFECT": 0,
+      "GREAT": 0,
+      "MISS": 1158
+    },
+    "last": "MISS",
+    "ap": "normal",
+    "motion": "on",
+    "resolution": 1,
+    "browserDPR": 1.25
+  },
+  {
+    "transition": {
+      "scene": "ap100",
+      "combo": 101,
+      "counts": {
+        "PERFECT": 100,
+        "GREAT": 1,
+        "MISS": 0
+      },
+      "last": "GREAT",
+      "ap": "normal",
+      "motion": "on",
+      "resolution": 1,
+      "browserDPR": 1.25
+    }
+  },
+  {
+    "restart": {
+      "scene": "ap100",
+      "combo": 100,
+      "counts": {
+        "PERFECT": 100,
+        "GREAT": 0,
+        "MISS": 0
+      },
+      "last": "PERFECT",
+      "ap": "maintaining",
+      "motion": "on",
+      "resolution": 1,
+      "browserDPR": 1.25
+    }
+  }
+]

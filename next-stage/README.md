@@ -1,5 +1,18 @@
 # Rhythm Stage NEXT
 
+최근 추가 작업: [PERFECT/AP 콤보](docs/ap-combo/README.md), [박자 가이드라인 전후 캡처·검증](docs/beat-guides/README.md), [가챠 DAY 3 배너 선택·검증](docs/gacha/day3.md), [판정 텍스트 DAY 8 전후 캡처·검증](docs/judgment-text/README.md). 각 보고서는 구현 당시 검증 기록입니다. 2026-10-29 후속 요청으로 GitHub Pages 배포를 진행하며 공개 경로는 `/next-stage/?v=20261022-track`을 유지합니다.
+
+## Gacha DAY 1 design (2026-10-26)
+
+설계 전용 문서: [아키텍처](docs/gacha/architecture.md), [레퍼런스 관찰](docs/gacha/references.md), [실행한 검증과 후속 계획](docs/gacha/validation-plan.md).
+DAY 1 당시 가챠는 설계만 존재했습니다. 현재 체크아웃에서 누락된 과거 테스트 및 export 파일은 검증 문서에 구분했습니다.
+
+## Gacha DAY 2 local implementation (2026-10-27)
+
+HOME의 GACHA 메뉴와 정적 안내 화면을 구현했습니다. `/next-stage/#/gacha`에서 확인할 수 있습니다.
+곡 목록 DOM과 선택 상태를 보존하며, 추첨·재화·저장은 아직 없습니다.
+[실제 변경·브라우저 검증·캡처·남은 제약](docs/gacha/day2.md)을 참고하세요. DAY 2는 커밋·push·배포하지 않았습니다.
+
 Pygame-free browser implementation: semantic HTML/CSS menus, PixiJS 8.17.1 WebGL gameplay and the original Web Audio clock/input bridge. No Python or WebAssembly runtime is loaded by this page. Run an HTTP server from the repository root, then open `/next/` (deployed) or `/web-next/` (source workspace). Audio is resolved from sibling `music/`.
 
 ## What changed

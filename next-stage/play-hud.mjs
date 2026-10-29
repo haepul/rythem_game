@@ -1,6 +1,21 @@
 // Read-only presentation adapter. No input listeners or simulation mutations.
 // Maximum is the sum of PERFECT awards (200 + combo * 10), including sustain ticks.
 export const SCORE_RANK_STEPS=Object.freeze({C:.45,B:.60,A:.75,S:.90});
+// Presentation lifetime only; engine judgment windows and feedback are unchanged.
+export const JUDGMENT_DURATION=360;
+// Cumulative Engine awards include simultaneous hits and every sustain tick.
+// Fail closed for absent/malformed statistics; zero judgments is not an AP claim.
+export function isAPMaintained(counts){
+ if(!counts||!['PERFECT','GREAT','MISS'].every(k=>Number.isSafeInteger(counts[k])&&counts[k]>=0))return false;
+ return counts.PERFECT>0&&Object.entries(counts).every(([grade,count])=>Number.isSafeInteger(count)&&count>=0&&(grade==='PERFECT'||count===0));
+}
+const JUDGMENT_FRAMES=[
+ {opacity:.72,transform:'translateY(0) scale(.95)',offset:0},
+ {opacity:1,transform:'translateY(0) scale(1.05)',offset:50/360},
+ {opacity:1,transform:'translateY(0) scale(1)',offset:130/360},
+ {opacity:1,transform:'translateY(0) scale(1)',offset:240/360},
+ {opacity:0,transform:'translateY(-3px) scale(1)',offset:1}
+];
 export function scoreRank(score,total){
  const candidate=Number.isSafeInteger(total)&&total>0?200*total+5*total*(total+1):0;
  const valid=Number.isSafeInteger(candidate)&&candidate>0;
@@ -11,10 +26,24 @@ export function scoreRank(score,total){
  return {ratio,maximum,valid,targets,percent:ratio===1?'100%':`${Math.floor(ratio*1000)/10}%`,rank:!valid?'D':ratio>=SCORE_RANK_STEPS.S?'S':ratio>=SCORE_RANK_STEPS.A?'A':ratio>=SCORE_RANK_STEPS.B?'B':ratio>=SCORE_RANK_STEPS.C?'C':'D'};
 }
 export class PlayHUD {
- constructor(root=document){this.el={};for(const id of ['score','life','life-fill','life-number','life-flash','song-progress','play-time','combo','judgment'])this.el[id]=root.getElementById(id);this.number=this.el.combo.querySelector('b');this.keys=[...root.querySelectorAll('.lane-keys span')];this.cache={};this.animations={};}
+ constructor(root=document){this.el={};for(const id of ['score','life','life-fill','life-number','life-flash','song-progress','play-time','combo','judgment'])this.el[id]=root.getElementById(id);this.judgmentText=this.el.judgment.querySelector('span');this.number=this.el.combo.querySelector('b');this.keys=[...root.querySelectorAll('.lane-keys span')];this.cache={};this.animations={};}
  write(key,value,fn){if(this.cache[key]!==value){this.cache[key]=value;fn(value);}}
  pulse(key,el,frames,duration,effects){this.animations[key]?.cancel();if(effects)this.animations[key]=el.animate(frames,{duration,easing:'cubic-bezier(.2,.8,.2,1)'});}
- reset(){for(const a of Object.values(this.animations))a.cancel();this.cache={};this.el.judgment.textContent='';this.el.combo.hidden=true;}
+ reset(){for(const a of Object.values(this.animations))a.cancel();this.cache={};this.judgmentText.textContent='';this.el.judgment.hidden=true;this.el.combo.hidden=true;}
+ updateJudgment(engine,now,effects){
+  const age=(now-engine.feedbackAt)*1000,grade=engine.feedback;
+  const visible=['PERFECT','GREAT','MISS'].includes(grade)&&age>=0&&age<JUDGMENT_DURATION;
+  const key=visible?`${engine.feedbackAt}/${grade}`:'';
+  const changed=this.cache.feedback!==key,motionChanged=this.cache['judgment-effects']!==Boolean(effects);
+  if(changed){this.cache.feedback=key;this.judgmentText.textContent=visible?grade:'';this.el.judgment.dataset.grade=visible?grade:'';this.el.judgment.hidden=!visible;}
+  if(changed||motionChanged){
+   this.cache['judgment-effects']=Boolean(effects);this.animations.judgment?.cancel();delete this.animations.judgment;
+   if(visible&&effects){this.animations.judgment=this.judgmentText.animate(JUDGMENT_FRAMES,{duration:JUDGMENT_DURATION,easing:'linear',fill:'both'});this.animations.judgment.currentTime=age;}
+  }
+  // Recover after a pause/tab suspension without creating a second animation.
+  const animation=this.animations.judgment;
+  if(visible&&animation&&Math.abs(Number(animation.currentTime)-age)>50)animation.currentTime=age;
+ }
  update(engine,now,duration,effects){
  const e=this.el;
  if(this.rankRoot===undefined){this.rankRoot=e.score.closest?.('.score-block');this.rankLetter=this.rankRoot?.querySelector('#score-rank');this.rankFill=this.rankRoot?.querySelector('#score-rank-fill');this.rankProgress=this.rankRoot?.querySelector('#score-rank-progress');this.rankSummary=this.rankRoot?.querySelector('#score-rank-summary');if(this.rankRoot)for(const marker of this.rankRoot.querySelectorAll('.score-rank-track i'))marker.style.setProperty('--step',`${SCORE_RANK_STEPS[marker.textContent]*100}%`);}
@@ -54,15 +83,19 @@ export class PlayHUD {
  this.write('progress',Math.round(Math.max(0,Math.min(1,now/duration))*1000),v=>e['song-progress'].value=v/1000);
  const format=t=>`${Math.floor(t/60).toString().padStart(2,'0')}:${(t%60).toString().padStart(2,'0')}`;
  this.write('time',`${Math.floor(Math.max(0,now))}/${Math.floor(duration)}`,()=>e['play-time'].textContent=`${format(Math.floor(Math.max(0,now)))} / ${format(Math.floor(duration))}`);
- this.write('combo-effects',Boolean(effects),v=>{if(!v)this.animations.combo?.cancel();});
+ this.write('combo-effects',Boolean(effects),v=>{e.combo.dataset.motion=v?'on':'off';if(!v){this.animations.combo?.cancel();this.animations['ap-change']?.cancel();}});
+ const previousAP=this.cache.ap;
+ this.write('ap',isAPMaintained(engine.counts),v=>{
+  e.combo.dataset.ap=v?'maintaining':'normal';
+  if(previousAP===true&&!v)this.pulse('ap-change',e.combo,[{opacity:.86},{opacity:1}],110,effects);
+ });
  this.write('combo',engine.combo,v=>{
   e.combo.hidden=v<3;this.number.textContent=v;
   this.write('combo-digits',Math.max(5,String(v).length),digits=>{this.number.style.setProperty('--combo-digits',String(digits));});
   if(v>=3)this.pulse('combo',this.number,[{transform:'scale(1.08)',opacity:.94},{transform:'scale(1.015)',opacity:1,offset:.65},{transform:'scale(1)',opacity:1}],130,effects);
   else this.animations.combo?.cancel();
  });
- const visible=now-engine.feedbackAt>=0&&now-engine.feedbackAt<.42;
- this.write('feedback',visible?`${engine.feedbackAt}/${engine.feedback}`:'',()=>{e.judgment.textContent=visible?engine.feedback:'';e.judgment.dataset.grade=engine.feedback;if(visible)this.pulse('judgment',e.judgment,[{opacity:0,transform:'translateY(4px) scale(.95)'},{opacity:1,transform:'none',offset:.18},{opacity:1,offset:.65},{opacity:0,transform:'translateY(-3px)'}],420,effects);});
+ this.updateJudgment(engine,now,effects);
  let mask=0;for(const contact of engine.contacts()){const lane=typeof contact==='number'?contact:contact.lane;if(lane!==null)mask|=1<<Math.max(0,Math.min(3,Math.round(lane)));}
  this.write('keys',mask,v=>this.keys.forEach((key,i)=>key.classList.toggle('pressed',Boolean(v&(1<<i)))));
  }

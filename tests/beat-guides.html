@@ -1,0 +1,40 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Beat guides · same-time renderer comparison</title>
+<link rel="stylesheet" href="../next-stage/style.css"><link rel="stylesheet" href="../next-stage/play-hud.css?v=20261027-judgment-text">
+<style>#controls{position:fixed;z-index:20;bottom:0;left:0;right:0;background:#f8faffee;padding:7px;display:flex;flex-wrap:wrap;gap:8px;color:#242438;font:12px Arial}#controls button,#controls select,#controls input{font:inherit;color:#242438;background:white;border:1px solid #888;padding:4px}#status{flex-basis:100%;white-space:normal}#controls[hidden]{display:none}</style>
+<nav id="controls"><label>Scene <select id="scene"><option value="idle">Idle</option><option value="tap">TAP + FLICK</option><option value="hold">HOLD + TAP</option><option value="slide">SLIDE + TAP</option><option value="dense">Dense chords</option><option value="master">Actual MASTER</option></select></label><label>BPM <select id="bpm"><option>60</option><option selected>120</option><option>180</option><option>240</option></select></label><label>Approach <select id="approach"><option>0.35</option><option>0.55</option><option selected>1</option></select></label><label>Render resolution <select id="resolution"><option>1</option><option>2</option></select></label><label><input id="before" type="checkbox">Before</label><label><input id="effects" type="checkbox" checked>Effects</label><button id="measure">Measure 240 frames</button><output id="status">Loading</output></nav>
+<script src="../next-stage/vendor/pixi.min.js"></script><script type="module">
+import {Stage} from '../next-stage/renderer.mjs?v=20261029-beat-guides';
+import {Engine} from '../next-stage/core.mjs';
+import {PlayHUD} from '../next-stage/play-hud.mjs?v=20261027-judgment-text';
+import {drawBeatGuidesBefore} from './fixtures/beat-guide-before.mjs';
+const $=id=>document.getElementById(id),q=new URLSearchParams(location.search);
+for(const id of ['scene','bpm','approach','resolution'])if(q.has(id))$(id).value=q.get(id);
+$('before').checked=q.has('before');$('effects').checked=q.get('effects')!=='0';$('controls').hidden=q.has('capture');
+const markup=await (await fetch('../next-stage/index.html?fixture=beat')).text();const play=new DOMParser().parseFromString(markup,'text/html').getElementById('play');document.body.append(play);play.hidden=false;$('count-in').hidden=true;$('pause-button').hidden=true;
+$('playing-title').textContent='박자 가이드라인 비교';$('playing-level').textContent='SAME AUDIO TIME · SILENT FIXTURE';
+const stage=new Stage();await stage.init($('stage-host'));const hud=new PlayHUD();
+const master=await (await fetch('../next-stage/data/21-master-full.json')).json();let engine,now,bpm,approach,offset=0,busy=false;
+function render(){stage.draw(engine,now,approach,bpm,offset,$('effects').checked);}
+function rebuild(){
+ if(busy)return;now=1.33;bpm=Number($('bpm').value);approach=Number($('approach').value);offset=0;
+ stage.drawBeatGuides=$('before').checked?drawBeatGuidesBefore:Stage.prototype.drawBeatGuides;
+ stage.app.renderer.resize(800,480,Number($('resolution').value));
+ const scene=$('scene').value;let notes=[];
+ if(scene==='tap')notes=[{type:'TAP',lane:0,time:1.5},{type:'FLICK',lane:2,time:1.7},{type:'TAP',lane:3,time:1.9}];
+ if(scene==='hold'||scene==='slide')notes=[{type:scene.toUpperCase(),lane:1,end_lane:scene==='slide'?3:1,time:1.1,end_time:2.2,tick_times:[1.1,1.6,2.2]},{type:'TAP',lane:0,time:1.6},{type:'FLICK',lane:3,time:1.9}];
+ if(scene==='dense')notes=Array.from({length:64},(_,i)=>({type:i%5===0?'FLICK':'TAP',lane:i%4,time:1.33+Math.floor(i/4)*.06}));
+ if(scene==='master'){engine=new Engine(master,true);now=183.00872050058055;bpm=master.bpm;offset=master.offset;engine.step(now,[],approach);}
+ else {engine=new Engine({notes,total:notes.reduce((n,v)=>n+(v.tick_times?.length||1),0)},true);engine.step(1,[],approach);if(scene==='hold'||scene==='slide')engine.step(1.1,[['key','down','KeyF',1.1]],approach);engine.step(now,[],approach);}
+ render();hud.reset();hud.update(engine,now,scene==='master'?master.duration:20,$('effects').checked);
+ for(const a of Object.values(hud.animations)){a.pause();a.currentTime=100;}
+ $('status').textContent=`${$('before').checked?'BEFORE':'AFTER'} · ${scene} · now=${now} · BPM=${bpm} · approach=${approach} · resolution=${stage.app.renderer.resolution} · canvas=${stage.app.canvas.width}×${stage.app.canvas.height} · browser DPR=${devicePixelRatio}`;
+ $('status').dataset.ready='true';
+}
+for(const id of ['scene','bpm','approach','resolution','before','effects'])$(id).onchange=rebuild;
+$('measure').onclick=async()=>{if(busy)return;busy=true;$('measure').disabled=true;$('status').dataset.measured='false';const cpu=[],frames=[];let previous;
+ for(let i=0;i<260;i++){const stamp=await new Promise(requestAnimationFrame),start=performance.now();render();if(i>=20){cpu.push(performance.now()-start);frames.push(stamp-previous);}previous=stamp;}
+ const avg=a=>a.reduce((s,v)=>s+v,0)/a.length,frameMean=avg(frames);cpu.sort((a,b)=>a-b);frames.sort((a,b)=>a-b);
+ $('status').textContent=JSON.stringify({before:$('before').checked,scene:$('scene').value,resolution:stage.app.renderer.resolution,frames:240,renderMean:avg(cpu),renderP95:cpu[228],frameMean,frameP95:frames[228],fps:1000/frameMean});$('status').dataset.measured='true';busy=false;$('measure').disabled=false;
+};
+rebuild();
+</script></html>

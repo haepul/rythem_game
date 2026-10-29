@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540">
+ <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#e4dbff"/><stop offset=".5" stop-color="#faf4ff"/><stop offset="1" stop-color="#d4e9fc"/></linearGradient><linearGradient id="orb" x2=".8" y2="1"><stop stop-color="#fff"/><stop offset=".55" stop-color="#cbb9ef" stop-opacity=".7"/><stop offset="1" stop-color="#b1eee8"/></linearGradient><pattern id="dots" width="36" height="36" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.2" fill="#7967b2" opacity=".18"/></pattern></defs>
+ <path fill="url(#bg)" d="M0 0h960v540H0z"/><path fill="url(#dots)" d="M0 0h960v540H0z"/>
+ <circle cx="80" cy="110" r="240" fill="#fff" opacity=".3"/><circle cx="900" cy="520" r="240" fill="none" stroke="#fff" stroke-width="2"/>
+ <ellipse cx="480" cy="445" rx="200" ry="20" fill="#a295c8" opacity=".17"/>
+ <circle cx="480" cy="270" r="199" fill="none" stroke="#fff" stroke-width="3"/><circle cx="480" cy="270" r="160" fill="url(#orb)" stroke="#fff" stroke-width="5"/>
+ <circle cx="480" cy="270" r="111" fill="#fff" opacity=".55"/><circle cx="480" cy="270" r="65" fill="none" stroke="#aa8dd8" stroke-width="2"/><circle cx="480" cy="270" r="29" fill="#fff"/>
+ <ellipse cx="480" cy="270" rx="256" ry="69" transform="rotate(-24 480 270)" fill="none" stroke="#fff" stroke-width="3"/>
+ <g fill="#fff" stroke="#b6a3df" stroke-width="2"><circle cx="200" cy="153" r="21"/><circle cx="771" cy="373" r="36"/></g>
+ <path d="M748 124h30m-15-15v30M150 366h24m-12-12v24" stroke="#b4a0d7" stroke-width="2"/>
+</svg>

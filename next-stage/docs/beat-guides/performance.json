@@ -1,0 +1,24 @@
+{
+  "before": {
+    "before": true,
+    "scene": "master",
+    "resolution": 1,
+    "frames": 240,
+    "renderMean": 1.9416666669150193,
+    "renderP95": 3.0999999940395355,
+    "frameMean": 9.129166666666666,
+    "frameP95": 16.69999999999709,
+    "fps": 109.53902327704245
+  },
+  "after": {
+    "before": false,
+    "scene": "master",
+    "resolution": 1,
+    "frames": 240,
+    "renderMean": 1.817083333681027,
+    "renderP95": 2.9000000059604645,
+    "frameMean": 9.33708333333331,
+    "frameP95": 16.69999999999709,
+    "fps": 107.09982596278309
+  }
+}

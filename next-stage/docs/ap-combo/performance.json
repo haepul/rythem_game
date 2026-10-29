@@ -1,0 +1,37 @@
+{
+  "hudAfter": {
+    "before": false,
+    "updates": 10000,
+    "mean": 0.009409999994933605,
+    "p95": 0.09999999403953552,
+    "mutations": 0
+  },
+  "framesAfter": {
+    "before": false,
+    "frames": 240,
+    "mean": 10.729166666666675,
+    "p95": 17.899999999997817,
+    "fps": 93.20388349514556
+  },
+  "hudBefore": {
+    "before": true,
+    "updates": 10000,
+    "mean": 0.01675,
+    "p95": 0.09999999403953552,
+    "mutations": 0
+  },
+  "framesBefore": {
+    "before": true,
+    "frames": 240,
+    "mean": 10.62625,
+    "p95": 17.90000000000009,
+    "fps": 94.10657569697682
+  },
+  "framesAfterFinal": {
+    "before": false,
+    "frames": 240,
+    "mean": 11.902499999999995,
+    "p95": 24.899999999999977,
+    "fps": 84.0159630329763
+  }
+}

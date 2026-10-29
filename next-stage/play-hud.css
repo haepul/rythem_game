@@ -31,10 +31,17 @@
 #play #combo{top:27%;right:1%;width:20%;text-align:center;color:#f5eaff;text-shadow:0 2px 0 #9b74be,0 3px 8px #14172d;pointer-events:none}
 #play #combo b{font:800 clamp(24px,5.4cqw,62px)/1 Arial,sans-serif;letter-spacing:-1px;font-variant-numeric:tabular-nums}
 #play #combo small{font:700 clamp(7px,1.25cqw,13px) Arial,sans-serif;letter-spacing:2px;margin-top:5px;color:#abf5e6}
-#play #judgment{top:43%;right:1%;width:18%;font:800 clamp(9px,2cqw,23px)/1.2 Arial,sans-serif;letter-spacing:.5px;text-shadow:0 2px 4px #02081f;pointer-events:none;user-select:none}
-#play #judgment[data-grade=PERFECT]{color:#f4ceff;text-shadow:1px 1px #67dfd0,0 2px 5px #151329}
-#play #judgment[data-grade=GREAT]{color:#9bffe0}
-#play #judgment[data-grade=MISS]{color:#ff9bb5}
+/* The outer box owns placement; only its single text span is animated. */
+#play #judgment{top:62.5%;left:50%;right:auto;width:32%;transform:translate(-50%,-50%);font:900 clamp(16px,3.25cqw,44px)/1.15 Arial,sans-serif;letter-spacing:.035em;text-shadow:none;pointer-events:none;user-select:none;z-index:2}
+#play #judgment[hidden]{display:none}
+#play #judgment span{display:inline-block;white-space:nowrap;transform-origin:center;--judge-ink:#24435f;--judge-fill:#acf8eb;color:var(--judge-fill);-webkit-text-fill-color:var(--judge-fill);-webkit-text-stroke:clamp(.8px,.16cqw,1.8px) var(--judge-ink);paint-order:stroke fill;text-shadow:none;filter:drop-shadow(0 1.5px 1px var(--judge-ink))}
+#play #judgment[data-grade=PERFECT] span{--judge-fill:#ffc9f4;--judge-ink:#ede7ff;--judge-gradient:linear-gradient(90deg,#ff8bdf 0%,#ffc9f4 25%,#f9faff 50%,#a1eeff 75%,#61dff4 100%);-webkit-text-stroke:clamp(.45px,.08cqw,1px) var(--judge-ink);filter:drop-shadow(0 1.5px 1px #242840) drop-shadow(0 0 2px #e9cfff55)}
+#play #judgment[data-grade=GREAT] span{--judge-fill:#f7a8e9;--judge-ink:#533b75;--judge-gradient:linear-gradient(180deg,#fff 0%,#ffd2f3 24%,#f7a8e9 58%,#c990f5 100%)}
+#play #judgment[data-grade=MISS] span{--judge-fill:#f4a5b5;--judge-ink:#60384a;--judge-gradient:linear-gradient(180deg,#ffd7df 0%,#f4a5b5 48%,#cb718e 100%)}
+@supports ((background-clip:text) or (-webkit-background-clip:text)){#play #judgment span{background-image:var(--judge-gradient);background-clip:text;-webkit-background-clip:text;color:transparent;-webkit-text-fill-color:transparent}}
+body.reduced #play #judgment span{transform:none!important;opacity:1!important}
+@media(prefers-reduced-motion:reduce){#play #judgment span{transform:none!important;opacity:1!important}}
+@media(forced-colors:active){#play #judgment span{background:none;color:CanvasText;-webkit-text-fill-color:CanvasText;-webkit-text-stroke:0;filter:none;text-shadow:none}}
 #play .lane-keys{top:91%;pointer-events:none;user-select:none}
 #play .lane-keys span{min-width:6%;padding:2px 0;text-align:center;border-bottom:2px solid #a8bce22b;border-radius:3px;color:#b5c5df;font-size:clamp(8px,1.5cqw,16px);transition:background 60ms,color 60ms;pointer-events:none}
 #play .lane-keys .pressed{color:#133e49;background:#a8ffec;box-shadow:0 0 10px #66e9d255;border-color:#fff}
@@ -55,16 +62,6 @@ body.reduced #play #life-fill{transition:none}
 }
 @media (forced-colors:active){#play #combo b,#play #combo small{background:none;color:CanvasText;-webkit-text-fill-color:CanvasText;-webkit-text-stroke:0;filter:none}}
 
-/* PERFECT prism lettering; judgment timing and existing entrance animation stay intact. */
-@supports ((background-clip:text) or (-webkit-background-clip:text)) {
- #play #judgment[data-grade=PERFECT]{
-  background:linear-gradient(180deg,#fff2ad 0%,#ffbce9 25%,#d2baff 49%,#9deaff 73%,#b5ffe5 100%);
-  -webkit-background-clip:text;background-clip:text;color:transparent;
-  -webkit-text-fill-color:transparent;-webkit-text-stroke:.3px #fff8ff;
-  text-shadow:none;filter:drop-shadow(0 1px 0 #795ca1) drop-shadow(0 2px 2px #10152b);
- }
-}
-@media (forced-colors:active){#play #judgment[data-grade=PERFECT]{background:none;color:CanvasText;-webkit-text-fill-color:CanvasText;-webkit-text-stroke:0;filter:none}}
 /* SCORE: compact translucent information group; no score/rank simulation. */
 #play .score-block{box-sizing:border-box;width:24%;min-width:0;padding:clamp(4px,.65cqw,8px) clamp(6px,1cqw,12px);gap:3px;clip-path:none;border:1px solid #d9d8f080;border-top-color:#8eeadd;border-radius:3px;background:linear-gradient(115deg,#141c38db,#242640a6);box-shadow:inset 0 1px #ffffff12,0 2px 3px #060a1c33;filter:none}
 #play .score-block small{font:800 clamp(8px,.95cqw,11px)/1.2 Arial,sans-serif;letter-spacing:1.4px;color:#ebebff;text-shadow:0 1px 2px #14152d}
@@ -94,7 +91,26 @@ body.reduced #play #score{transform:none!important;opacity:1!important}
 #play #combo{top:27%;right:1%;width:20%;align-items:center;gap:clamp(2px,.4cqw,5px);text-shadow:none;pointer-events:none}
 #play #combo b{display:block;width:100%;font:900 clamp(14px,calc(25cqw / var(--combo-digits,5)),62px)/1.06 Arial,sans-serif;font-variant-numeric:tabular-nums;font-feature-settings:'tnum';letter-spacing:-.5px;white-space:nowrap;transform-origin:center;color:#efdcff;-webkit-text-fill-color:#efdcff;-webkit-text-stroke:.7px #eadbfa;text-shadow:none;filter:drop-shadow(0 2px 1px #342448)}
 #play #combo small{margin:0;font:800 clamp(7px,1.1cqw,13px)/1.2 Arial,sans-serif;letter-spacing:1.5px;background:none;color:#c1f5ed;-webkit-text-fill-color:#c1f5ed;-webkit-text-stroke:0;filter:none;text-shadow:0 1px 2px #302440}
-@supports ((background-clip:text) or (-webkit-background-clip:text)){#play #combo b{background:linear-gradient(180deg,#ffffff 4%,#ffe5fa 24%,#e6c6ff 50%,#c9b5ff 72%,#b8f4f1 96%);background-clip:text;-webkit-background-clip:text;color:transparent;-webkit-text-fill-color:transparent}}
+/* Normal combo has quiet near-white ink; prism is reserved for AP maintenance. */
+#play #combo b{background:none;color:#fff1fa;-webkit-text-fill-color:#fff1fa}
+#play #combo[data-ap=maintaining] b{color:#eacbff;-webkit-text-fill-color:#eacbff;filter:drop-shadow(0 2px 1px #342448) drop-shadow(0 0 2px #ceafff33)}
+@supports ((background-clip:text) or (-webkit-background-clip:text)){
+ #play #combo[data-ap=maintaining] b{background-image:linear-gradient(110deg,#ff94d8 0%,#e9b8ff 23%,#fffaff 47%,#a5e9ff 70%,#96fff0 100%);background-size:115% 100%;background-clip:text;-webkit-background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+ #play #combo[data-ap=maintaining][data-motion=on] b{animation:ap-ink 4s ease-in-out infinite alternate}
+}
+#play #combo[data-ap=maintaining] small{color:#edd5ff;-webkit-text-fill-color:#edd5ff;text-shadow:0 1px 2px #302440,0 0 3px #cbaeff55}
+/* Exactly two reusable CSS stars, outside the digits; no particle allocation. */
+#play #combo::before,#play #combo::after{content:'';position:absolute;pointer-events:none;display:none;width:clamp(5px,.8cqw,10px);height:clamp(7px,1.05cqw,13px);background:#f7f4ff;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);opacity:0}
+#play #combo::before{left:1%;top:-5%}
+#play #combo::after{right:2%;bottom:-8%;background:#b8f5ff}
+#play #combo[data-ap=maintaining][data-motion=on]::before,#play #combo[data-ap=maintaining][data-motion=on]::after{display:block;animation:ap-star 2.3s ease-in-out infinite}
+#play #combo[data-ap=maintaining][data-motion=on]::after{animation-delay:-1.15s}
+@keyframes ap-ink{from{background-position:0% 50%}to{background-position:100% 50%}}
+@keyframes ap-star{0%,65%,100%{opacity:0;transform:scale(.65)}76%{opacity:.65;transform:scale(1)}86%{opacity:.18;transform:scale(.8)}}
+body.reduced #play #combo[data-ap][data-motion] b{animation:none}
+body.reduced #play #combo[data-ap][data-motion]::before,body.reduced #play #combo[data-ap][data-motion]::after{display:none}
+@media(prefers-reduced-motion:reduce){#play #combo[data-ap][data-motion] b{animation:none}#play #combo[data-ap][data-motion]::before,#play #combo[data-ap][data-motion]::after{display:none}}
+@media(forced-colors:active){#play #combo[data-ap][data-motion] b,#play #combo[data-ap] small,#play #judgment[data-grade=PERFECT] span{background:none;color:CanvasText;-webkit-text-fill-color:CanvasText;-webkit-text-stroke:0;filter:none;animation:none}#play #combo[data-ap][data-motion]::before,#play #combo[data-ap][data-motion]::after{display:none}}
 @media(prefers-reduced-motion:reduce){#play #combo b{transform:none!important;opacity:1!important}}
 body.reduced #play #combo b{transform:none!important;opacity:1!important}
 @media(forced-colors:active){#play #combo b,#play #combo small{background:none;color:CanvasText;-webkit-text-fill-color:CanvasText;-webkit-text-stroke:0;filter:none;text-shadow:none}}

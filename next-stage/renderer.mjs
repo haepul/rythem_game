@@ -33,6 +33,8 @@ export class Stage{
  }
  theme(accent){
   this.accent=color(accent);const g=this.track;g.clear();
+  // Low-saturation reflection only; note/track/judgment palettes are unchanged.
+  this.beatReflection=color(accent.map((v,i)=>Math.round(v*.12+[177,224,218][i]*.88)));
   // Static glass surface: equal screen-height strips avoid a dense horizon mesh.
   // Alpha stays below one so the existing stage background remains visible.
   const point=(lane,q)=>project(lane,Math.pow(q,1/1.55));
@@ -274,7 +276,27 @@ export class Stage{
   }
  }
  head(kind,lane,time,now,approach,index){const p=1-(time-now)/approach;if(p<0||p>1.08)return index;let s=this.pool[index];if(!s){s=new P.Sprite(this.textures[kind]);s.anchor.set(.5,82/96);this.heads.addChild(s);this.pool.push(s);}s.texture=this.textures[kind];let [x,y,w]=project(lane,p);s.position.set(x,y);s.width=w*.89;s.height=36+42*Math.pow(clamp(p,0,1),1.55);s.visible=true;return index+1;}
- draw(engine,now,approach,bpm,offset,effects=true){const grid=this.grid,r=this.ribbon,fx=this.fx;grid.clear();r.clear();fx.clear();const beat=60/bpm,start=Math.ceil((now-offset)/beat);for(let k=start;k<start+Math.ceil(approach/beat)+1;k++){let p=1-(offset+k*beat-now)/approach;if(p<0||p>1)continue;let [x,y,w]=project(-.5,p);grid.moveTo(x,y).lineTo(x+w*4,y).stroke({color:0xaabbd8,alpha:.025+p*.085,width:.55+p*.3});}this.drawJudgment(engine,now,effects);
+ drawBeatGuides(now,approach,bpm,offset,effects=true){
+  const grid=this.grid;grid.clear();
+  if(!Number.isFinite(now)||!Number.isFinite(offset)||!Number.isFinite(bpm)||bpm<=0||!Number.isFinite(approach)||approach<=0)return;
+  // Same beat clock and projection as before. There is no time-signature metadata.
+  const beat=60/bpm,start=Math.ceil((now-offset)/beat),count=Math.ceil(approach/beat)+1;
+  if(!Number.isFinite(count)||!Number.isSafeInteger(start))return;
+  // Only pathological view densities are subsampled, always on original beats.
+  // This is a rendering budget, not a measure/downbeat emphasis.
+  const stride=Math.max(1,Math.ceil(count/32)),density=Math.min(1,Math.sqrt(4/count));
+  for(let k=Math.ceil(start/stride)*stride;k<start+count;k+=stride){
+   const p=1-(offset+k*beat-now)/approach;if(p<0||p>1)continue;
+   const [x,y,w]=project(-.5,p),depth=(y-110)/300;
+   // Fade in over the first 8px and yield to the fixed Y=410 deck over the last 16px.
+   const horizon=clamp((y-110)/8,0,1),edge=clamp((410-y)/16,0,1);
+   const alpha=(.025+.115*depth)*horizon*(edge*edge*(3-2*edge))*density;
+   if(effects)grid.moveTo(x,y).lineTo(x+w*4,y).stroke({color:0xb4a6df,alpha:alpha*.16,width:1.6+depth*.6});
+   grid.moveTo(x,y).lineTo(x+w*4,y).stroke({color:0xc5c9e9,alpha,width:.55+depth*.5});
+   if(effects)grid.moveTo(x,y).lineTo(x+w*4,y).stroke({color:this.beatReflection??0xb1e0da,alpha:alpha*.18,width:.32+depth*.18});
+  }
+ }
+ draw(engine,now,approach,bpm,offset,effects=true){const r=this.ribbon,fx=this.fx;this.drawBeatGuides(now,approach,bpm,offset,effects);r.clear();fx.clear();this.drawJudgment(engine,now,effects);
 
  const visible=this.visible??=[];visible.length=0;
  for(const n of engine.active)if(!n.hit)visible.push(n);
