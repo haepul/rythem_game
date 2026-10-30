@@ -3,7 +3,7 @@ import {SettingsMotion} from './settings-motion.mjs';
 import {PlayHUD} from './play-hud.mjs?v=20261029-ap-combo';
 import {albumArt} from './covers.mjs';
 import {Engine,rank,clamp} from './core.mjs';
-import {Stage} from './renderer.mjs?v=20261029-beat-guides';
+import {Stage} from './renderer.mjs?v=20261030-ribbon';
 import {MenuNavigation} from './menu-navigation.mjs';
 import {mountGachaView} from './gacha/view.mjs?v=20261028-day3-final';
 const $=id=>document.getElementById(id),audio=window.rhythmAudio;

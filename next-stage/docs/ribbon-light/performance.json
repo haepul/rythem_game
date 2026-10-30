@@ -1,0 +1,70 @@
+[
+  {
+    "before": true,
+    "scene": "dense",
+    "resolution": 1,
+    "frames": 240,
+    "renderMean": 7.023750000016298,
+    "renderP95": 11.599999999627471,
+    "frameMean": 14.892083333333334,
+    "frameP95": 25.300000000000182,
+    "fps": 67.14977197056602
+  },
+  {
+    "before": false,
+    "scene": "dense",
+    "resolution": 1,
+    "frames": 240,
+    "renderMean": 9.042499999998835,
+    "renderP95": 16.90000000037253,
+    "frameMean": 11.973749999999988,
+    "frameP95": 25,
+    "fps": 83.51602463722735
+  },
+  {
+    "before": true,
+    "scene": "master",
+    "resolution": 1,
+    "frames": 240,
+    "renderMean": 2.200416666651533,
+    "renderP95": 3.6999999997206032,
+    "frameMean": 10.485833333333327,
+    "frameP95": 18.200000000004366,
+    "fps": 95.3667646825082
+  },
+  {
+    "before": false,
+    "scene": "master",
+    "resolution": 1,
+    "frames": 240,
+    "renderMean": 1.7212499999945672,
+    "renderP95": 2.8000000002793968,
+    "frameMean": 9.719166666666666,
+    "frameP95": 17.100000000000023,
+    "fps": 102.88947955071595
+  },
+  {
+    "before": false,
+    "scene": "dense",
+    "resolution": 1,
+    "frames": 240,
+    "renderMean": 4.967499999998836,
+    "renderP95": 8.199999999720603,
+    "frameMean": 10.587083333333323,
+    "frameP95": 16.899999999997817,
+    "fps": 94.45472076823182,
+    "version": "final-single-patch"
+  },
+  {
+    "before": true,
+    "scene": "dense",
+    "resolution": 1,
+    "frames": 240,
+    "renderMean": 4.466249999976329,
+    "renderP95": 8.299999999813735,
+    "frameMean": 10.349583333333339,
+    "frameP95": 18.700000000004366,
+    "fps": 96.62224727243442,
+    "version": "repeat-baseline"
+  }
+]

@@ -1,3 +1,4 @@
+import {drawSustainRibbon} from './ribbon-light.mjs';
 import {noteTexture} from './note-skin.mjs';
 import {NOTE_PALETTE} from './note-palette.mjs';
 import {project,clamp} from './core.mjs';
@@ -7,30 +8,9 @@ export class Stage{
  async init(host){this.app=new P.Application();await this.app.init({width:800,height:480,resolution:Math.min(devicePixelRatio||1,2),autoDensity:true,antialias:true,backgroundAlpha:0,autoStart:false,preference:'webgl'});this.app.canvas.id='canvas';this.app.canvas.setAttribute('aria-label','4레인 리듬게임 플레이 영역');host.append(this.app.canvas);this.track=new P.Graphics();this.grid=new P.Graphics();this.ribbon=new P.Graphics();this.heads=new P.Container();this.fx=new P.Graphics();this.initJudgment();this.app.stage.addChild(this.track,this.grid,this.judgeGlow,this.ribbon,this.heads,this.judgeHighlight,this.inputHighlight,this.fx,this.diamondBurst);this.pool=[];this.textures={};for(const name of ['TAP','FLICK','HOLD','SLIDE'])this.textures[name]=noteTexture(P,name);this.previewTextures={CRITICAL:noteTexture(P,'TAP',true),CRITICAL_FLICK:noteTexture(P,'FLICK',true),TRACE:noteTexture(P,'TRACE')};this.longOpacity=.7;this.theme([102,233,210]);}
  // Sample the judge's exact path. One continuous fill avoids segment seams.
  drawRibbon(n,a,b,now,approach,effects){
- const r=this.ribbon,pts=this.ribbonPoints??=(new Float64Array(75));
- const c=Number(NOTE_PALETTE[n.type].body.replace('#','0x')),opacity=this.longOpacity??.7;
- for(let i=0;i<=24;i++){
- const t=a+(b-a)*i/24,l=n.type==='SLIDE'?n.judge.position(t):n.lane;
- const [x,y,w]=project(l,1-(t-now)/approach);
- pts[i*3]=x;pts[i*3+1]=y;pts[i*3+2]=w;
+  drawSustainRibbon(this,n,a,b,now,approach,effects);
  }
- const strip=(fraction,alpha)=>{
- r.moveTo(pts[0]-pts[2]*fraction,pts[1]);
- for(let i=1;i<=24;i++)r.lineTo(pts[i*3]-pts[i*3+2]*fraction,pts[i*3+1]);
- for(let i=24;i>=0;i--)r.lineTo(pts[i*3]+pts[i*3+2]*fraction,pts[i*3+1]);
- r.closePath().fill({color:c,alpha:alpha*opacity});
- };
- if(effects)strip(.41,.045);strip(.38,n.active?.34:.23);strip(.24,n.active?.16:.10);strip(.025,n.active?.13:.07);
- for(const side of [-1,1]){
- r.moveTo(pts[0]+side*pts[2]*.38,pts[1]);
- for(let i=1;i<=24;i++)r.lineTo(pts[i*3]+side*pts[i*3+2]*.38,pts[i*3+1]);
- r.stroke({color:c,width:1.25,alpha:(n.active?.9:.72)*opacity});
- }
- if(effects&&n.active){
- const t=a+((now*.45)%1)*(b-a),[x,y,w]=project(n.judge.position(t),1-(t-now)/approach);
- r.moveTo(x-w*.3,y).lineTo(x+w*.3,y).stroke({color:0xffffff,alpha:.28,width:1.5});
- }
- }
+
  theme(accent){
   this.accent=color(accent);const g=this.track;g.clear();
   // Low-saturation reflection only; note/track/judgment palettes are unchanged.

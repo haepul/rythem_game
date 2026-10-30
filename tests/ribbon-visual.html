@@ -1,0 +1,46 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HOLD / SLIDE ribbon comparison</title>
+<link rel="stylesheet" href="../next-stage/style.css"><link rel="stylesheet" href="../next-stage/play-hud.css?v=20261029-ap-combo">
+<style>#controls{position:fixed;z-index:20;bottom:0;left:0;right:0;background:#f8faffee;padding:7px;display:flex;flex-wrap:wrap;gap:8px;color:#242438;font:12px Arial}#controls button,#controls select{font:inherit;color:#242438;background:white;border:1px solid #888;padding:5px}#status{flex-basis:100%}#controls[hidden]{display:none}</style>
+<nav id="controls"><label>Scene <select id="scene"><option value="hold">HOLD approach</option><option value="hold-active">HOLD active</option><option value="hold-release">HOLD release</option><option value="hold-tail">HOLD tail</option><option value="slide">SLIDE approach</option><option value="slide-active">SLIDE active</option><option value="slide-straight">SLIDE straight</option><option value="slide-tail">SLIDE tail</option><option value="dense">Dense long notes</option><option value="master">Actual MASTER</option><option value="input">Keyboard / pointer</option></select></label>
+<label>Opacity <select id="opacity"><option>.1</option><option selected>.7</option><option>1</option></select></label><label>Render resolution <select id="resolution"><option>1</option><option>2</option></select></label><label><input id="before" type="checkbox">Before</label><label><input id="effects" type="checkbox" checked>Effects</label><label><input id="motion" type="checkbox">Reduced motion</label><button id="pause">Run / pause fixture clock</button><button id="measure">Measure 240 frames</button><output id="status">Loading</output></nav>
+<script src="../next-stage/vendor/pixi.min.js"></script><script type="module">
+import {Stage} from '../next-stage/renderer.mjs?v=20261030-ribbon';
+import {Engine,project} from '../next-stage/core.mjs';
+import {PlayHUD} from '../next-stage/play-hud.mjs?v=20261029-ap-combo';
+import {drawRibbonBefore} from './fixtures/ribbon-before.mjs';
+const $=id=>document.getElementById(id),query=new URLSearchParams(location.search);
+for(const id of ['scene','opacity','resolution'])if(query.has(id))$(id).value=query.get(id);
+$('before').checked=query.has('before');$('effects').checked=query.get('effects')!=='0';$('motion').checked=query.get('motion')==='0';$('controls').hidden=query.has('capture');
+const markup=await (await fetch('../next-stage/index.html')).text();const play=new DOMParser().parseFromString(markup,'text/html').getElementById('play');document.body.append(play);play.hidden=false;$('count-in').hidden=true;$('pause-button').hidden=true;
+$('playing-title').textContent='HOLD / SLIDE';$('playing-level').textContent='SILENT FIXTURE · ENGINE CONTACTS';
+const stage=new Stage();await stage.init($('stage-host'));const hud=new PlayHUD(),master=await (await fetch('../next-stage/data/21-master-full.json')).json();
+let engine,now,approach=1,busy=false,running=false,frame,lastStamp,bpm=120,offset=0,events=[],inputCount=0,peakContacts=0;
+function render(){stage.longOpacity=Number($('opacity').value);stage.draw(engine,now,approach,bpm,offset,$('effects').checked&&!$('motion').checked);hud.update(engine,now,10,false);}
+const long=(type,lane,end_lane,time=1,end_time=2.4)=>({type,lane,end_lane,time,end_time,tick_times:[time,(time+end_time)/2,end_time]});
+function rebuild(){if(busy)return;running=false;cancelAnimationFrame(frame);stage.ribbonLights=new WeakMap();stage.drawRibbon=$('before').checked?drawRibbonBefore:Stage.prototype.drawRibbon;stage.app.renderer.resize(800,480,Number($('resolution').value));hud.reset();bpm=120;offset=0;
+ const scene=$('scene').value,isSlide=scene.startsWith('slide'),type=isSlide?'SLIDE':'HOLD';let notes=[long(type,1,isSlide&&scene!=='slide-straight'?3:1),{type:'TAP',lane:0,time:1.8},{type:'FLICK',lane:3,time:2.1}];
+ now=scene==='hold'||scene==='slide'?.85:scene.endsWith('tail')?2.36:1.5;
+ if(scene==='dense')notes=[long('HOLD',0,0),long('SLIDE',1,3),long('SLIDE',3,1),long('HOLD',2,2),...Array.from({length:16},(_,i)=>({type:'TAP',lane:i%4,time:1.6+Math.floor(i/4)*.15}))];
+ if(scene.endsWith('tail'))notes.push({type:'TAP',lane:0,time:2.4},long('HOLD',2,2));
+ if(scene==='input'){notes=[long('HOLD',0,0,0,30),long('SLIDE',1,3,0,30)];now=1.5;}
+ if(scene==='master'){engine=new Engine(master,true);now=183.00872050058055;bpm=master.bpm;offset=master.offset;engine.step(now,[],approach);render();}
+ else {engine=new Engine({notes,total:notes.reduce((s,n)=>s+(n.tick_times?.length??1),0)},true);
+  for(let t=0;t<now;t+=.01){const at=Math.min(now,t+.01),input=[];
+   if(scene!=='input'&&at>=1&&t<1){for(const n of notes.filter(n=>n.end_time)){if(n.type==='SLIDE'){const [x]=project(n.lane,1);input.push(['touch','down','slide'+n.lane,x,410,1]);}else input.push(['key','down',['KeyD','KeyF','KeyJ','KeyK'][n.lane],1]);}}
+   for(const n of engine.notes.filter(n=>n.type==='SLIDE'))if(at>1&&scene!=='input'){const [x]=project(n.judge.position(at),1);input.push(['touch','move','slide'+n.lane,x,410,at]);}
+   if(scene==='hold-release'&&at>=1.4&&t<1.4)input.push(['key','up','KeyF',1.4]);
+   engine.step(at,input,approach);if(at>now-.12){stage.ribbon.clear();for(const n of engine.active)if(n.judge&&!n.hit)stage.drawRibbon(n,Math.max(at,n.time),Math.min(at+approach,n.end_time),at,approach,$('effects').checked&&!$('motion').checked);}
+  }engine.step(now,[],approach);render();
+ }
+ events=[];inputCount=0;peakContacts=0;$('status').textContent=JSON.stringify({scene,now,before:$('before').checked,resolution:stage.app.renderer.resolution,canvas:[stage.app.canvas.width,stage.app.canvas.height],active:engine.notes.filter(n=>n.judge).map(n=>[n.type,!!n.active]),counts:engine.counts});$('status').dataset.ready='true';
+}
+for(const id of ['scene','opacity','resolution','before','effects','motion'])$(id).onchange=rebuild;
+function tick(stamp){if(!running)return;const dt=lastStamp===undefined?0:Math.min(.05,(stamp-lastStamp)/1000);lastStamp=stamp;now+=dt;inputCount+=events.length;engine.step(now,events.splice(0),approach);peakContacts=Math.max(peakContacts,engine.contacts().length);render();$('status').textContent=JSON.stringify({now,inputCount,peakContacts,contacts:engine.contacts(),counts:engine.counts,active:engine.notes.filter(n=>n.judge).map(n=>!!n.active)});frame=requestAnimationFrame(tick);}
+$('pause').onclick=()=>{running=!running;lastStamp=undefined;if(running)frame=requestAnimationFrame(tick);else cancelAnimationFrame(frame);};
+for(const action of ['keydown','keyup'])addEventListener(action,e=>{if($('scene').value!=='input'||!['KeyD','KeyF','KeyJ','KeyK'].includes(e.code)||e.repeat)return;events.push(['key',action==='keydown'?'down':'up',e.code,now]);});
+const canvas=stage.app.canvas;canvas.style.touchAction='none';for(const action of ['pointerdown','pointermove','pointerup','pointercancel'])canvas.addEventListener(action,e=>{if($('scene').value!=='input')return;if(action==='pointerdown')canvas.setPointerCapture(e.pointerId);const r=canvas.getBoundingClientRect();events.push(['touch',action.replace('pointer',''),String(e.pointerId),(e.clientX-r.left)*800/r.width,(e.clientY-r.top)*480/r.height,now]);});
+$('measure').onclick=async()=>{if(busy||running)return;busy=true;$('measure').disabled=true;$('status').dataset.measured='false';const cpu=[],frames=[];let previous;
+ for(let i=0;i<260;i++){const stamp=await new Promise(requestAnimationFrame),start=performance.now();render();if(i>=20){cpu.push(performance.now()-start);frames.push(stamp-previous);}previous=stamp;}
+ const avg=a=>a.reduce((s,v)=>s+v,0)/a.length,frameMean=avg(frames);cpu.sort((a,b)=>a-b);frames.sort((a,b)=>a-b);$('status').textContent=JSON.stringify({before:$('before').checked,scene:$('scene').value,resolution:stage.app.renderer.resolution,frames:240,renderMean:avg(cpu),renderP95:cpu[228],frameMean,frameP95:frames[228],fps:1000/frameMean});$('status').dataset.measured='true';busy=false;$('measure').disabled=false;
+};rebuild();
+</script></html>

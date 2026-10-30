@@ -1,0 +1,17 @@
+{
+  "afterKeyboardAndPointer": {
+    "now": 33.89040000000021,
+    "inputCount": 5,
+    "peakContacts": 1,
+    "contacts": [],
+    "counts": {
+      "PERFECT": 0,
+      "GREAT": 0,
+      "MISS": 6
+    },
+    "active": [
+      false,
+      false
+    ]
+  }
+}
