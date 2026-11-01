@@ -1,5 +1,9 @@
 # Rhythm Stage NEXT
 
+최신 DAY 7: [무료 시뮬레이션 실행·원자적 저장·검증·배포 계약](docs/gacha/day7.md). 아래 DAY 1~6 안내는 당시의 기록입니다.
+
+2026-10-30 **로컬 DAY 5 완료**: [상세 안내 선행 보완·무료 테스트 재화·저장·검증·캡처](docs/gacha/day5.md). 이번 변경은 commit/push/배포하지 않았습니다. 현재 로컬 확인 경로는 `/next-stage/#/gacha`이며, 아래 과거 배포 기록과 구분합니다.
+
 최근 추가 작업: [PERFECT/AP 콤보](docs/ap-combo/README.md), [박자 가이드라인 전후 캡처·검증](docs/beat-guides/README.md), [가챠 DAY 3 배너 선택·검증](docs/gacha/day3.md), [판정 텍스트 DAY 8 전후 캡처·검증](docs/judgment-text/README.md). 각 보고서는 구현 당시 검증 기록입니다. 2026-10-29 후속 요청으로 GitHub Pages 배포를 진행하며 공개 경로는 `/next-stage/?v=20261022-track`을 유지합니다.
 
 ## Gacha DAY 1 design (2026-10-26)
@@ -51,3 +55,5 @@ The separate desktop chart editor/audio-analysis tooling stays in Python; this w
 
 Reference implementation API: https://pixijs.com/8.x/guides/components/application
 Vendored PixiJS: https://cdn.jsdelivr.net/npm/pixi.js@8.17.1/dist/pixi.min.js (MIT notice in `vendor/PIXI-LICENSE.txt`). Nanum Gothic Bold is unmodified and accompanied by `UI-FONT-LICENSE.txt`. Jackets are generated from original SVG geometry; no Project SEKAI graphic assets are bundled.
+
+DAY 6 로컬 구현: [임시 카드·확률 엔진·상세 안내 및 검증](docs/gacha/day6.md). 아직 추첨 실행·차감·획득 저장은 없으며 배포하지 않았습니다.

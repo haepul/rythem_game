@@ -4,7 +4,7 @@
 #home.menu-shell .gacha-heading{margin-bottom:20px}
 #home.menu-shell .gacha-heading h1{font-size:clamp(32px,5vw,48px);letter-spacing:.04em;line-height:1.15;color:var(--ui-text)}
 #home.menu-shell .gacha-heading h1 span{color:var(--ui-cyan)}
-#home.menu-shell .gacha-heading>p:last-child{color:var(--ui-muted);font-size:var(--ui-text-sm);margin-top:12px;line-height:1.7}
+#home.menu-shell .gacha-heading-copy>p:last-child{color:var(--ui-muted);font-size:var(--ui-text-sm);margin-top:12px;line-height:1.7}
 #home.menu-shell .gacha-panel{display:flex;flex-direction:column;align-items:center;gap:16px;padding:22px 24px 24px;background:radial-gradient(ellipse at 50% 35%,#dbf9f4aa,transparent 62%),var(--ui-surface);border:1px solid var(--ui-border);border-radius:var(--ui-radius-lg);box-shadow:var(--ui-highlight),var(--ui-shadow-panel)}
 #home.menu-shell .gacha-status{color:var(--ui-selected);background:var(--ui-soft);padding:9px 16px;border-radius:var(--ui-radius-pill);font-size:var(--ui-text-sm);text-align:center;line-height:1.6}
 #home.menu-shell .gacha-art{position:relative;width:min(100%,390px);height:250px;flex:none}
@@ -87,3 +87,62 @@
 @media(prefers-reduced-motion:reduce){#home.menu-shell .gacha-banner-button{transition:none}#home.menu-shell .gacha-banner-button:hover,#home.menu-shell .gacha-banner-button:active{transform:none}}
 #home.menu-shell .gacha-screen:where(body.reduced *) .gacha-banner-button{transition:none;transform:none}
 @media(forced-colors:active){#home.menu-shell .gacha-banner-button[aria-pressed=true]{outline:3px solid Highlight}#home.menu-shell .gacha-selected{color:Highlight}}
+/* DAY 4 details: shared native modal, scoped controls, no backdrop blur. */
+dialog.gacha-dialog{width:min(92vw,560px);max-height:88dvh;padding:24px;border:1px solid #d5e7ed;border-top:5px solid var(--ui-cyan);color:var(--ui-text);background:var(--ui-surface);overflow:auto}
+dialog.gacha-dialog::backdrop{background:rgb(21 25 54 / .66);backdrop-filter:none}
+dialog.gacha-dialog h2{font-size:clamp(22px,4vw,28px);overflow-wrap:anywhere;line-height:1.35}
+dialog.gacha-dialog p{line-height:1.65;overflow-wrap:anywhere}
+dialog.gacha-dialog .ui-button{min-height:44px;white-space:normal}
+dialog.gacha-dialog .gacha-dialog-close{width:100%;margin-top:12px}
+#home.menu-shell .gacha-details{min-height:44px;flex-shrink:0;white-space:normal}
+#home.menu-shell .gacha-bottom{flex-wrap:wrap}
+/* DAY 5 wallet: menu-only, no per-frame work or decorative motion. */
+#home.menu-shell .gacha-heading{display:grid;grid-template-columns:minmax(0,1fr) minmax(270px,420px);column-gap:24px;align-items:start}
+#home.menu-shell .gacha-heading-copy{min-width:0}
+#home.menu-shell .gacha-wallet{text-align:right;min-width:0;padding:16px 20px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-md);background:var(--ui-surface);box-shadow:var(--ui-shadow-sm)}
+#home.menu-shell .gacha-wallet-label{font-size:14px;font-weight:800;color:var(--ui-text)}
+#home.menu-shell .gacha-balance{display:block;font-size:32px;font-variant-numeric:tabular-nums;line-height:1.3;color:var(--ui-text);overflow-wrap:anywhere}
+#home.menu-shell .gacha-wallet-policy{font-size:12px;color:var(--ui-muted);line-height:1.6;margin:6px 0 10px}
+#home.menu-shell .gacha-wallet-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+#home.menu-shell .gacha-wallet .ui-button{min-height:44px;max-width:100%;white-space:normal;padding:10px 14px;font-size:14px}
+#home.menu-shell .gacha-wallet .ui-button[hidden]{display:none}
+#home.menu-shell .gacha-wallet .ui-button:disabled{opacity:.65;transform:none;cursor:default}
+#home.menu-shell .gacha-wallet-status,#home.menu-shell .gacha-wallet-error{font-size:13px;line-height:1.6;overflow-wrap:anywhere;margin-top:8px}
+#home.menu-shell .gacha-wallet-error{color:#9a2456;font-weight:700}
+#home.menu-shell .gacha-wallet-status:empty,#home.menu-shell .gacha-wallet-error:empty{display:none}
+@media(max-width:900px){
+ #home.menu-shell .gacha-heading{display:block}
+ #home.menu-shell .gacha-wallet{margin-top:16px;text-align:left}
+ #home.menu-shell .gacha-wallet-actions{justify-content:flex-start}
+}
+@media(prefers-reduced-motion:reduce){dialog.gacha-dialog,dialog.gacha-dialog::backdrop{animation:none;transition:none}}
+body.reduced dialog.gacha-dialog,body.reduced dialog.gacha-dialog::backdrop{animation:none;transition:none}
+
+/* DAY 6: readable probability disclosure; keep close outside the scroll region. */
+/* DAY 7: scoped controls and a scroll region, never a fixed-height result grid. */
+#home.menu-shell .gacha-draw{padding:var(--ui-space-4);margin-top:var(--ui-space-4);border:1px solid var(--ui-border);border-radius:var(--ui-radius-md);background:var(--ui-surface)}
+.gacha-draw-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ui-space-3);margin-block:var(--ui-space-3)}
+.gacha-draw-actions button{width:100%;min-height:44px;white-space:normal}
+.gacha-draw-actions p,.gacha-draw-policy,.gacha-draw-status{font-size:var(--ui-text-sm);line-height:1.6;overflow-wrap:anywhere}
+.gacha-draw-history{display:flex;flex-wrap:wrap;gap:var(--ui-space-2)}
+.gacha-draw-error:not(:empty){margin-top:var(--ui-space-3);color:#9c2559;font-size:var(--ui-text-sm);line-height:1.6}
+dialog.gacha-draw-dialog[open]{display:flex;flex-direction:column;width:min(92vw,600px);max-height:min(88dvh,calc(100% - 24px));overflow:hidden}
+dialog.gacha-draw-dialog header,dialog.gacha-draw-dialog .gacha-dialog-close{flex-shrink:0}
+dialog.gacha-draw-dialog .gacha-dialog-content{overflow:auto;min-height:0;overscroll-behavior:contain;overflow-wrap:anywhere;line-height:1.65}
+dialog.gacha-draw-dialog .gacha-dialog-content p{margin-bottom:8px}
+dialog.gacha-draw-dialog button{min-height:44px;white-space:normal}
+.gacha-result-list{padding-left:24px;margin-block:16px}
+.gacha-result-list li{border-bottom:1px solid var(--ui-border);padding:8px 4px;color:var(--ui-text)}
+.gacha-result-list li p:first-child{font-weight:800}
+@media(max-width:440px){.gacha-draw-actions{grid-template-columns:1fr}dialog.gacha-draw-dialog{padding:16px}}
+dialog.gacha-dialog[open]:has(.gacha-probabilities){display:flex;flex-direction:column;width:min(92vw,640px);max-height:min(88dvh,calc(100% - 24px))}
+dialog.gacha-dialog:has(.gacha-probabilities) header{flex-shrink:0}
+dialog.gacha-dialog:has(.gacha-probabilities) .gacha-dialog-content{overflow:auto;min-height:0;overscroll-behavior:contain}
+dialog.gacha-dialog:has(.gacha-probabilities) .gacha-dialog-close{flex-shrink:0}
+.gacha-dialog .gacha-probabilities table{width:100%;table-layout:fixed;border-collapse:collapse;margin:16px 0;font-size:var(--ui-text-sm);line-height:1.5}
+.gacha-dialog .gacha-probabilities caption{text-align:left;font-weight:800;color:var(--ui-text);padding-block:8px}
+.gacha-dialog .gacha-probabilities th,.gacha-dialog .gacha-probabilities td{padding:10px 8px;border-bottom:1px solid var(--ui-border);text-align:left;overflow-wrap:anywhere;vertical-align:top}
+.gacha-dialog .gacha-probabilities thead{background:var(--ui-soft)}
+.gacha-dialog .gacha-probabilities tbody th{font-weight:600}
+.gacha-dialog .gacha-probabilities td:last-child{font-variant-numeric:tabular-nums}
+@media(max-width:440px){dialog.gacha-dialog:has(.gacha-probabilities){padding:16px}.gacha-dialog .gacha-probabilities th,.gacha-dialog .gacha-probabilities td{padding:8px 5px}}

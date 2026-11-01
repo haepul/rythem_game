@@ -1,0 +1,160 @@
+{
+  "date": "2026-10-31 KST",
+  "app": "http://127.0.0.1:8785/next-stage/?v=20261031-day6-verified#/gacha",
+  "fixture": "http://127.0.0.1:8785/tests/gacha-draw.html",
+  "bannerChecks": [
+    {
+      "focusInside": true,
+      "modal": true,
+      "rates": [
+        "R2 · ★★ 임시 카드80%",
+        "R3 · ★★★ 임시 카드15%",
+        "R4 · ★★★★ 임시 카드5%",
+        "test-card-001R2 · ★★ 임시 카드40%",
+        "test-card-002R2 · ★★ 임시 카드40%",
+        "test-card-003R3 · ★★★ 임시 카드7.5%",
+        "test-card-004R3 · ★★★ 임시 카드7.5%",
+        "test-card-005R4 · ★★★★ 임시 카드2.5%",
+        "test-card-006R4 · ★★★★ 임시 카드2.5%"
+      ],
+      "title": "민트 스테이지"
+    },
+    {
+      "focusInside": true,
+      "modal": true,
+      "rates": [
+        "R2 · ★★ 임시 카드80%",
+        "R3 · ★★★ 임시 카드15%",
+        "R4 · ★★★★ 임시 카드5%",
+        "test-card-001R2 · ★★ 임시 카드40%",
+        "test-card-002R2 · ★★ 임시 카드40%",
+        "test-card-003R3 · ★★★ 임시 카드7.5%",
+        "test-card-004R3 · ★★★ 임시 카드7.5%",
+        "test-card-005R4 · ★★★★ 임시 카드2.5%",
+        "test-card-006R4 · ★★★★ 임시 카드2.5%"
+      ],
+      "title": "라일락 스테이지"
+    },
+    {
+      "focusInside": true,
+      "modal": true,
+      "rates": [
+        "R2 · ★★ 임시 카드80%",
+        "R3 · ★★★ 임시 카드15%",
+        "R4 · ★★★★ 임시 카드5%",
+        "test-card-001R2 · ★★ 임시 카드40%",
+        "test-card-002R2 · ★★ 임시 카드40%",
+        "test-card-003R3 · ★★★ 임시 카드7.5%",
+        "test-card-004R3 · ★★★ 임시 카드7.5%",
+        "test-card-005R4 · ★★★★ 임시 카드2.5%",
+        "test-card-006R4 · ★★★★ 임시 카드2.5%"
+      ],
+      "title": "피치 스테이지"
+    }
+  ],
+  "responsive": [
+    {
+      "animation": "none",
+      "closeHeight": 44,
+      "closeInside": true,
+      "contentOverflow": false,
+      "dialogInside": true,
+      "pageOverflow": false,
+      "size": [
+        360,
+        800
+      ]
+    },
+    {
+      "animation": "none",
+      "closeHeight": 44,
+      "closeInside": true,
+      "contentOverflow": false,
+      "dialogInside": true,
+      "pageOverflow": false,
+      "size": [
+        390,
+        844
+      ]
+    },
+    {
+      "animation": "none",
+      "closeHeight": 44,
+      "closeInside": true,
+      "contentOverflow": false,
+      "dialogInside": true,
+      "pageOverflow": false,
+      "size": [
+        844,
+        390
+      ]
+    },
+    {
+      "animation": "none",
+      "closeHeight": 44,
+      "closeInside": true,
+      "contentOverflow": false,
+      "dialogInside": true,
+      "pageOverflow": false,
+      "size": [
+        1366,
+        768
+      ]
+    }
+  ],
+  "errorCases": [
+    {
+      "tables": 0,
+      "text": "맑은 민트빛과 겹쳐진 마름모. 가볍게 펼쳐지는 새로운 무대의 색을 살펴보세요.제공 확률 미설정희귀도 안내 준비 중 · 실제 등급과 대상 목록은 아직 설정되지 않았습니다.추첨 비용 미설정 · 추첨 실행 준비 중 · 교환은 제공하지 않습니다."
+    },
+    {
+      "tables": 0,
+      "text": "맑은 민트빛과 겹쳐진 마름모. 가볍게 펼쳐지는 새로운 무대의 색을 살펴보세요.확률 설정 오류 · 제공 확률을 표시할 수 없습니다. 설정을 확인해 주세요.희귀도 안내 준비 중 · 실제 등급과 대상 목록은 아직 설정되지 않았습니다.추첨 비용 미설정 · 추첨 실행 준비 중 · 교환은 제공하지 않습니다."
+    }
+  ],
+  "cssZoom200": {
+    "viewport": [
+      1366,
+      768
+    ],
+    "dialogTop": 24,
+    "dialogBottom": 744,
+    "closeBottom": 694.4,
+    "closeHeight": 88,
+    "contentHorizontalOverflow": false,
+    "longIds": true,
+    "focusLoop": true
+  },
+  "nativeZoom": {
+    "before": {
+      "dpr": 1.0000000149011612,
+      "width": 1366
+    },
+    "after": {
+      "dpr": 1.0000000149011612,
+      "width": 1366
+    },
+    "applied": false
+  },
+  "escapeFocusReturn": true,
+  "routeExitClosedDialogs": true,
+  "settingsCoexistence": true,
+  "menuSelectionPreserved": [
+    "Cry Baby",
+    "MASTER",
+    "전체 곡",
+    "demo-peach"
+  ],
+  "consoleErrors": [],
+  "screenshots": {
+    "captured": false,
+    "reason": "Browser screenshot APIs returned Unable to capture screenshot; DOM and interaction checks only."
+  },
+  "unverified": [
+    "physical mobile touch",
+    "native browser 200% zoom",
+    "OS reduced-motion change",
+    "Safari",
+    "Firefox"
+  ]
+}

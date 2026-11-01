@@ -5,7 +5,7 @@ import {albumArt} from './covers.mjs';
 import {Engine,rank,clamp} from './core.mjs';
 import {Stage} from './renderer.mjs?v=20261030-ribbon';
 import {MenuNavigation} from './menu-navigation.mjs';
-import {mountGachaView} from './gacha/view.mjs?v=20261028-day3-final';
+import {mountGachaView} from './gacha/view.mjs?v=20261101-day7';
 const $=id=>document.getElementById(id),audio=window.rhythmAudio;
 const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback;}catch{return fallback;}};
 const save=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value));}catch{toast('이 브라우저에서는 기록을 저장할 수 없습니다.');}};
@@ -52,8 +52,8 @@ const settingsMotion=new SettingsMotion($('settings'),()=>!settings.effects||mat
 const exitSettings=()=>settingsMotion.exit(()=>state==='PAUSED'?resume():$('settings').close());
 $('settings').addEventListener('cancel',e=>{e.preventDefault();exitSettings();});
 $('settings').querySelector('form').addEventListener('submit',e=>{e.preventDefault();exitSettings();});
-function settingsDialog(paused=false){settingsMotion.cancel();$('settings').classList.toggle('live-pause',paused);$('pause-actions').hidden=!paused;$('settings-done').hidden=paused;$('settings-title').textContent=paused?'일시정지':'플레이 설정';$('settings').querySelector('.eyebrow').textContent=paused?'LIVE / PAUSE':'MAKE IT YOURS';$('pause-song').hidden=!paused;$('pause-song').textContent=paused?`${songs[selected].song} · ${level.toUpperCase()} · ${practice?'연습 모드':'라이브'}`:'';$('settings').showModal();}
-$('settings-button').onclick=()=>settingsDialog();$('help-button').onclick=()=>$('help').showModal();$('settings').addEventListener('close',()=>{if(state==='PAUSED')resume();});
+function settingsDialog(paused=false){gachaView.closeDialogs();settingsMotion.cancel();$('settings').classList.toggle('live-pause',paused);$('pause-actions').hidden=!paused;$('settings-done').hidden=paused;$('settings-title').textContent=paused?'일시정지':'플레이 설정';$('settings').querySelector('.eyebrow').textContent=paused?'LIVE / PAUSE':'MAKE IT YOURS';$('pause-song').hidden=!paused;$('pause-song').textContent=paused?`${songs[selected].song} · ${level.toUpperCase()} · ${practice?'연습 모드':'라이브'}`:'';$('settings').showModal();}
+$('settings-button').onclick=()=>settingsDialog();$('help-button').onclick=()=>{gachaView.closeDialogs();$('help').showModal();};$('settings').addEventListener('close',()=>{if(state==='PAUSED')resume();});
 function closeDialogs(){settingsMotion.cancel();for(const el of document.querySelectorAll('dialog[open]'))el.close();}
 function home(){mouseHeld=false;generation++;state='HOME';audio.setInputEnabled(false);audio.cancel();engine?.clear();closeDialogs();$('play').hidden=true;$('result').hidden=true;$('home').hidden=false;navigation.navigate('library',{replace:true,restore:false,force:true});renderLibrary();renderDetail(false);}
 function pause(){mouseHeld=false;if(state==='COUNTDOWN'){home();return;}if(state!=='PLAY')return;engine.step(audio.currentTime,JSON.parse(audio.drainInput()),.55/settings.speed);state='PAUSED';audio.pause();audio.setInputEnabled(false);engine.clear();settingsDialog(true);}

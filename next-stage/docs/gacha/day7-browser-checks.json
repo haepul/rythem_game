@@ -1,0 +1,115 @@
+{
+  "browser": "Codex IAB Chromium on Windows; desktop viewport emulation",
+  "responsive": [
+    {
+      "close": {
+        "bottom": 742.1719741821289,
+        "height": 43.339942932128906,
+        "top": 698.83203125
+      },
+      "contentOverflow": false,
+      "dialog": {
+        "bottom": 758.7200698852539,
+        "left": 21.301000595092773,
+        "right": 323.4989986419678,
+        "top": 65.2800064086914
+      },
+      "focused": "확인",
+      "height": 800,
+      "overflow": false,
+      "resultCount": 10,
+      "width": 360
+    },
+    {
+      "close": {
+        "bottom": 783.2316665649414,
+        "height": 43.339942932128906,
+        "top": 739.8917236328125
+      },
+      "contentOverflow": false,
+      "dialog": {
+        "bottom": 799.7797393798828,
+        "left": 21.52899169921875,
+        "right": 353.6709899902344,
+        "top": 68.20783996582031
+      },
+      "focused": "확인",
+      "height": 844,
+      "overflow": false,
+      "resultCount": 10,
+      "width": 390
+    },
+    {
+      "close": {
+        "bottom": 351.97036361694336,
+        "height": 43.33999252319336,
+        "top": 308.63037109375
+      },
+      "contentOverflow": false,
+      "dialog": {
+        "bottom": 376.3984146118164,
+        "left": 118.9000015258789,
+        "right": 709.9000015258789,
+        "top": 38.00162506103515
+      },
+      "focused": "확인",
+      "height": 390,
+      "overflow": false,
+      "resultCount": 10,
+      "width": 844
+    },
+    {
+      "close": {
+        "bottom": 704.4157218933105,
+        "height": 43.34003829956055,
+        "top": 661.07568359375
+      },
+      "contentOverflow": false,
+      "dialog": {
+        "bottom": 728.8437881469727,
+        "left": 380.1000061035156,
+        "right": 971.1000061035156,
+        "top": 63.143775939941406
+      },
+      "focused": "확인",
+      "height": 768,
+      "overflow": false,
+      "resultCount": 10,
+      "width": 1366
+    }
+  ],
+  "cssZoom200": {
+    "viewport": "1366x768",
+    "modalTop": 24,
+    "modalBottom": 744,
+    "closeBottom": 694.4,
+    "closeHeight": 88,
+    "horizontalOverflow": false,
+    "effects": "none"
+  },
+  "checks": [
+    "grant 3000 once",
+    "Escape cancel: no debit, opener focus restored",
+    "single draw: 3000 to 2700, one result",
+    "reload returns same request and result",
+    "ten draw: 3000 to 0, ten results",
+    "quota error: no debit, same-request retry succeeds",
+    "committing Escape blocked",
+    "two real tabs: 3000 to 2700 to 2400, two receipts",
+    "corrupt recovery warning and confirmation",
+    "future version blocked",
+    "back while committing hides modal; return restores committed result",
+    "Cry Baby MASTER/full selection survives gacha round trip",
+    "probability tables 80/15/5 and 40/7.5/2.5",
+    "real song normal game-over and practice enter/pause/resume/return",
+    "6-second one-note fixture clear persists isolated existing game record; reload restores F"
+  ],
+  "screenshots": "getScreenshot failed: Unable to capture screenshot",
+  "notRun": [
+    "real mobile devices",
+    "Safari/Firefox",
+    "native browser 200% zoom",
+    "audible audio sync verification",
+    "FPS and input latency measurement"
+  ]
+}

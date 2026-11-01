@@ -1,0 +1,33 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DAY5 지갑 검증 · 테스트 전용 저장소</title>
+<link rel="stylesheet" href="../next-stage/style.css"><link rel="stylesheet" href="../next-stage/ui-system.css"><link rel="stylesheet" href="../next-stage/gacha.css?v=20261030-day5">
+<style>#home{display:block;padding:16px;min-height:100dvh}#controls{display:flex;flex-wrap:wrap;gap:12px;padding:12px;background:#fff}#controls button,#controls select{min-height:44px;padding:8px;max-width:100%;white-space:normal}#log{white-space:pre-wrap;overflow-wrap:anywhere;margin:12px}html.zoomed #home{zoom:2}</style>
+<div id="controls"><label>저장 실패 주입 <select id="failure"><option value="none">정상</option><option value="quota">용량 초과</option><option value="write">쓰기 실패</option><option value="read">읽기 실패</option><option value="no-lock">잠금 미지원</option></select></label>
+<button id="seed">시험 지갑 0으로 준비</button><button id="corrupt">손상 JSON 준비</button><button id="future">미래 버전 준비</button><button id="rapid">20회 연속 지급 요청</button><button id="race">다른 시험 탭과 지급 경쟁</button><button id="show">메뉴 다시 열기</button><button id="settings">시험 설정 창</button>
+<label><input type="checkbox" id="zoom">CSS 200% 확대</label><label><input type="checkbox" id="off">효과 OFF</label><label><input type="checkbox" id="motion">reduced-motion 모사</label></div>
+<p>운영 지갑과 분리된 <code>rhythm-next-test-wallet-day5</code>만 사용합니다. 두 탭에서 이 페이지를 연 뒤 경쟁 버튼을 누르세요.</p><pre id="log" role="status"></pre>
+<div id="home" class="menu-shell"><main class="gacha-screen" id="gacha-screen"></main></div>
+<dialog id="fixture-settings" class="ui-modal"><h2>시험 설정</h2><form method="dialog"><button>닫기</button></form></dialog>
+<script type="module">
+import {mountGachaView} from '../next-stage/gacha/view.mjs?v=20261101-day7';
+import {createWalletStore} from '../next-stage/gacha/wallet-storage.mjs?v=20261101-day7';
+import {initialWallet} from '../next-stage/gacha/wallet.mjs?v=20261101-day7';
+const $=id=>document.getElementById(id),key='rhythm-next-test-wallet-day5',channel=new BroadcastChannel(key),tabId=crypto.randomUUID();
+let view,store;const report=text=>$('log').textContent=text;
+function mount(){view?.destroy();const mode=$('failure').value;
+ const storage={getItem(k){if(mode==='read')throw new Error('injected read failure');return localStorage.getItem(k);},setItem(k,v){if(mode==='quota')throw new DOMException('injected quota','QuotaExceededError');if(mode==='write')throw new Error('injected write failure');localStorage.setItem(k,v);}};
+ const locks=mode==='no-lock'?undefined:{request:(name,options,callback)=>navigator.locks.request(name,options,async()=>{await new Promise(resolve=>setTimeout(resolve,250));return callback();})};
+ store=createWalletStore({storage,locks,key});view=mountGachaView($('gacha-screen'),()=>{view.setVisible(false);$('gacha-screen').hidden=true;},{walletStore:store,effects:()=>!$('off').checked&&!$('motion').checked&&!matchMedia('(prefers-reduced-motion: reduce)').matches});
+ $('gacha-screen').hidden=false;view.setVisible(true);
+}
+async function seed(raw){await navigator.locks.request(key+':transaction',()=>localStorage.setItem(key,raw));$('failure').value='none';mount();report('시험 데이터 준비 완료. 운영 기록·설정·지갑에는 쓰지 않았습니다.');}
+$('seed').onclick=()=>seed(JSON.stringify(initialWallet()));$('corrupt').onclick=()=>seed('{broken');$('future').onclick=()=>seed(JSON.stringify({...initialWallet(),schemaVersion:99}));$('failure').onchange=mount;
+$('rapid').onclick=async()=>{const results=await Promise.all(Array.from({length:20},()=>store.claim()));report(JSON.stringify({kind:'rapid',results:results.map(r=>r.error??(r.changed?'granted':'duplicate')),balance:store.snapshot.wallet?.balance},null,2));};
+async function race(id){const result=await store.claim();const data={kind:'race-result',id,tabId,result:result.error??(result.changed?'granted':'duplicate'),balance:store.snapshot.wallet?.balance};report(JSON.stringify(data,null,2));channel.postMessage(data);}
+$('race').onclick=()=>{const id=crypto.randomUUID();channel.postMessage({kind:'race',id});race(id);};
+channel.onmessage=e=>{if(e.data.kind==='race')race(e.data.id);else if(e.data.kind==='race-result')$('log').textContent+='\nPeer: '+JSON.stringify(e.data);};
+addEventListener('storage',e=>{if(e.key===key)store.refresh();});addEventListener('focus',()=>store.refresh());
+$('show').onclick=()=>{$('gacha-screen').hidden=false;view.setVisible(true);};$('settings').onclick=()=>{view.closeDialogs();$('fixture-settings').showModal();};
+$('zoom').onchange=()=>document.documentElement.classList.toggle('zoomed',$('zoom').checked);
+for(const id of ['off','motion'])$(id).onchange=()=>{document.body.classList.toggle('reduced',$('off').checked||$('motion').checked);view.syncMotion();};
+mount();
+</script></html>

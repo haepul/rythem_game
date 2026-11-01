@@ -1,0 +1,25 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DAY 7 격리 추첨 검증</title>
+<link rel="stylesheet" href="../next-stage/style.css"><link rel="stylesheet" href="../next-stage/ui-system.css"><link rel="stylesheet" href="../next-stage/gacha.css?v=20261101-day7">
+<style>#home{display:block;padding:16px}#controls{display:flex;flex-wrap:wrap;gap:8px;padding:12px;background:white}#controls button{min-height:44px}html.zoomed #home{zoom:2}#evidence{white-space:pre-wrap;overflow-wrap:anywhere;padding:12px}</style>
+<div id="controls"><button id="seed">시험 데이터: v1 잔액 3,000</button><button id="zero">시험 데이터: 초기 0</button><button id="corrupt">시험 데이터: 손상</button><button id="future">시험 데이터: 미래 버전</button><label><input id="fail" type="checkbox">쓰기 실패</label><label><input id="delay" type="checkbox">잠금 3초 지연</label><label><input id="zoom" type="checkbox">CSS 200% 확대</label><label><input id="motion" type="checkbox">효과 OFF</label><button id="show">메뉴 다시 열기</button></div>
+<p>시험 전용 키 rhythm-next-day7-flow-fixture만 사용합니다. 운영 기록·잔액을 읽거나 변경하지 않습니다.</p>
+<div id="home" class="menu-shell"><main id="gacha-screen" class="gacha-screen"></main></div><pre id="evidence" aria-label="시험 저장 요약"></pre>
+<script type="module">
+import {mountGachaView} from '../next-stage/gacha/view.mjs?v=20261101-day7';
+import {createWalletStore} from '../next-stage/gacha/wallet-storage.mjs?v=20261101-day7';
+const key='rhythm-next-day7-flow-fixture',$=id=>document.getElementById(id);
+const storage={getItem:k=>localStorage.getItem(k),setItem(k,v){if($('fail').checked){$('fail').checked=false;throw new DOMException('fixture quota','QuotaExceededError');}localStorage.setItem(k,v);}};
+const locks={request:(n,o,fn)=>navigator.locks.request(n,o,async()=>{if($('delay').checked)await new Promise(r=>setTimeout(r,3000));return fn();})};
+const store=createWalletStore({key,storage,locks});
+const view=mountGachaView($('gacha-screen'),()=>{view.setVisible(false);$('gacha-screen').hidden=true;},{walletStore:store,effects:()=>!$('motion').checked});
+function show(){if(location.hash!=='#gacha')history.pushState(null,'','#gacha');view.setVisible(true);$('gacha-screen').hidden=false;}
+window.addEventListener('popstate',()=>{const open=location.hash==='#gacha';view.setVisible(open);$('gacha-screen').hidden=!open;});
+async function seed(raw){await navigator.locks.request(key+':transaction',()=>localStorage.setItem(key,raw));store.refresh();show();}
+$('seed').onclick=()=>seed(JSON.stringify({schemaVersion:1,balance:3000,claimedGrantIds:['test-crystals-v1']}));
+$('zero').onclick=()=>seed(JSON.stringify({schemaVersion:1,balance:0,claimedGrantIds:[]}));
+$('corrupt').onclick=()=>seed('{');$('future').onclick=()=>seed(JSON.stringify({schemaVersion:99}));
+$('zoom').onchange=()=>document.documentElement.classList.toggle('zoomed',$('zoom').checked);
+$('motion').onchange=()=>{document.body.classList.toggle('reduced',$('motion').checked);view.syncMotion();};$('show').onclick=show;
+store.subscribe(s=>{$('evidence').textContent=JSON.stringify({balance:s.wallet?.balance,schemaVersion:s.wallet?.schemaVersion,receipts:s.wallet?.receipts.map(r=>({id:r.request.requestId,count:r.results.length,before:r.balanceBefore,after:r.balanceAfter})),error:s.error},null,2);});
+window.addEventListener('storage',e=>{if(e.key===key)store.refresh();});show();
+</script></html>

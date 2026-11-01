@@ -1,8 +1,8 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {BANNERS,BANNER_ART,validateBanners} from '../next-stage/gacha/banners.mjs';
-import {BannerSelection} from '../next-stage/gacha/banner-selection.mjs';
+import {BANNERS,BANNER_ART,validateBanners} from '../next-stage/gacha/banners.mjs?v=20261101-day7';
+import {BannerSelection} from '../next-stage/gacha/banner-selection.mjs?v=20261101-day7';
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function setup(banners=BANNERS,assets=BANNER_ART){
  const renders=[],images=[],loads=[];
