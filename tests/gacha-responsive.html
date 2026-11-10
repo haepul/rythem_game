@@ -1,0 +1,7 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><title>DAY 12 반응형 격리 검사</title>
+<style>body{margin:8px;font:16px sans-serif}select{min-height:44px}iframe{display:block;border:0;margin-top:8px}</style>
+<label>시험 화면 크기 <select id="size"><option>360×800</option><option>390×844</option><option>844×390</option><option>768×1024</option><option>1366×768</option></select></label>
+<label>검사 페이지 <select id="page"><option value="gacha-exchange.html">교환과 보관함</option><option value="gacha-flow.html">추첨과 결과</option></select></label>
+<p>브라우저 뷰포트 도구가 크기를 적용하지 못할 때 사용하는 실제 크기 iframe입니다. 실기기 검사가 아닙니다.</p>
+<iframe title="격리 가챠 화면" src="gacha-exchange.html?v=20261108-day13" width="360" height="800"></iframe>
+<script>const s=document.querySelector('#size'),f=document.querySelector('iframe');s.onchange=()=>{const [w,h]=s.value.split('×');f.width=w;f.height=h;};document.querySelector('#page').onchange=e=>{f.src=e.target.value+'?v=20261108-day13';};</script></html>

@@ -1,6 +1,6 @@
-import {CARDS} from './cards.mjs?v=20261101-day7';
-import {DRAW_COSTS} from './wallet-config.mjs?v=20261101-day7';
-import {DRAW_CONFIGS,BANNER_DRAW_CONFIG_IDS,drawProbabilities} from './draw-config.mjs?v=20261101-day7';
+import {CARDS} from './cards.mjs?v=20261108-day13';
+import {DRAW_COSTS} from './wallet-config.mjs?v=20261108-day13';
+import {DRAW_CONFIGS,BANNER_DRAW_CONFIG_IDS,drawProbabilities} from './draw-config.mjs?v=20261108-day13';
 
 export const rarityLabel=rarity=>`${rarity} · ${'★'.repeat(Number(rarity.slice(1)))} 임시 카드`;
 export const probabilityLabel=(numeratorBps,denominator=1)=>{
@@ -14,7 +14,7 @@ export function bannerDetails(id,banners,{configs=DRAW_CONFIGS,bindings=BANNER_D
  if(!banner)return null;
  const base={title:banner.title,description:banner.subtitle,status:'unset',rates:null,
   rarity:'희귀도 안내 준비 중 · 실제 등급과 대상 목록은 아직 설정되지 않았습니다.',
-  probability:'제공 확률 미설정',rules:'추첨 비용 미설정 · 추첨 실행 준비 중 · 교환은 제공하지 않습니다.'};
+  probability:'제공 확률 미설정',rules:'추첨 비용 미설정 · 추첨 실행 준비 중 · 무료 스티커 교환 규칙은 배너의 보너스 안내에서 확인하세요.'};
  try{
   if(!Object.hasOwn(bindings,id)||bindings[id]===null)return base;
   const version=bindings[id];if(!Object.hasOwn(configs,version))throw new Error('missing-config');
@@ -22,7 +22,7 @@ export function bannerDetails(id,banners,{configs=DRAW_CONFIGS,bindings=BANNER_D
   const sharing=banners.filter(b=>Object.hasOwn(bindings,b.id)&&bindings[b.id]===version).map(b=>b.title);
   return {...base,status:'configured',rates,rarity:'R2 / R3 / R4 · 희귀도별 임시 카드 풀',
    probability:`프로젝트 테스트 규칙 v1 · ${rates.version} · 프세카 공식 확률이 아닙니다.`,
-   rules:`10회는 독립 추첨 10번 · 10회 보장 없음 · 프로젝트 테스트 비용: 1회 ${DRAW_COSTS[1]} / 10회 ${DRAW_COSTS[10]} 크리스탈 · 무료 시뮬레이션 · 교환은 제공하지 않습니다.`,
+   rules:`10회는 독립 추첨 10번 · 10회 보장 없음 · 프로젝트 테스트 비용: 1회 ${DRAW_COSTS[1]} / 10회 ${DRAW_COSTS[10]} 크리스탈 · 무료 시뮬레이션 · 무료 스티커 교환 규칙은 배너의 보너스 안내에서 확인하세요.`,
    shared:`${sharing.join(' · ')}${sharing.length>1?' 배너는 같은':' 배너의'} 테스트 풀을 사용합니다. 실제 캐릭터 정보는 포함하지 않습니다.`};
  }catch{return {...base,status:'invalid',probability:'확률 설정 오류 · 제공 확률을 표시할 수 없습니다. 설정을 확인해 주세요.'};}
 }

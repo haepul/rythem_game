@@ -1,0 +1,60 @@
+{
+  "kind": "faults",
+  "checks": [
+    {
+      "name": "before-save failure unchanged",
+      "ok": true
+    },
+    {
+      "name": "retry commits once",
+      "ok": true
+    },
+    {
+      "name": "accepted-throw",
+      "ok": true
+    },
+    {
+      "name": "intro-error",
+      "ok": true
+    },
+    {
+      "name": "reveal-error",
+      "ok": true
+    },
+    {
+      "name": "reduce-start",
+      "ok": true
+    },
+    {
+      "name": "reduce-intro",
+      "ok": true
+    },
+    {
+      "name": "reduce-card",
+      "ok": true
+    },
+    {
+      "name": "exit-intro",
+      "ok": true
+    },
+    {
+      "name": "exit-card",
+      "ok": true
+    }
+  ],
+  "snapshot": {
+    "writes": 10,
+    "rolls": 40,
+    "confirms": 11,
+    "error": null,
+    "balance": 2700,
+    "receipts": 1,
+    "exchanges": 0,
+    "cards": 1,
+    "stickers": 1,
+    "dom": 170,
+    "animations": 1,
+    "timers": 0,
+    "listeners": 53
+  }
+}

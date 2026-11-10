@@ -1,6 +1,6 @@
 // Temporary project test policy; these are not Project SEKAI rules.
 export const WALLET_KEY='rhythm-next-gacha-wallet-v1';
-export const SCHEMA_VERSION=2;
+export const SCHEMA_VERSION=3;
 export const INITIAL_BALANCE=0;
 export const TEST_GRANT=Object.freeze({id:'test-crystals-v1',amount:3000});
 export const DRAW_COSTS=Object.freeze({1:300,10:3000});

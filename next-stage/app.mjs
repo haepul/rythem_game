@@ -5,7 +5,7 @@ import {albumArt} from './covers.mjs';
 import {Engine,rank,clamp} from './core.mjs';
 import {Stage} from './renderer.mjs?v=20261030-ribbon';
 import {MenuNavigation} from './menu-navigation.mjs';
-import {mountGachaView} from './gacha/view.mjs?v=20261101-day7';
+import {mountGachaView} from './gacha/view.mjs?v=20261108-day13';
 const $=id=>document.getElementById(id),audio=window.rhythmAudio;
 const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback;}catch{return fallback;}};
 const save=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value));}catch{toast('이 브라우저에서는 기록을 저장할 수 없습니다.');}};

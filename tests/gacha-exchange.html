@@ -1,0 +1,26 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DAY 12 격리 교환 검증</title>
+<link rel="stylesheet" href="../next-stage/style.css"><link rel="stylesheet" href="../next-stage/ui-system.css"><link rel="stylesheet" href="../next-stage/gacha.css?v=20261108-day13">
+<style>#home{display:block;padding:16px}#controls{display:flex;flex-wrap:wrap;gap:8px;padding:12px}#controls button{min-height:44px}html.zoomed #home{zoom:2}#evidence{white-space:pre-wrap;overflow-wrap:anywhere;padding:12px}</style>
+<div id="controls"><button id="seed">시험 초기 재화 3000</button><button id="nine">이전 v2 9장 기록</button><button id="ten">이전 v2 10장 기록</button><button id="corrupt">손상 데이터 시험</button><button id="show">가챠 다시 열기</button><label><input id="fail" type="checkbox">쓰기 실패</label><label><input id="motion" type="checkbox">효과 OFF</label><label><input id="zoom" type="checkbox">CSS 200%</label></div>
+<p>격리 키 rhythm-next-day12-exchange-fixture만 사용합니다. 운영 기록은 변경하지 않습니다.</p>
+<div id="home" class="menu-shell"><main id="gacha-screen"></main></div><p id="outside" hidden>가챠를 떠났습니다. 위 버튼으로 재진입합니다.</p><pre id="evidence" aria-label="격리 저장 검증"></pre>
+<script type="module">
+import {mountGachaView} from '../next-stage/gacha/view.mjs?v=20261108-day13';
+import {createWalletStore} from '../next-stage/gacha/wallet-storage.mjs?v=20261108-day13';
+import {createDrawService} from '../next-stage/gacha/draw-service.mjs?v=20261108-day13';
+import {bannerRewards} from '../next-stage/gacha/acquisition-history.mjs?v=20261108-day13';
+import {inventoryModel} from '../next-stage/gacha/inventory-model.mjs?v=20261108-day13';
+const key='rhythm-next-day12-exchange-fixture',$=id=>document.getElementById(id);let writes=0,rolls=0;
+const store=createWalletStore({key,storage:{getItem:k=>localStorage.getItem(k),setItem(k,v){if($('fail').checked){$('fail').checked=false;throw new DOMException('fixture','QuotaExceededError');}localStorage.setItem(k,v);writes++;}},locks:navigator.locks});
+const drawService=createDrawService({store,rng:()=>{rolls++;return 0;}});
+const view=mountGachaView($('gacha-screen'),()=>{view.setVisible(false);$('gacha-screen').hidden=true;$('outside').hidden=false;},{walletStore:store,drawService,effects:()=>!$('motion').checked});
+const show=()=>{view.setVisible(true);$('gacha-screen').hidden=false;$('outside').hidden=true;};
+async function seed(wallet){view.closeDialogs();await navigator.locks.request(key+':transaction',()=>localStorage.setItem(key,typeof wallet==='string'?wallet:JSON.stringify(wallet)));store.refresh();show();}
+$('seed').onclick=()=>seed({schemaVersion:1,balance:3000,claimedGrantIds:['test-crystals-v1']});
+function old(count){const request={...drawService.quote('demo-mint',count===10?10:1),requestId:'legacy-0'};
+const receipts=Array.from({length:count===10?1:9},(_,i)=>({request:{...request,requestId:'legacy-'+i},results:Array.from({length:request.count},()=>({cardId:'test-card-001',rarity:'R2',configVersion:request.configVersion,schemaVersion:1})),balanceBefore:6000-i*300,balanceAfter:6000-i*300-request.cost,committedAt:100}));return {schemaVersion:2,balance:3000,claimedGrantIds:['test-crystals-v1'],receipts};}
+$('nine').onclick=()=>seed(old(9));$('ten').onclick=()=>seed(old(10));$('corrupt').onclick=()=>seed('{');$('show').onclick=show;
+$('motion').onchange=()=>{document.body.classList.toggle('reduced',$('motion').checked);view.syncMotion();};$('zoom').onchange=()=>document.documentElement.classList.toggle('zoomed',$('zoom').checked);
+store.subscribe(s=>{$('evidence').textContent=JSON.stringify({writes,rolls,error:s.error,schema:s.wallet?.schemaVersion,balance:s.wallet?.balance,rewards:s.wallet?bannerRewards(s.wallet,'demo-mint'):null,total:s.wallet?inventoryModel(s.wallet).total:null,transactions:s.wallet?.transactions,exchanges:s.wallet?.exchanges},null,2);});
+window.addEventListener('storage',e=>{if(e.key===key)store.refresh();});show();
+</script></html>

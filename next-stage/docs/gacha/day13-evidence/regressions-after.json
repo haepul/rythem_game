@@ -1,0 +1,41 @@
+{
+  "kind": "regressions",
+  "checks": [
+    {
+      "name": "cancel has no RNG/write/debit",
+      "ok": true
+    },
+    {
+      "name": "confirmation focus survives unchanged refresh",
+      "ok": true
+    },
+    {
+      "name": "corrupt storage does not trap confirmation dialog",
+      "ok": true
+    },
+    {
+      "name": "corrupt bytes preserved",
+      "ok": true
+    },
+    {
+      "name": "changed balance retains confirmation focus and blocks insufficient draw",
+      "ok": true
+    },
+    {
+      "name": "inventory refresh retains focused expanded history",
+      "ok": true
+    },
+    {
+      "name": "new exchange updates quantity without collapsing focused history",
+      "ok": true
+    },
+    {
+      "name": "result reopen does not write/sample/debit",
+      "ok": true
+    },
+    {
+      "name": "synthetic touch plus 20 clicks commit once",
+      "ok": true
+    }
+  ]
+}

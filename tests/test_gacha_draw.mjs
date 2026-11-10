@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {CARDS} from '../next-stage/gacha/cards.mjs?v=20261101-day7';
-import {TEST_DRAW_CONFIG as C,validateDrawConfig,drawProbabilities,DrawConfigError} from '../next-stage/gacha/draw-config.mjs?v=20261101-day7';
-import {drawCards,DrawRandomError} from '../next-stage/gacha/draw-engine.mjs?v=20261101-day7';
-import {bannerDetails,probabilityLabel} from '../next-stage/gacha/details.mjs?v=20261101-day7';
-import {BANNERS} from '../next-stage/gacha/banners.mjs?v=20261101-day7';
-import {createWalletStore} from '../next-stage/gacha/wallet-storage.mjs?v=20261101-day7';
-import {WALLET_KEY,DRAW_COST} from '../next-stage/gacha/wallet-config.mjs?v=20261101-day7';
+import {CARDS} from '../next-stage/gacha/cards.mjs?v=20261108-day13';
+import {TEST_DRAW_CONFIG as C,validateDrawConfig,drawProbabilities,DrawConfigError} from '../next-stage/gacha/draw-config.mjs?v=20261108-day13';
+import {drawCards,DrawRandomError} from '../next-stage/gacha/draw-engine.mjs?v=20261108-day13';
+import {bannerDetails,probabilityLabel} from '../next-stage/gacha/details.mjs?v=20261108-day13';
+import {BANNERS} from '../next-stage/gacha/banners.mjs?v=20261108-day13';
+import {createWalletStore} from '../next-stage/gacha/wallet-storage.mjs?v=20261108-day13';
+import {WALLET_KEY,DRAW_COST} from '../next-stage/gacha/wallet-config.mjs?v=20261108-day13';
 const clone=x=>structuredClone(x),sequence=values=>{let i=0;return ()=>values[i++];};
 function prev(x){const b=new DataView(new ArrayBuffer(8));b.setFloat64(0,x);b.setBigUint64(0,b.getBigUint64(0)-1n);return b.getFloat64(0);}
 

@@ -1,5 +1,5 @@
-import {CARDS} from './cards.mjs?v=20261101-day7';
-import {BASIS_POINTS,validateDrawConfig} from './draw-config.mjs?v=20261101-day7';
+import {CARDS} from './cards.mjs?v=20261108-day13';
+import {BASIS_POINTS,validateDrawConfig} from './draw-config.mjs?v=20261108-day13';
 
 export class DrawRandomError extends Error{constructor(){super('RNG must return a finite number in [0, 1).');this.name='DrawRandomError';}}
 function random(rng){const value=rng();if(typeof value!=='number'||!Number.isFinite(value)||value<0||value>=1)throw new DrawRandomError();return value;}

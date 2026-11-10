@@ -1,5 +1,5 @@
-import {WALLET_KEY,TEST_GRANT} from './wallet-config.mjs?v=20261101-day7';
-import {parseWallet,initialWallet,grantWallet,validateWallet} from './wallet.mjs?v=20261101-day7';
+import {WALLET_KEY,TEST_GRANT,SCHEMA_VERSION} from './wallet-config.mjs?v=20261108-day13';
+import {parseWallet,initialWallet,grantWallet,validateWallet} from './wallet.mjs?v=20261108-day13';
 
 export const WALLET_ERRORS=Object.freeze({
  'invalid-json':'저장된 가챠 데이터를 읽을 수 없습니다. 자동으로 덮어쓰지 않았습니다.',
@@ -38,7 +38,7 @@ export function createWalletStore({storage,locks,key=WALLET_KEY,grant=TEST_GRANT
    const fresh=read();
    const next=operation(fresh);
    if(!next.ok){accept(fresh);error=next.error;return next;}
-   if(validateWallet(next.wallet)||next.wallet.schemaVersion!==2){accept(fresh);error='invalid-data';return {ok:false,error};}
+   if(validateWallet(next.wallet)||next.wallet.schemaVersion!==SCHEMA_VERSION){accept(fresh);error='invalid-data';return {ok:false,error};}
    const writes=next.changed||fresh.migrated,encoded=JSON.stringify(next.wallet);
    if(writes){
     try{storage.setItem(key,encoded);}

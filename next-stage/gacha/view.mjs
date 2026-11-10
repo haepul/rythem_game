@@ -1,12 +1,14 @@
-import {BANNERS,BANNER_ART,BANNER_THEMES,validateBanners} from './banners.mjs?v=20261101-day7';
-import {BannerSelection,loadBannerArt} from './banner-selection.mjs?v=20261101-day7';
-import {bannerDetails,renderBannerDetails,mountGachaDialog} from './details.mjs?v=20261101-day7';
-import {mountWalletView} from './wallet-view.mjs?v=20261101-day7';
-import {browserWalletStore} from './wallet-storage.mjs?v=20261101-day7';
-import {mountDrawView} from './draw-view.mjs?v=20261101-day7';
+import {BANNERS,BANNER_ART,BANNER_THEMES,validateBanners} from './banners.mjs?v=20261108-day13';
+import {BannerSelection,loadBannerArt} from './banner-selection.mjs?v=20261108-day13';
+import {bannerDetails,renderBannerDetails,mountGachaDialog} from './details.mjs?v=20261108-day13';
+import {mountWalletView} from './wallet-view.mjs?v=20261108-day13';
+import {browserWalletStore} from './wallet-storage.mjs?v=20261108-day13';
+import {mountDrawView} from './draw-view.mjs?v=20261108-day13';
+import {mountInventory} from './inventory-view.mjs?v=20261108-day13';
+import {mountExchange} from './exchange-view.mjs?v=20261108-day13';
 
 // Mount once; selection updates never replace the return button or focused option.
-export function mountGachaView(root,onReturn,{banners=BANNERS,assets=BANNER_ART,walletStore,drawService,detailOptions,effects=()=>!document.body.classList.contains('reduced')&&!matchMedia('(prefers-reduced-motion: reduce)').matches}={}){
+export function mountGachaView(root,onReturn,{banners=BANNERS,assets=BANNER_ART,walletStore,drawService,detailOptions,introOptions,revealOptions,effects=()=>!document.body.classList.contains('reduced')&&!matchMedia('(prefers-reduced-motion: reduce)').matches}={}){
  const validated=validateBanners(banners,assets),doc=root.ownerDocument;
  root.innerHTML=`<header class="gacha-heading"><div class="gacha-heading-copy"><p class="eyebrow">RHYTHM STAGE / COLLECTION</p>
  <h1 id="gacha-title" tabindex="-1">GACHA<span aria-hidden="true">.</span></h1>
@@ -23,6 +25,7 @@ export function mountGachaView(root,onReturn,{banners=BANNERS,assets=BANNER_ART,
  const detailModal=mountGachaDialog(root,{onVisible:()=>visible});
  const store=walletStore??browserWalletStore(doc.defaultView);
  const walletView=mountWalletView(root,{store,ownsStore:false});
+ const inventory=mountInventory(root,{store});
  let drawView=null;
  const detailsButton=q('.gacha-details');detailsButton.disabled=!validated.banners.length;
  q('.gacha-list-label span').textContent=String(validated.banners.length).padStart(2,'0')+' / PREVIEW';
@@ -57,8 +60,9 @@ export function mountGachaView(root,onReturn,{banners=BANNERS,assets=BANNER_ART,
    if(effects()&&duration)animation=feature.animate([{opacity:.5,transform:'translateY(4px)'},{opacity:1,transform:'translateY(0)'}],{duration,easing:'cubic-bezier(.2,.8,.2,1)'});
   }
  },onArt(image){if(image){image.alt='';imageHost.replaceChildren(image);fallback.hidden=true;}}});
- drawView=mountDrawView(root,{store,getBanner:()=>selection.selectedBannerId,banners:validated.banners,service:drawService});
- const choose=e=>{const button=e.target.closest('[data-banner-id]');if(button&&list.contains(button)){selection.select(button.dataset.bannerId);drawView.refresh();}};
+ drawView=mountDrawView(root,{store,getBanner:()=>selection.selectedBannerId,banners:validated.banners,onReturn,service:drawService,effects,introOptions,revealOptions});
+ const exchange=mountExchange(root,{store,getBanner:()=>selection.selectedBannerId,banners:validated.banners,inventory});
+ const choose=e=>{const button=e.target.closest('[data-banner-id]');if(button&&list.contains(button)){selection.select(button.dataset.bannerId);drawView.refresh();exchange.refresh();}};
  list.addEventListener('click',choose);returnButton.addEventListener('click',onReturn);
  const showDetails=()=>{const data=bannerDetails(selection.selectedBannerId,validated.banners,detailOptions);if(!data)return;
   renderBannerDetails(detailModal.content,data);
@@ -66,9 +70,9 @@ export function mountGachaView(root,onReturn,{banners=BANNERS,assets=BANNER_ART,
  };
  detailsButton.addEventListener('click',showDetails);
  return {errors:validated.errors,get selectedBannerId(){return selection.selectedBannerId;},
-  closeDialogs(){detailModal.close(false);walletView.closeDialogs();drawView.closeDialogs();},
-  setVisible(value){visible=value;walletView.setVisible(value);if(!visible){cancelMotion();detailModal.close(false);}else{for(const img of failedThumbnails)img.remove();failedThumbnails.clear();}selection.setVisible(visible);drawView.setVisible(value);},
-  syncMotion(){if(!effects())cancelMotion();},
-  destroy(){visible=false;cancelMotion();selection.destroy();detailModal.destroy();walletView.destroy();drawView.destroy();store.destroy();detailsButton.removeEventListener('click',showDetails);list.removeEventListener('click',choose);returnButton.removeEventListener('click',onReturn);for(const img of list.querySelectorAll('img'))img.onerror=null;failedThumbnails.clear();root.replaceChildren();}
+  closeDialogs(){detailModal.close(false);walletView.closeDialogs();drawView.closeDialogs();inventory.close();exchange.close();},
+  setVisible(value){visible=value;inventory.setVisible(value);exchange.setVisible(value);walletView.setVisible(value);if(!visible){cancelMotion();detailModal.close(false);}else{for(const img of failedThumbnails)img.remove();failedThumbnails.clear();}selection.setVisible(visible);drawView.setVisible(value);},
+  syncMotion(){if(!effects())cancelMotion();drawView.syncMotion();},
+  destroy(){visible=false;exchange.destroy();inventory.destroy();cancelMotion();selection.destroy();detailModal.destroy();walletView.destroy();drawView.destroy();store.destroy();detailsButton.removeEventListener('click',showDetails);list.removeEventListener('click',choose);returnButton.removeEventListener('click',onReturn);for(const img of list.querySelectorAll('img'))img.onerror=null;failedThumbnails.clear();root.replaceChildren();}
  };
 }

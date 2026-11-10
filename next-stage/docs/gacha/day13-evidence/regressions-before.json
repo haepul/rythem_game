@@ -1,0 +1,29 @@
+{
+  "kind": "regressions",
+  "checks": [
+    {
+      "name": "cancel has no RNG/write/debit",
+      "ok": true
+    },
+    {
+      "name": "confirmation focus survives unchanged refresh",
+      "ok": false
+    },
+    {
+      "name": "corrupt storage does not trap confirmation dialog",
+      "ok": false
+    },
+    {
+      "name": "corrupt bytes preserved",
+      "ok": true
+    },
+    {
+      "name": "inventory refresh retains focused expanded history",
+      "ok": false
+    },
+    {
+      "name": "result reopen does not write/sample/debit",
+      "ok": true
+    }
+  ]
+}

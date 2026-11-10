@@ -1,0 +1,21 @@
+{
+  "checkedDateKST": "2026-11-03",
+  "day7RunId": 41265412432,
+  "day7RunStatus": "completed/success",
+  "sha": "77451317d7d3f7a68a36f54d8de0c932769465cb",
+  "files": [
+    {
+      "path": "next-stage/index.html",
+      "status": 200,
+      "matchesDay7Commit": true,
+      "sha256": "d427463edd6a2f2dea682e8db210ec711355edf2c51afdad1416f8f443dea76f"
+    },
+    {
+      "path": "next-stage/gacha/draw-service.mjs",
+      "status": 200,
+      "matchesDay7Commit": true,
+      "sha256": "b8de2842de9282fabff7fd49a161df995ba2900e3219c52d8ceb1ba6191934ad"
+    }
+  ],
+  "day8Day9Deployed": false
+}

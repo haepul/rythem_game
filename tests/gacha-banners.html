@@ -1,11 +1,11 @@
 <!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>가챠 배너 오류·접근성 fixture</title>
-<link rel="stylesheet" href="../next-stage/style.css"><link rel="stylesheet" href="../next-stage/ui-system.css"><link rel="stylesheet" href="../next-stage/gacha.css?v=20261028-day3">
+<link rel="stylesheet" href="../next-stage/style.css"><link rel="stylesheet" href="../next-stage/ui-system.css"><link rel="stylesheet" href="../next-stage/gacha.css?v=20261108-day13">
 <style>#home{display:block;padding:20px;min-height:100dvh}#controls{display:flex;flex-wrap:wrap;gap:12px;padding:12px}#controls button,#controls select{padding:12px;border:1px solid #777;background:white}html.large{font-size:200%}</style>
 <div id="controls"><label>시험 장면 <select id="case"><option value="normal">기본</option><option value="broken">이미지 실패</option><option value="missing">자산 매핑 누락</option><option value="long">긴 제목</option><option value="empty">빈 목록</option><option value="duplicate">중복 ID</option></select></label><label><input type="checkbox" id="large">텍스트 200%</label><label><input type="checkbox" id="off">효과 OFF</label><button id="show">다시 열기</button><button id="destroy">뷰 해제</button><output id="status"></output></div>
 <div id="home" class="menu-shell"><main class="gacha-screen" id="gacha-screen"></main></div>
 <script type="module">
-import {mountGachaView} from '../next-stage/gacha/view.mjs?v=20261101-day7';
-import {BANNERS,BANNER_ART} from '../next-stage/gacha/banners.mjs?v=20261101-day7';
+import {mountGachaView} from '../next-stage/gacha/view.mjs?v=20261108-day13';
+import {BANNERS,BANNER_ART} from '../next-stage/gacha/banners.mjs?v=20261108-day13';
 const $=id=>document.getElementById(id),root=$('gacha-screen');let view;
 function mount(){view?.destroy();let banners=BANNERS,assets=BANNER_ART;const kind=$('case').value;
  if(kind==='empty')banners=[];

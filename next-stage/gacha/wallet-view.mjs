@@ -1,6 +1,6 @@
-import {TEST_GRANT,DRAW_COSTS} from './wallet-config.mjs?v=20261101-day7';
-import {browserWalletStore,WALLET_ERRORS} from './wallet-storage.mjs?v=20261101-day7';
-import {mountGachaDialog} from './details.mjs?v=20261101-day7';
+import {TEST_GRANT,DRAW_COSTS} from './wallet-config.mjs?v=20261108-day13';
+import {browserWalletStore,WALLET_ERRORS} from './wallet-storage.mjs?v=20261108-day13';
+import {mountGachaDialog} from './details.mjs?v=20261108-day13';
 
 export function mountWalletView(root,{store=browserWalletStore(root.ownerDocument.defaultView),ownsStore=true}={}){
  const doc=root.ownerDocument;let visible=false,disposed=false,lastMessage='',recoveryToken;

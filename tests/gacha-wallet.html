@@ -1,5 +1,5 @@
 <!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DAY5 지갑 검증 · 테스트 전용 저장소</title>
-<link rel="stylesheet" href="../next-stage/style.css"><link rel="stylesheet" href="../next-stage/ui-system.css"><link rel="stylesheet" href="../next-stage/gacha.css?v=20261030-day5">
+<link rel="stylesheet" href="../next-stage/style.css"><link rel="stylesheet" href="../next-stage/ui-system.css"><link rel="stylesheet" href="../next-stage/gacha.css?v=20261108-day13">
 <style>#home{display:block;padding:16px;min-height:100dvh}#controls{display:flex;flex-wrap:wrap;gap:12px;padding:12px;background:#fff}#controls button,#controls select{min-height:44px;padding:8px;max-width:100%;white-space:normal}#log{white-space:pre-wrap;overflow-wrap:anywhere;margin:12px}html.zoomed #home{zoom:2}</style>
 <div id="controls"><label>저장 실패 주입 <select id="failure"><option value="none">정상</option><option value="quota">용량 초과</option><option value="write">쓰기 실패</option><option value="read">읽기 실패</option><option value="no-lock">잠금 미지원</option></select></label>
 <button id="seed">시험 지갑 0으로 준비</button><button id="corrupt">손상 JSON 준비</button><button id="future">미래 버전 준비</button><button id="rapid">20회 연속 지급 요청</button><button id="race">다른 시험 탭과 지급 경쟁</button><button id="show">메뉴 다시 열기</button><button id="settings">시험 설정 창</button>
@@ -8,9 +8,9 @@
 <div id="home" class="menu-shell"><main class="gacha-screen" id="gacha-screen"></main></div>
 <dialog id="fixture-settings" class="ui-modal"><h2>시험 설정</h2><form method="dialog"><button>닫기</button></form></dialog>
 <script type="module">
-import {mountGachaView} from '../next-stage/gacha/view.mjs?v=20261101-day7';
-import {createWalletStore} from '../next-stage/gacha/wallet-storage.mjs?v=20261101-day7';
-import {initialWallet} from '../next-stage/gacha/wallet.mjs?v=20261101-day7';
+import {mountGachaView} from '../next-stage/gacha/view.mjs?v=20261108-day13';
+import {createWalletStore} from '../next-stage/gacha/wallet-storage.mjs?v=20261108-day13';
+import {initialWallet} from '../next-stage/gacha/wallet.mjs?v=20261108-day13';
 const $=id=>document.getElementById(id),key='rhythm-next-test-wallet-day5',channel=new BroadcastChannel(key),tabId=crypto.randomUUID();
 let view,store;const report=text=>$('log').textContent=text;
 function mount(){view?.destroy();const mode=$('failure').value;

@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createWalletStore} from '../next-stage/gacha/wallet-storage.mjs?v=20261101-day7';
-import {createDrawService,resolveDrawConfig} from '../next-stage/gacha/draw-service.mjs?v=20261101-day7';
-import {initialWallet,parseWallet,validateWallet} from '../next-stage/gacha/wallet.mjs?v=20261101-day7';
-import {WALLET_KEY,TEST_GRANT} from '../next-stage/gacha/wallet-config.mjs?v=20261101-day7';
+import {createWalletStore} from '../next-stage/gacha/wallet-storage.mjs?v=20261108-day13';
+import {createDrawService,resolveDrawConfig} from '../next-stage/gacha/draw-service.mjs?v=20261108-day13';
+import {initialWallet,parseWallet,validateWallet} from '../next-stage/gacha/wallet.mjs?v=20261108-day13';
+import {WALLET_KEY,TEST_GRANT} from '../next-stage/gacha/wallet-config.mjs?v=20261108-day13';
 
 function fixture(balance=3000){
  const data=new Map([[WALLET_KEY,JSON.stringify({...initialWallet(),balance,claimedGrantIds:[TEST_GRANT.id]})]]);
@@ -18,7 +18,7 @@ const intent=(s,count=1,id='external')=>({...s.quote('demo-mint',count),requestI
 test('v1 migration preserves balance and claimed IDs in the SAME key; no duplicate grant',async()=>{
  const f=fixture();f.data.set(WALLET_KEY,JSON.stringify({schemaVersion:1,balance:2700,claimedGrantIds:[TEST_GRANT.id,'old-grant']}));
  const {store,service}=f.create();assert.equal(store.snapshot.wallet.balance,2700);assert.equal(f.writes,0);
- assert.equal((await store.migrate()).migrated,true);assert.equal(f.read().schemaVersion,2);assert.deepEqual(f.read().claimedGrantIds,[TEST_GRANT.id,'old-grant']);
+ assert.equal((await store.migrate()).migrated,true);assert.equal(f.read().schemaVersion,3);assert.deepEqual(f.read().claimedGrantIds,[TEST_GRANT.id,'old-grant']);
  assert.equal((await store.claim()).changed,false);assert.equal(f.read().balance,2700);
  await service.execute(intent(service));assert.equal(f.read().balance,2400);assert.equal(f.read().receipts.length,1);assert.equal(f.data.size,1);
 });

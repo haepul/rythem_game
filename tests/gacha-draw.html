@@ -1,14 +1,14 @@
 <!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DAY 6 확률 안내 검증</title>
-<link rel="stylesheet" href="../next-stage/style.css"><link rel="stylesheet" href="../next-stage/ui-system.css"><link rel="stylesheet" href="../next-stage/gacha.css?v=20261101-day7">
+<link rel="stylesheet" href="../next-stage/style.css"><link rel="stylesheet" href="../next-stage/ui-system.css"><link rel="stylesheet" href="../next-stage/gacha.css?v=20261108-day13">
 <style>#home{display:block;padding:16px}#controls{display:flex;flex-wrap:wrap;gap:12px;padding:12px;background:white}#controls select,#controls button{min-height:44px}html.zoomed #home{zoom:2}</style>
 <div id="controls"><label>설정 사례 <select id="case"><option value="normal">정상</option><option value="unset">미설정</option><option value="invalid">지원하지 않는 보장</option><option value="long">긴 카드 ID</option></select></label><label><input id="zoom" type="checkbox">CSS 200% 확대</label><label><input id="motion" type="checkbox">효과 OFF / reduced-motion 모사</label><button id="show">메뉴 다시 열기</button></div>
 <p>테스트 전용 메모리 지갑 · 운영 저장소를 읽거나 쓰지 않습니다. DAY 7 공통 UI를 사용하되 메모리 저장만 합니다.</p>
 <div id="home" class="menu-shell"><main class="gacha-screen" id="gacha-screen"></main></div>
 <script type="module">
-import {mountGachaView} from '../next-stage/gacha/view.mjs?v=20261101-day7';
-import {createWalletStore} from '../next-stage/gacha/wallet-storage.mjs?v=20261101-day7';
-import {CARDS} from '../next-stage/gacha/cards.mjs?v=20261101-day7';
-import {TEST_DRAW_CONFIG as C} from '../next-stage/gacha/draw-config.mjs?v=20261101-day7';
+import {mountGachaView} from '../next-stage/gacha/view.mjs?v=20261108-day13';
+import {createWalletStore} from '../next-stage/gacha/wallet-storage.mjs?v=20261108-day13';
+import {CARDS} from '../next-stage/gacha/cards.mjs?v=20261108-day13';
+import {TEST_DRAW_CONFIG as C} from '../next-stage/gacha/draw-config.mjs?v=20261108-day13';
 const $=id=>document.getElementById(id);let view;
 function mount(){view?.destroy();const mode=$('case').value;let detailOptions;
  if(mode==='unset')detailOptions={bindings:{}};

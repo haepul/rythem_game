@@ -1,8 +1,9 @@
-import {DRAW_COSTS,COST_POLICY_VERSION} from './wallet-config.mjs?v=20261101-day7';
-import {validDrawRequest,sameDrawRequest} from './wallet.mjs?v=20261101-day7';
-import {CARDS} from './cards.mjs?v=20261101-day7';
-import {DRAW_CONFIGS,BANNER_DRAW_CONFIG_IDS,validateDrawConfig} from './draw-config.mjs?v=20261101-day7';
-import {drawCards} from './draw-engine.mjs?v=20261101-day7';
+import {DRAW_COSTS,COST_POLICY_VERSION} from './wallet-config.mjs?v=20261108-day13';
+import {validDrawRequest,sameDrawRequest} from './wallet.mjs?v=20261108-day13';
+import {CARDS} from './cards.mjs?v=20261108-day13';
+import {DRAW_CONFIGS,BANNER_DRAW_CONFIG_IDS,validateDrawConfig} from './draw-config.mjs?v=20261108-day13';
+import {drawCards} from './draw-engine.mjs?v=20261108-day13';
+import {drawTransaction} from './acquisition-history.mjs?v=20261108-day13';
 
 export const DRAW_ERRORS=Object.freeze({
  'invalid-request':'추첨 요청 형식이 잘못되었습니다.',
@@ -52,13 +53,14 @@ export function createDrawService({store,resolve=resolveDrawConfig,rng=Math.rand
   let result;
   try{result=await store.update(wallet=>{
    const existing=wallet.receipts.find(r=>r.request.requestId===intent.requestId);
+   if(wallet.exchanges.some(r=>r.request.requestId===intent.requestId))return {ok:false,error:'request-conflict'};
    if(existing)return sameDrawRequest(existing.request,intent)?{ok:true,changed:false,wallet,receipt:existing}:{ok:false,error:'request-conflict'};
    let current;try{current=quote(intent.bannerId,intent.count);}catch{return {ok:false,error:'invalid-config'};}
    if(!sameDrawRequest({...current,requestId:intent.requestId},intent))return {ok:false,error:'config-changed'};
    if(wallet.balance<intent.cost)return {ok:false,error:'insufficient-balance'};
    let results;try{const def=resolve(intent.bannerId);results=drawCards(def.config,intent.count,{cards:def.cards,rng});}catch{return {ok:false,error:'rng-failed'};}
    const next={request:{...intent},results,balanceBefore:wallet.balance,balanceAfter:wallet.balance-intent.cost,committedAt:clock()};
-   return {ok:true,changed:true,receipt:next,wallet:{...wallet,balance:next.balanceAfter,receipts:[...wallet.receipts,next]}};
+   return {ok:true,changed:true,receipt:next,wallet:{...wallet,balance:next.balanceAfter,receipts:[...wallet.receipts,next],transactions:[...wallet.transactions,drawTransaction(next)]}};
   });}catch{result={ok:false,error:'commit-unknown'};}
   busy=false;
   if(!result.ok)return fail(result.error);

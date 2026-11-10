@@ -1,0 +1,8 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DAY 13 격리 통합 검증</title>
+<link rel="stylesheet" href="../next-stage/style.css"><link rel="stylesheet" href="../next-stage/ui-system.css"><link rel="stylesheet" href="../next-stage/gacha.css?v=20261108-day13">
+<style>#controls{display:flex;flex-wrap:wrap;gap:8px;padding:12px}#controls button,#controls select{min-height:44px}#home{display:block;padding:16px}#report{white-space:pre-wrap;overflow-wrap:anywhere;padding:16px}#outside{padding:16px}</style>
+<div id="controls"><button id="seed">격리 재화 3000 준비</button><button id="enter">가챠 진입</button><button id="measure">10회 연출 및 20회 왕복 측정</button><button id="regress">UI 결함 재현 검사</button><button id="faults">중단 복구 검사</button><button id="corrupt">다른 탭 손상 JSON</button><button id="spend">다른 탭 1회 추첨</button><label><input id="effects" type="checkbox" checked>효과 ON</label><label><input id="reduce" type="checkbox">reduced-motion 모의</label></div>
+<p>명시적 시험 fixture: rhythm-next-day13-fixture만 사용합니다. 측정 RAF/DOM 입력 및 모의 미디어 설정은 이 시험 페이지에만 있습니다.</p>
+<section id="outside" hidden><h2 tabindex="-1">곡 선택 대체 화면</h2><p>실제 게임 메뉴 회귀는 별도의 gacha-play 격리 앱에서 검사합니다.</p></section>
+<div id="home" class="menu-shell"><main id="gacha-screen"></main></div><pre id="report" role="status" aria-label="검증 보고"></pre>
+<script type="module" src="gacha-integration.mjs?v=20261108-day13-r2"></script></html>

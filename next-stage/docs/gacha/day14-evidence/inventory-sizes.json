@@ -1,0 +1,97 @@
+[
+  {
+    "buttons": [
+      {
+        "h": 44,
+        "text": "닫기"
+      }
+    ],
+    "dialog": [
+      {
+        "client": 319,
+        "height": 776,
+        "scroll": 319,
+        "width": 320.8000183105469
+      }
+    ],
+    "height": 800,
+    "scrollWidth": 345,
+    "width": 345
+  },
+  {
+    "buttons": [
+      {
+        "h": 44,
+        "text": "닫기"
+      }
+    ],
+    "dialog": [
+      {
+        "client": 350,
+        "height": 820,
+        "scroll": 350,
+        "width": 351.20001220703125
+      }
+    ],
+    "height": 844,
+    "scrollWidth": 375,
+    "width": 375
+  },
+  {
+    "buttons": [
+      {
+        "h": 44,
+        "text": "닫기"
+      }
+    ],
+    "dialog": [
+      {
+        "client": 775,
+        "height": 366.3999938964844,
+        "scroll": 775,
+        "width": 776.4750366210938
+      }
+    ],
+    "height": 390,
+    "scrollWidth": 829,
+    "width": 829
+  },
+  {
+    "buttons": [
+      {
+        "h": 44,
+        "text": "닫기"
+      }
+    ],
+    "dialog": [
+      {
+        "client": 705,
+        "height": 540.0499877929688,
+        "scroll": 705,
+        "width": 706.5499877929688
+      }
+    ],
+    "height": 1024,
+    "scrollWidth": 753,
+    "width": 753
+  },
+  {
+    "buttons": [
+      {
+        "h": 44,
+        "text": "닫기"
+      }
+    ],
+    "dialog": [
+      {
+        "client": 848,
+        "height": 540.0499877929688,
+        "scroll": 848,
+        "width": 850
+      }
+    ],
+    "height": 768,
+    "scrollWidth": 1351,
+    "width": 1351
+  }
+]

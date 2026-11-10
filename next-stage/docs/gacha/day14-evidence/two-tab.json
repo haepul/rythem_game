@@ -1,0 +1,19 @@
+{
+  "other": {
+    "writes": 1,
+    "rolls": 2,
+    "confirms": 1,
+    "error": null,
+    "balance": 2700,
+    "receipts": 1,
+    "exchanges": 0,
+    "cards": 1,
+    "stickers": 1,
+    "dom": 130,
+    "animations": 4,
+    "timers": 0,
+    "listeners": 53
+  },
+  "confirmation": "RHYTHM STAGE / INFORMATION\n\n무료 시뮬레이션 추첨 확인\n\n민트 스테이지\n\n배너 ID: demo-mint\n\n설정: project-test-v1 / project-cost-v1\n\n10회 · 비용 3,000 크리스탈\n\n현재 잔액 2,700 · 예상 잔액 0\n\n프로젝트 테스트 규칙입니다. 10회는 독립 추첨이며 보장은 없습니다. 확인 직전 최신 잔액과 설정을 다시 검증합니다.\n\n300 크리스탈 부족\n\n확인하고 추첨\n\n취소",
+  "confirmEnabled": false
+}

@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {initialWallet,validateWallet,parseWallet,grantWallet,drawEligibility} from '../next-stage/gacha/wallet.mjs?v=20261101-day7';
-import {createWalletStore,browserWalletStore} from '../next-stage/gacha/wallet-storage.mjs?v=20261101-day7';
-import {WALLET_KEY,TEST_GRANT,DRAW_COST} from '../next-stage/gacha/wallet-config.mjs?v=20261101-day7';
-import {bannerDetails} from '../next-stage/gacha/details.mjs?v=20261101-day7';
-import {BANNERS} from '../next-stage/gacha/banners.mjs?v=20261101-day7';
+import {initialWallet,validateWallet,parseWallet,grantWallet,drawEligibility} from '../next-stage/gacha/wallet.mjs?v=20261108-day13';
+import {createWalletStore,browserWalletStore} from '../next-stage/gacha/wallet-storage.mjs?v=20261108-day13';
+import {WALLET_KEY,TEST_GRANT,DRAW_COST} from '../next-stage/gacha/wallet-config.mjs?v=20261108-day13';
+import {bannerDetails} from '../next-stage/gacha/details.mjs?v=20261108-day13';
+import {BANNERS} from '../next-stage/gacha/banners.mjs?v=20261108-day13';
 
 function fixture(){
  const data=new Map();let tail=Promise.resolve(),writes=0,readError=null,writeError=null;

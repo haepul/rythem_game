@@ -1,4 +1,15 @@
 /* Opt-in HOME shell additions; gameplay and legacy pages have no matching scope. */
+/* DAY 8 original geometry. Only finite transform/opacity WAAPI transitions. */
+.gacha-draw-dialog .gacha-intro{padding:16px max(12px,env(safe-area-inset-right)) 16px max(12px,env(safe-area-inset-left));text-align:center;border-radius:var(--ui-radius-md);background:radial-gradient(ellipse at 50% 45%,#c8faf166,transparent 65%),var(--ui-surface);border:1px solid var(--ui-border)}
+.gacha-intro-announcement,.gacha-intro-hint{font-size:var(--ui-text-sm);line-height:1.65;color:var(--ui-muted)}
+.gacha-intro-art{position:relative;display:grid;place-items:center;height:220px;max-width:100%;overflow:hidden;isolation:isolate}
+.gacha-intro-symbol{width:148px;height:148px;z-index:1}.gacha-intro-symbol svg{width:100%;height:100%;display:block}
+.gacha-intro-orbit{position:absolute;width:190px;height:190px;border-radius:50%;border:1px solid #b7a3e5;box-shadow:inset 0 0 0 12px #ffffff88;opacity:.5}
+.gacha-intro-particle{position:absolute;left:calc(50% - 3px);top:calc(50% - 3px);width:6px;height:6px;border:1px solid #fff;background:var(--ui-mint);opacity:0;transform:translate(var(--px),var(--py)) rotate(45deg)}
+.gacha-intro-particle:nth-child(even){background:#c3b0ed}
+.gacha-intro-phase{font-size:var(--ui-text-lg);font-weight:800;color:var(--ui-selected);letter-spacing:.025em}
+@media(max-width:480px){.gacha-intro-particle[data-index="4"],.gacha-intro-particle[data-index="5"]{display:none}.gacha-intro-art{height:190px}.gacha-intro-symbol{width:128px;height:128px}}
+@media(max-height:450px){.gacha-intro-art{height:110px}.gacha-intro-symbol{width:86px;height:86px}.gacha-intro-orbit{width:100px;height:100px}.gacha-intro-hint{display:none}}
 #home.menu-shell .gacha-screen{padding:20px 0 24px;min-width:0}
 #home.menu-shell [hidden]{display:none!important}
 #home.menu-shell .gacha-heading{margin-bottom:20px}
@@ -146,3 +157,80 @@ dialog.gacha-dialog:has(.gacha-probabilities) .gacha-dialog-close{flex-shrink:0}
 .gacha-dialog .gacha-probabilities tbody th{font-weight:600}
 .gacha-dialog .gacha-probabilities td:last-child{font-variant-numeric:tabular-nums}
 @media(max-width:440px){dialog.gacha-dialog:has(.gacha-probabilities){padding:16px}.gacha-dialog .gacha-probabilities th,.gacha-dialog .gacha-probabilities td{padding:8px 5px}}
+/* DAY 9: original reusable card reveal. No global animation or game selectors. */
+.gacha-reveal{text-align:center;padding:var(--ui-space-3) max(8px,env(safe-area-inset-right)) var(--ui-space-3) max(8px,env(safe-area-inset-left));background:linear-gradient(150deg,#f5fffc,#f7f4ff);border:1px solid var(--ui-border);border-radius:var(--ui-radius-md)}
+.gacha-reveal-progress{font-size:var(--ui-text-sm);font-variant-numeric:tabular-nums;color:var(--ui-muted);overflow-wrap:anywhere}
+.gacha-reveal-stage{position:relative;display:grid;place-items:center;min-height:250px;padding:12px;overflow:hidden;isolation:isolate}
+.gacha-reveal-card{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:min(100%,190px);min-height:218px;padding:20px 12px;overflow:hidden;border:2px solid var(--reveal-accent);border-radius:var(--ui-radius-md);background:linear-gradient(150deg,#fff,var(--reveal-light));box-shadow:var(--ui-shadow-sm);z-index:1}
+.gacha-reveal-card>*{position:relative;z-index:1}
+.gacha-reveal[data-rarity="R3"] .gacha-reveal-card{border:5px double var(--reveal-accent)}
+.gacha-reveal[data-rarity="R4"] .gacha-reveal-card{border:3px solid transparent;background:linear-gradient(150deg,#fff,#f6f0ff) padding-box,linear-gradient(135deg,#f6a9d9,#bfa6f5,#89e5e2,#f6a9d9) border-box}
+.gacha-reveal[data-rarity="R4"] .gacha-reveal-card:after{content:'';position:absolute;inset:5px;border:1px solid #ffffff;border-radius:5px;pointer-events:none}
+.gacha-reveal[data-rarity="neutral"] .gacha-reveal-card{border-style:dashed}
+.gacha-reveal-symbol{font:64px/1 var(--ui-font);color:var(--reveal-accent)}
+.gacha-reveal-rarity{font-size:var(--ui-text-xl);font-weight:900;color:var(--ui-text);letter-spacing:.08em}
+.gacha-reveal-id{font-size:var(--ui-text-sm);font-weight:700;overflow-wrap:anywhere;max-width:100%;margin:0!important}
+.gacha-reveal-card .gacha-reveal-light{position:absolute;inset:0;background:radial-gradient(ellipse,#fff,var(--reveal-light),transparent);opacity:0;pointer-events:none;z-index:0}
+.gacha-reveal[data-rarity="R3"] .gacha-reveal-light{background:linear-gradient(100deg,transparent,#fff,transparent)}
+.gacha-reveal-particle{position:absolute;left:calc(50% - 3px);top:calc(50% - 3px);width:6px;height:6px;background:#c5b5e8;border:1px solid white;opacity:0;pointer-events:none}
+.gacha-reveal-next{width:100%;min-height:44px;flex-shrink:0;margin-top:8px}
+.gacha-reveal-next:focus-visible{outline:3px solid var(--ui-cyan);outline-offset:3px}
+@media(max-width:480px){.gacha-reveal-stage{min-height:226px}.gacha-reveal-card{min-height:194px;width:min(100%,170px)}.gacha-reveal-particle[data-index="3"],.gacha-reveal-particle[data-index="4"],.gacha-reveal-particle[data-index="5"]{display:none}}
+@media(max-height:450px){.gacha-reveal-stage{min-height:116px;padding:4px}.gacha-reveal-card{min-height:108px;width:min(100%,260px);padding:8px;gap:4px}.gacha-reveal-symbol{font-size:24px}.gacha-reveal-rarity{font-size:var(--ui-text-lg)}.gacha-reveal{padding:8px}dialog.gacha-draw-dialog:has(.gacha-reveal){padding:12px;max-height:calc(100dvh - 24px)}dialog.gacha-draw-dialog:has(.gacha-reveal) header .eyebrow{display:none}dialog.gacha-draw-dialog:has(.gacha-reveal) h2{font-size:22px}dialog.gacha-draw-dialog:has(.gacha-reveal) .ui-button{padding-block:8px}dialog.gacha-draw-dialog:has(.gacha-reveal) .gacha-dialog-close{margin-top:8px}}
+/* DAY 10: immutable saved results, non-interactive cards in draw order. */
+dialog.gacha-draw-dialog.gacha-result-mode[open]{width:min(92vw,920px);max-width:calc(100% - 24px);padding-bottom:max(16px,env(safe-area-inset-bottom))}
+dialog.gacha-result-mode .gacha-dialog-content{container-type:inline-size}
+.gacha-results{padding:4px 4px 12px}
+.gacha-results-banner{font-size:var(--ui-text-lg);font-weight:800;color:var(--ui-text)}
+.gacha-results-announcement{font-size:var(--ui-text-sm);color:var(--ui-muted)}
+.gacha-result-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;list-style:none;padding:12px 0;margin:0}
+@container(min-width:660px){.gacha-result-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.gacha-result-card{position:relative;min-width:0;min-height:152px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:30px 10px 14px;border:2px solid var(--result-accent);border-radius:var(--ui-radius-md);background:linear-gradient(145deg,#fff,var(--result-light));box-shadow:var(--ui-shadow-sm);color:var(--ui-text);overflow-wrap:anywhere}
+.gacha-result-card[data-rarity="R3"]{border:5px double var(--result-accent);padding:27px 7px 11px}
+.gacha-result-card[data-rarity="R4"]{border:3px solid transparent;background:linear-gradient(150deg,#fff,#f6f0ff) padding-box,linear-gradient(135deg,#f6a9d9,#bfa6f5,#89e5e2) border-box}
+.gacha-result-card[data-rarity="neutral"]{border-style:dashed}
+.gacha-result-position{position:absolute;left:8px;top:7px;font-size:var(--ui-text-xs);color:var(--ui-muted);font-variant-numeric:tabular-nums}
+.gacha-result-new{position:absolute;right:6px;top:6px;border:1px solid #0d837b;border-radius:var(--ui-radius-pill);background:#d5fff5;color:#17564e;font:800 10px/1.5 var(--ui-font);letter-spacing:.03em;padding:1px 7px}
+.gacha-result-symbol{font:44px/1 var(--ui-font);color:var(--result-accent)}
+.gacha-result-rarity{font-size:var(--ui-text-lg);font-weight:900;letter-spacing:.08em}
+.gacha-result-id{font-size:var(--ui-text-sm);font-weight:700;text-align:center;max-width:100%;margin:0!important;line-height:1.5!important}
+.gacha-results[data-count="1"] .gacha-result-grid{grid-template-columns:minmax(0,230px);justify-content:center}
+.gacha-results[data-count="1"] .gacha-result-card{min-height:244px}
+.gacha-results[data-count="1"] .gacha-result-symbol{font-size:68px}
+.gacha-result-summary{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;margin:16px 0 0;padding:16px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-md);background:var(--ui-soft)}
+.gacha-result-summary dt{font-size:var(--ui-text-sm);color:var(--ui-muted)}
+.gacha-result-summary dd{font-size:var(--ui-text-lg);font-weight:800;margin:4px 0 0;font-variant-numeric:tabular-nums}
+.gacha-result-unknown{font-size:var(--ui-text-sm);color:var(--ui-muted)}
+dialog.gacha-result-mode .gacha-dialog-close{background:var(--ui-accent);font-weight:800}
+.gacha-result-return{flex-shrink:0;width:100%;margin-top:8px;min-height:44px}
+@container(min-width:660px){
+ .gacha-results[data-count="10"] .gacha-result-grid{gap:10px;padding-block:8px}
+ .gacha-results[data-count="10"] .gacha-result-card{min-height:128px;padding:26px 8px 10px;gap:5px}
+ .gacha-results[data-count="10"] .gacha-result-card[data-rarity="R3"]{padding:23px 5px 7px}
+ .gacha-results[data-count="10"] .gacha-result-symbol{font-size:36px}
+ .gacha-results[data-count="10"] .gacha-result-rarity{line-height:1.2}
+ .gacha-results[data-count="10"] .gacha-result-summary{margin-top:8px;padding:10px}
+}
+@media(max-height:450px){
+ dialog.gacha-draw-dialog.gacha-result-mode[open]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto minmax(72px,1fr) auto;column-gap:8px;padding:12px;max-height:calc(100% - 24px);overflow:auto}
+ dialog.gacha-result-mode header,dialog.gacha-result-mode .gacha-dialog-content{grid-column:1/-1}
+ dialog.gacha-result-mode header .eyebrow{display:none}
+ dialog.gacha-result-mode h2{font-size:22px}
+ dialog.gacha-result-mode .ui-button{padding:8px;margin-top:8px;align-self:stretch}
+}
+/* DAY 11/12: scoped inventory and free sticker exchange; no new motion. */
+.gacha-rewards{margin-block:16px;padding:var(--ui-space-4);border:1px solid var(--ui-border);border-radius:var(--ui-radius-md);background:linear-gradient(130deg,var(--ui-surface),var(--ui-soft));overflow-wrap:anywhere}
+.gacha-rewards h3{margin:0 0 10px}.gacha-rewards p{margin:8px 0;line-height:1.7;font-size:var(--ui-text-sm)}
+.gacha-rewards .gacha-reward-balance{font-weight:800;color:var(--ui-text)}.gacha-rewards progress{display:block;width:100%;height:10px;margin:12px 0}
+.gacha-rewards button,.gacha-inventory-open{min-height:44px;margin-block:8px}
+dialog.gacha-collection-dialog[open]{display:flex;flex-direction:column;width:min(92vw,850px);max-width:calc(100% - 24px);max-height:calc(100% - 24px);overflow:auto;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+dialog.gacha-collection-dialog header,dialog.gacha-collection-dialog .gacha-dialog-close{flex-shrink:0}
+dialog.gacha-collection-dialog .gacha-dialog-content{min-height:72px;overflow:auto;overflow-wrap:anywhere;line-height:1.7}
+.gacha-collection-dialog button,.gacha-collection-dialog select,.gacha-collection-dialog summary{min-height:44px;padding:10px}
+.gacha-collection-tools{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px}.gacha-collection-tools label{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.gacha-collection-tools select{max-width:100%;background:var(--ui-surface);border:1px solid var(--ui-border);border-radius:var(--ui-radius-sm)}
+.gacha-inventory-grid{list-style:none;padding:12px 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.gacha-inventory-grid details{width:100%;font-size:var(--ui-text-sm)}.gacha-inventory-grid details ol{padding-left:18px}.gacha-inventory-grid p{font-size:var(--ui-text-sm)}
+.gacha-exchange-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}.gacha-exchange-options button{white-space:normal;overflow-wrap:anywhere;text-align:left}
+@media(max-width:600px){.gacha-inventory-grid,.gacha-exchange-options{grid-template-columns:1fr}.gacha-collection-tools{display:grid;grid-template-columns:1fr}}
+@media(max-height:450px){dialog.gacha-collection-dialog header .eyebrow{display:none}dialog.gacha-collection-dialog h2{font-size:22px}}

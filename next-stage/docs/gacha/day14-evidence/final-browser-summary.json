@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-10 KST",
+  "appFixture": "gacha-play.html?isolation=day14&fixture=short",
+  "generalBeforeAfter": "Cry Baby MASTER, 6 second 1 TAP fixture; score 0 MISS 1, record retained",
+  "pauseResume": true,
+  "practiceCompleted": true,
+  "practiceStorageUnchanged": true,
+  "sameHistoricalCardsAndNewAfterReload": true,
+  "libraryRoundTrip": {
+    "song": "Cry Baby",
+    "difficulty": "MASTER",
+    "filter": "FAVORITES"
+  },
+  "gacha": {
+    "banner": "demo-lilac",
+    "count": 10,
+    "cost": 3000,
+    "exchange": "test-card-005",
+    "stickers": 2,
+    "totalCards": 11
+  },
+  "consoleErrors": [],
+  "limits": [
+    "no audio listening/sync measurement",
+    "no real Android/iOS",
+    "native browser 200% not verified",
+    "OS reduced motion and physical tab visibility not verified",
+    "practice pause attempt missed the short playback window"
+  ]
+}

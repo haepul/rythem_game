@@ -1,4 +1,4 @@
-import {CARDS,RARITIES} from './cards.mjs?v=20261101-day7';
+import {CARDS,RARITIES} from './cards.mjs?v=20261108-day13';
 
 export const BASIS_POINTS=10000;
 export const TEST_DRAW_CONFIG=Object.freeze({

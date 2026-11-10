@@ -1,0 +1,116 @@
+{
+  "first": {
+    "writes": 3,
+    "rolls": 20,
+    "error": null,
+    "schema": 3,
+    "balance": 0,
+    "rewards": {
+      "balance": 2,
+      "progress": 0,
+      "threshold": 10,
+      "bonus": 2
+    },
+    "total": 11,
+    "transactions": [
+      {
+        "kind": "draw",
+        "id": "1a136560-0f6a-4802-9cb3-522bd16dca3b",
+        "rewardVersion": "free-rewards-v1"
+      },
+      {
+        "kind": "exchange",
+        "id": "bcb4999d-78f0-4198-992c-ae585bd18a3d"
+      }
+    ],
+    "exchanges": [
+      {
+        "request": {
+          "bannerId": "demo-mint",
+          "cardId": "test-card-006",
+          "rarity": "R4",
+          "ruleVersion": "free-rewards-v1",
+          "cost": 10,
+          "requestId": "bcb4999d-78f0-4198-992c-ae585bd18a3d"
+        },
+        "stickersBefore": 12,
+        "stickersAfter": 2,
+        "committedAt": 1794021229738
+      }
+    ]
+  },
+  "mobile360": {
+    "client": 319,
+    "close": {
+      "bottom": 771.2000122070312,
+      "height": 44,
+      "left": 28.80000114440918,
+      "right": 316.00001335144043,
+      "top": 727.2000122070312,
+      "width": 287.20001220703125,
+      "x": 28.80000114440918,
+      "y": 727.2000122070312
+    },
+    "rect": {
+      "bottom": 788,
+      "height": 776,
+      "left": 12,
+      "right": 332.8000183105469,
+      "top": 12,
+      "width": 320.8000183105469,
+      "x": 12,
+      "y": 12
+    },
+    "scroll": 319
+  },
+  "landscape844": {
+    "client": 775,
+    "close": {
+      "bottom": 361.6000061035156,
+      "height": 44,
+      "left": 42.962501525878906,
+      "right": 785.8375015258789,
+      "top": 317.6000061035156,
+      "width": 742.875,
+      "x": 42.962501525878906,
+      "y": 317.6000061035156
+    },
+    "rect": {
+      "bottom": 378.3999938964844,
+      "height": 366.3999938964844,
+      "left": 26.162500381469727,
+      "right": 802.6375370025635,
+      "top": 12,
+      "width": 776.4750366210938,
+      "x": 26.162500381469727,
+      "y": 12
+    },
+    "scroll": 775
+  },
+  "zoom200": {
+    "client": 650,
+    "close": {
+      "bottom": 710.6465835571289,
+      "height": 87.9830093383789,
+      "left": 57.7196159362793,
+      "right": 1293.4802360534668,
+      "top": 622.66357421875,
+      "width": 1235.7606201171875,
+      "x": 57.7196159362793,
+      "y": 622.66357421875
+    },
+    "rect": {
+      "bottom": 744.2400035858154,
+      "height": 719.8605346679688,
+      "left": 24.126123428344727,
+      "right": 1327.0737552642822,
+      "top": 24.37946891784668,
+      "width": 1302.9476318359375,
+      "x": 24.126123428344727,
+      "y": 24.37946891784668
+    },
+    "scroll": 650
+  },
+  "actualApp": "10 draw, 12 stickers, exchange006, 2 stickers, inventory11; Cry Baby MASTER preserved; short normal result saved; practice pause; reload restored",
+  "captureLimitation": "Initial capture errors recovered; viewport override did not resize, responsive iframe used. CSS zoom is not OS browser zoom."
+}
