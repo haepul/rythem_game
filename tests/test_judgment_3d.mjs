@@ -19,9 +19,10 @@ assert.ok(layers.indexOf(stage.judgeGlow)<layers.indexOf(stage.ribbon));
 assert.ok(layers.indexOf(stage.ribbon)<layers.indexOf(stage.heads));
 assert.ok(layers.indexOf(stage.heads)<layers.indexOf(stage.judgeHighlight));
 assert.ok(layers.indexOf(stage.diamondBurst)>layers.indexOf(stage.inputHighlight));
-assert.equal(stage.lineBody.commands.filter(c=>c[0]==='rect').length,5);
-assert.ok(stage.lineBody.commands.some(c=>c[0]==='rect'&&c[2]===448));
-assert.ok(stage.lineBody.commands.some(c=>c[0]==='poly'&&c[1][1]===410&&c[1][5]===444));
+const frames=stage.lineBody.commands.filter((command,index,list)=>
+ command[0]==='rect'&&list[index+1]?.[0]==='stroke');
+assert.deepEqual(frames.map(([,x,y,w,h])=>[x,y,w,h]),
+ [0,1,2,3].map(lane=>{const [x,y,w]=project(lane,1);return [x-w/2+2,y,w-4,34];}));
 assert.ok(stage.judgeHighlight.commands.some(c=>c[0]==='stroke'&&c[1].width===2.2));
 const staticBody=JSON.stringify(stage.lineBody.commands);
 const notes=['TAP','FLICK','HOLD','SLIDE'].map((type,lane)=>({type,lane,time:1,...(lane>1?{end_time:2,end_lane:lane,tick_times:[1,1.5,2]}:{})}));

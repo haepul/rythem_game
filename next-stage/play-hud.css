@@ -117,3 +117,25 @@ body.reduced #play #combo b{transform:none!important;opacity:1!important}
 
 #play #score-rank-summary{display:block;font:700 clamp(6px,.75cqw,10px)/1.2 Arial,sans-serif;letter-spacing:0;color:#cce9ed;margin-top:2px;white-space:nowrap;text-shadow:0 1px 2px #15152c}
 @media(forced-colors:active){#play #score-rank-summary{color:CanvasText;text-shadow:none}}
+
+#play .song-hud {
+  display: grid;
+  grid-template-columns: auto minmax(0, auto);
+  justify-content: center;
+  align-items: center;
+  text-align: left;
+  gap: 0 clamp(4px, .7cqw, 9px);
+  pointer-events: none;
+}
+#playing-art {
+  width: clamp(20px, 3.6cqw, 44px);
+  aspect-ratio: 1;
+  grid-row: span 2;
+  overflow: hidden;
+  border-radius: 3px;
+  border: 1px solid #ffffff66;
+}
+#playing-art .cover { position: relative; width: 100%; height: 100%; }
+#playing-art img, #playing-art svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+#playing-art img { z-index: 1; object-fit: cover; }
+#play .song-hud small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

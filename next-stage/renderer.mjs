@@ -165,37 +165,19 @@ export class Stage{
   for(const [width,alpha] of [[28,.025],[22,.03],[16,.065],[13,.08]])
    g.moveTo(left,y).lineTo(right,y).stroke({color:this.judgeColor,width,alpha});
   const body=this.lineBody;body.clear();
-  // The arrival edge stays at Y410. A broad dark receiving deck extends
-  // toward the player; its front border is decorative, never a second judge.
-  const depth=34,height=5,cap=5;
-  const atY=(lane,yy)=>project(lane,Math.pow((yy-110)/300,1/1.55));
-  const mix=(a,b,t)=>color([16,8,0].map(s=>Math.round(((a>>s)&255)*(1-t)+((b>>s)&255)*t)));
-  const frontY=y+depth,[frontLeft]=atY(-.5,frontY),[frontRight]=atY(3.5,frontY);
-  for(let i=0;i<depth;i++){
-   const yy=y+i,[l]=atY(-.5,yy),[r]=atY(3.5,yy),[ll]=atY(-.5,yy+1),[rr]=atY(3.5,yy+1);
-   body.poly([l,yy,r,yy,rr,yy+1,ll,yy+1]).fill({color:mix(0x101329,0x34264f,i/(depth-1)),alpha:.88});
-  }
-  // The dark front is behind ribbons and heads, not a foreground occluder.
-  for(let i=0;i<height;i++){
-   const t=i/(height-1),tint=t<.45?mix(0x8c6ae0,0x514194,t/.45):mix(0x514194,0x251e51,(t-.45)/.55);
-   body.rect(frontLeft+cap,frontY+i,frontRight-frontLeft-cap*2,1).fill({color:tint,alpha:.96});
-  }
-  body.poly([frontLeft,frontY,frontLeft+cap,frontY,frontLeft+cap,frontY+height,frontLeft,frontY+2]).fill({color:0x7464b4,alpha:.95});
-  body.poly([frontRight-cap,frontY,frontRight,frontY,frontRight,frontY+2,frontRight-cap,frontY+height]).fill({color:0x392c6e,alpha:.98});
-  body.poly([left,y,right,y,frontRight,frontY,frontLeft,frontY]).stroke({color:0xc892ef,width:2.8,alpha:.94});
-  body.moveTo(frontLeft+cap,frontY+height).lineTo(frontRight-cap,frontY+height).stroke({color:0x8fe9dc,width:.8,alpha:.32});
-  for(let lane=0;lane<3;lane++){
-   const [back]=project(lane+.5,1),[front]=atY(lane+.5,frontY);
-   body.moveTo(back,y+2).lineTo(front,frontY-2).stroke({color:0xc8b3e6,width:1,alpha:.32});
-  }
-  // Short end reflections fall off toward the caps without extra textures.
-  for(const side of [-1,1])for(let i=0;i<5;i++){
-   const x=side<0?left+cap+i*6:right-cap-i*6;
-   body.moveTo(x,y-1).lineTo(x-side*6,y-1).stroke({color:0xfaffff,width:1,alpha:.1+i*.06});
-  }
+  // Four separate key beds. Their upper rims share the note arrival Y.
+  const depth=34,gap=4;
   const h=this.judgeHighlight;h.clear();
-  h.moveTo(left,y).lineTo(right,y).stroke({color:this.judgeColor,width:3,alpha:.65});
-  h.moveTo(left,y).lineTo(right,y).stroke({color:0xf7ffff,width:2.2,alpha:.9});
+  for(const [x,top,width] of this.judgeLanes){
+   const start=x-width/2+gap/2,end=x+width/2-gap/2;
+   const span=end-start,bottom=top+depth;
+   body.rect(start,bottom,span,4).fill({color:0x302747,alpha:.92});
+   body.rect(start,top,span,depth).fill({color:0x16162e,alpha:.86});
+   body.rect(start+2,top+2,span-4,4).fill({color:this.judgeColor,alpha:.18});
+   body.rect(start,top,span,depth).stroke({color:0xc69bf2,width:2,alpha:.96});
+   body.moveTo(start+1,bottom).lineTo(end-1,bottom).stroke({color:0xe4bbff,width:2,alpha:.95});
+   h.moveTo(start+1,top).lineTo(end-1,top).stroke({color:0xf7ffff,width:2.2,alpha:.9});
+  }
   for(let lane=0;lane<4;lane++){
    const [x,yy,w]=this.judgeLanes[lane],light=this.laneLights[lane];
    light.position.set(x,yy);light.width=w*.96;light.height=38;
