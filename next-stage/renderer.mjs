@@ -22,7 +22,7 @@ export class Stage{
   for(let i=0;i<32;i++){
    const q=i/32,z=(i+1)/32,[x,y,w]=point(-.5,q),[xx,yy,ww]=point(-.5,z);
    const tint=color([Math.round(12+13*z),Math.round(16+12*z),Math.round(35+19*z)]);
-   g.poly([x,y,x+w*4,y,xx+ww*4,yy,xx,yy]).fill({color:tint,alpha:.78-.15*z});
+   g.poly([x,y,x+w*4,y,xx+ww*4,yy,xx,yy]).fill({color:tint,alpha:.47-.16*z});
    // Broad, low-opacity side reflections; the central note field stays quiet.
    for(const side of [0,1]){
     const l=side?3.04:-.5,r=side?3.5:-.04;
@@ -40,7 +40,7 @@ export class Stage{
    const q=i/12,z=(i+1)/12,[x,y]=point(edge-.5,q),[xx,yy]=point(edge-.5,z),outer=edge===0||edge===4;
    if(outer){
     g.moveTo(x,y).lineTo(xx,yy).stroke({color:0xaaa0ef,width:5,alpha:.014+.023*z});
-    g.moveTo(x,y).lineTo(xx,yy).stroke({color:0xd6e4ff,width:.65+.55*z,alpha:.12+.36*z});
+    g.moveTo(x,y).lineTo(xx,yy).stroke({color:0xd6e4ff,width:.65+.55*z,alpha:.29+.39*z});
     const inward=edge===0?1:-1;
     g.moveTo(x+inward*2,y).lineTo(xx+inward*2,yy).stroke({color:this.accent,width:1.8,alpha:.014+.045*z});
    }else g.moveTo(x,y).lineTo(xx,yy).stroke({color:0xaeb7d7,width:.6+.35*z,alpha:.055+.15*z});

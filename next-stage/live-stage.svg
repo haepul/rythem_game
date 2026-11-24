@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" preserveAspectRatio="none">
+ <defs>
+  <linearGradient id="night" x2=".22" y2="1" gradientUnits="objectBoundingBox"><stop stop-color="#081330"/><stop offset=".55" stop-color="#23285a"/><stop offset="1" stop-color="#463065"/></linearGradient>
+  <linearGradient id="beam" x2=".4" y2="1"><stop stop-color="#738aea" stop-opacity=".04"/><stop offset=".7" stop-color="#807bff" stop-opacity=".25"/><stop offset="1" stop-color="#63def4" stop-opacity=".07"/></linearGradient>
+  <linearGradient id="floor" x2="0" y2="1"><stop stop-color="#15143b"/><stop offset="1" stop-color="#453766"/></linearGradient>
+  <pattern id="lights" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M1 3h6v2H1z" fill="#9292ed" opacity=".36"/></pattern>
+  <path id="sky" d="M0 288V179h18v-11h17v39h13v-58h22v26h12v-45h23v58h14v-19h28v42h28v-33h21v110z"/>
+ </defs>
+ <path fill="url(#night)" d="M0 0h800v480H0z"/>
+ <g fill="#131936"><use href="#sky"/><use href="#sky" transform="translate(800 8) scale(-1 1)"/></g>
+ <g fill="url(#lights)"><use href="#sky"/><use href="#sky" transform="translate(800 8) scale(-1 1)"/></g>
+ <path fill="url(#floor)" d="M0 279Q400 250 800 279v201H0z"/>
+ <g stroke="#9395dc" opacity=".16" fill="none"><path d="M0 310Q400 280 800 310M0 343Q400 317 800 343M0 420Q400 402 800 420M325 250 0 465m470-215 330 215"/></g>
+ <g fill="url(#beam)"><path d="M45 90 85 84 220 358 128 369zM750 116l29 4-130 265-74-20zM-40 165l14-30 165 182-56 8z"/></g>
+ <g fill="#bdb0ff" opacity=".29"><path d="m28 130 13 5-9 4zm135-51 6 4-8 3zm550 89 17-9-5 13zm-32 107 5-8 4 3zM62 323l10 4-5 5z"/></g>
+</svg>

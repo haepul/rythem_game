@@ -139,3 +139,62 @@ body.reduced #play #combo b{transform:none!important;opacity:1!important}
 #playing-art img, #playing-art svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 #playing-art img { z-index: 1; object-fit: cover; }
 #play .song-hud small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Fixed scenery below the transparent note canvas. */
+#play #stage-wrap {
+  background: #172246 url("./live-stage.svg") center / 100% 100% no-repeat;
+}
+.live-screens {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.live-screens i {
+  position: absolute;
+  inset: 16% auto auto 36%;
+  width: 28%;
+  aspect-ratio: 1;
+  border: 2px solid #a7adc2;
+  border-top-width: 5px;
+  border-radius: 4%;
+  background: repeating-linear-gradient(0deg, transparent 0 2px, #10142d55 2px 3px),
+              var(--live-jacket, linear-gradient(145deg,#7978ad,#4b7c96)) center / cover;
+  opacity: .59;
+  box-shadow: 0 6px 0 #0d1538, 0 0 0 4px #151b35;
+}
+.live-screens i:first-child, .live-screens i:last-child {
+  width: 17%;
+  top: 29%;
+  opacity: .33;
+}
+.live-screens i:first-child { left: 15%; transform: skewY(-5deg); }
+.live-screens i:last-child { left: 68%; transform: skewY(5deg); }
+#play .play-hud { inset: 2.2% 3% auto; height: 10%; gap: 1.5%; }
+#play .life-block { width: 18%; border-radius: 18px; background: #202645ce; padding: .32cqw .8cqw .55cqw; }
+#play .life-track { border-radius: 12px; }
+#play #song-progress { left: 38%; width: 24%; top: 12.3%; height: 2px; opacity: .55; }
+#play .lane-keys { top: 94%; }
+#play .lane-keys span { font: 700 clamp(7px,.9cqw,11px)/1.1 Arial,sans-serif; color:#c0c1db; border:0; }
+@media (pointer:coarse) { #play .lane-keys { visibility:hidden; } }
+
+#play #pause-button { position: relative; }
+#play #pause-button::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  min-width: 44px;
+  min-height: 44px;
+  width: 100%;
+  height: 100%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+}
+.live-screens::after {
+  content: "";
+  position: absolute;
+  inset: 56% 0 0;
+  background: radial-gradient(ellipse at 4% 96%, #478be94f, transparent 47%),
+              radial-gradient(ellipse at 96% 88%, #a448cf4d, transparent 51%);
+}
